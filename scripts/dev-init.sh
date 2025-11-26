@@ -138,7 +138,10 @@ cd backends
 for backend_dir in php python node; do
     if [ "$backend_dir" != "$BACKEND" ] && [ -d "$backend_dir" ]; then
         print_warning "Удаляем папку backends/$backend_dir..."
-        # rm -rf "$backend_dir"
+
+        # если не хочется удалять, можно закомментировать следующую строку
+        rm -rf "$backend_dir"
+        
         print_success "Папка backends/$backend_dir удалена"
     fi
 done
