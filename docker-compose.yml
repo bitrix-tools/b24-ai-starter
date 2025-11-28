@@ -75,7 +75,6 @@ services:
       BITRIX24_PHP_SDK_APPLICATION_CLIENT_ID: ${CLIENT_ID:-enter_your_b24_app_client_id}
       BITRIX24_PHP_SDK_APPLICATION_CLIENT_SECRET: ${CLIENT_SECRET:-enter_your_b24_app_secret}
       BITRIX24_PHP_SDK_APPLICATION_SCOPE: ${SCOPE:-enter_your_b24_app_scope}
-      BITRIX_WEBHOOK_URL: ${BITRIX_WEBHOOK_URL:-https://your-domain.bitrix24.ru/rest/1/webhook-key/}
     expose:
       - "8000"
     ports:

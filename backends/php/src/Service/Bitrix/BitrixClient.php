@@ -3,22 +3,24 @@
 namespace App\Service\Bitrix;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Psr\Log\LoggerInterface;
 
 class BitrixClient
 {
     private HttpClientInterface $client;
-    private string $webhookUrl;
+    private string $domain;
+    private string $accessToken;
     private LoggerInterface $logger;
 
     public function __construct(
         HttpClientInterface $client,
-        #[Autowire(env: 'BITRIX_WEBHOOK_URL')] string $webhookUrl,
+        string $domain,
+        string $accessToken,
         LoggerInterface $logger
     ) {
         $this->client = $client;
-        $this->webhookUrl = $webhookUrl;
+        $this->domain = $domain;
+        $this->accessToken = $accessToken;
         $this->logger = $logger;
     }
 
@@ -68,16 +70,25 @@ class BitrixClient
     }
 
     /**
-     * Generic method to call Bitrix24 API
+     * Generic method to call Bitrix24 API using OAuth token
      */
     public function call(string $method, array $params = []): array
     {
         try {
-            $response = $this->client->request('POST', $this->webhookUrl . $method, [
+            // Build API URL: https://{domain}/rest/{method}
+            $url = sprintf('https://%s/rest/%s', $this->domain, $method);
+            
+            // Add access token to parameters
+            $params['auth'] = $this->accessToken;
+
+            $response = $this->client->request('POST', $url, [
                 'json' => $params,
             ]);
 
             $data = $response->toArray();
+            
+            // Debug logging
+            error_log('Bitrix24 Response for ' . $method . ': ' . json_encode($data));
 
             if (isset($data['error'])) {
                 throw new \RuntimeException('Bitrix24 API Error: ' . ($data['error_description'] ?? $data['error']));
@@ -87,6 +98,7 @@ class BitrixClient
         } catch (\Exception $e) {
             $this->logger->error('Bitrix24 API Request Failed', [
                 'method' => $method,
+                'domain' => $this->domain,
                 'error' => $e->getMessage(),
             ]);
             throw $e;

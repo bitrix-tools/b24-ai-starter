@@ -27,7 +27,12 @@
       <div class="bg-white rounded-xl shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Сотрудник</label>
-          <input v-model="filters.employeeId" type="text" placeholder="ID сотрудника" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm" />
+          <select v-model="filters.employeeId" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
+            <option value="">Все сотрудники</option>
+            <option v-for="user in users" :key="user.id" :value="user.id">
+              {{ user.name }}
+            </option>
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Проект</label>
@@ -103,7 +108,7 @@
                     </tr>
 
                     <!-- Level 4: Time Entries -->
-                    <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-blue-50 transition-colors">
+                    <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-green-50 transition-colors">
                       <td class="px-6 py-2 pl-20 text-sm text-gray-600">
                         ⏱ Метка #{{ entry.id }}
                       </td>
@@ -134,19 +139,44 @@
 <script setup lang="ts">
 import { useReportsStore } from '~/stores/reports'
 import { storeToRefs } from 'pinia'
+import type { B24Frame } from '@bitrix24/b24jssdk'
+
+const { t, locales: localesI18n, setLocale } = useI18n()
+const { initApp, processErrorGlobal } = useAppInit('EmployeesReport')
+const { $initializeB24Frame } = useNuxtApp()
 
 useHead({
   title: 'Отчёт по сотрудникам'
 })
 
 const store = useReportsStore()
+const apiStore = useApiStore()
 const { items, isLoading, error } = storeToRefs(store)
 
+const users = ref<{ id: string, name: string }[]>([])
 const filters = ref({
   employeeId: '',
   projectName: '',
   dateFrom: '',
   dateTo: ''
+})
+
+onMounted(async () => {
+  try {
+    const $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    
+    // Load users for filter
+    const usersData = await apiStore.getUsers()
+    users.value = usersData.items
+    
+    // Debug schema (temporary)
+    const schema = await apiStore.getDebugSchema()
+    console.log('Smart Process Schema:', schema)
+  } catch (e) {
+    console.error('Failed to initialize Bitrix24 frame or load data:', e)
+    processErrorGlobal(e)
+  }
 })
 
 const fetchData = () => {
@@ -193,9 +223,9 @@ const groupedData = computed(() => {
   })
 
   // Convert Maps to Arrays for template
-  return Array.from(employeesMap.values()).map(emp => ({
+  return Array.from(employeesMap.values()).map((emp: any) => ({
     ...emp,
-    projects: Array.from(emp.projects.values()).map(proj => ({
+    projects: Array.from(emp.projects.values()).map((proj: any) => ({
       ...proj,
       tasks: Array.from(proj.tasks.values())
     }))

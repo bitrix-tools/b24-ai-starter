@@ -31,7 +31,12 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Сотрудник</label>
-          <input v-model="filters.employeeId" type="text" placeholder="ID сотрудника" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm" />
+          <select v-model="filters.employeeId" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
+            <option value="">Все сотрудники</option>
+            <option v-for="user in users" :key="user.id" :value="user.id">
+              {{ user.name }}
+            </option>
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Дата с</label>
@@ -133,20 +138,42 @@
 
 <script setup lang="ts">
 import { useReportsStore } from '~/stores/reports'
+import { useApiStore } from '~/stores/api'
 import { storeToRefs } from 'pinia'
+import type { B24Frame } from '@bitrix24/b24jssdk'
+
+const { t, locales: localesI18n, setLocale } = useI18n()
+const { initApp, processErrorGlobal } = useAppInit('ProjectsReport')
+const { $initializeB24Frame } = useNuxtApp()
 
 useHead({
   title: 'Отчёт по проектам'
 })
 
 const store = useReportsStore()
+const apiStore = useApiStore()
 const { items, isLoading, error } = storeToRefs(store)
 
+const users = ref<{ id: string, name: string }[]>([])
 const filters = ref({
   employeeId: '',
   projectName: '',
   dateFrom: '',
   dateTo: ''
+})
+
+onMounted(async () => {
+  try {
+    const $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    
+    // Load users for filter
+    const usersData = await apiStore.getUsers()
+    users.value = usersData.items
+  } catch (e) {
+    console.error('Failed to initialize Bitrix24 frame or load data:', e)
+    processErrorGlobal(e)
+  }
 })
 
 const fetchData = () => {
@@ -189,9 +216,9 @@ const groupedData = computed(() => {
   })
 
   // Convert Maps to Arrays
-  return Array.from(projectsMap.values()).map(proj => ({
+  return Array.from(projectsMap.values()).map((proj: any) => ({
     ...proj,
-    employees: Array.from(proj.employees.values()).map(emp => ({
+    employees: Array.from(proj.employees.values()).map((emp: any) => ({
       ...emp,
       tasks: Array.from(emp.tasks.values())
     }))

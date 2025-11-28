@@ -4,22 +4,26 @@ namespace App\Service\Report;
 
 use App\Service\Bitrix\BitrixClient;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class ReportDataService
 {
-    private BitrixClient $bitrixClient;
+    private HttpClientInterface $httpClient;
     private LoggerInterface $logger;
 
-    public function __construct(BitrixClient $bitrixClient, LoggerInterface $logger)
+    public function __construct(HttpClientInterface $httpClient, LoggerInterface $logger)
     {
-        $this->bitrixClient = $bitrixClient;
+        $this->httpClient = $httpClient;
         $this->logger = $logger;
     }
 
-    public function getReportData(array $filter = []): array
+    public function getReportData(string $domain, string $accessToken, array $filter = []): array
     {
+        // Create BitrixClient with OAuth credentials
+        $bitrixClient = new BitrixClient($this->httpClient, $domain, $accessToken, $this->logger);
+        
         // Step 0: Fetch data
-        $rawItems = $this->bitrixClient->fetchSmartProcessItems($filter);
+        $rawItems = $bitrixClient->fetchSmartProcessItems($filter);
         
         $normalizedItems = [];
         

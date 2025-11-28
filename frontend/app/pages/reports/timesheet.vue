@@ -126,6 +126,11 @@
 <script setup lang="ts">
 import { useReportsStore } from '~/stores/reports'
 import { storeToRefs } from 'pinia'
+import type { B24Frame } from '@bitrix24/b24jssdk'
+
+const { t, locales: localesI18n, setLocale } = useI18n()
+const { initApp, processErrorGlobal } = useAppInit('TimesheetReport')
+const { $initializeB24Frame } = useNuxtApp()
 
 useHead({
   title: 'Ежемесячный табель'
@@ -134,20 +139,36 @@ useHead({
 const store = useReportsStore()
 const { items, isLoading, error } = storeToRefs(store)
 
+onMounted(async () => {
+  try {
+    const $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+  } catch (e) {
+    console.error('Failed to initialize Bitrix24 frame:', e)
+    processErrorGlobal(e)
+  }
+})
+
 const filters = ref({
   dateFrom: new Date().toISOString().split('T')[0], // Default to today
   dateTo: ''
 })
 
 // Helper to get days in month
-const daysInMonth = computed(() => {
+interface DayInfo {
+  day: number
+  date: string
+  isWeekend: boolean
+}
+
+const daysInMonth = computed<DayInfo[]>(() => {
   if (!filters.value.dateFrom) return []
   
   const date = new Date(filters.value.dateFrom)
   const year = date.getFullYear()
   const month = date.getMonth()
   
-  const days = []
+  const days: DayInfo[] = []
   const lastDay = new Date(year, month + 1, 0).getDate()
   
   for (let i = 1; i <= lastDay; i++) {
@@ -167,6 +188,8 @@ const monthName = computed(() => {
 })
 
 const fetchData = () => {
+  if (!filters.value.dateFrom) return
+
   // Calculate start and end of month
   const date = new Date(filters.value.dateFrom)
   const year = date.getFullYear()
@@ -185,10 +208,20 @@ const fetchData = () => {
 }
 
 // Timesheet Data Processing
+interface EmployeeData {
+  employeeId: string
+  employeeName: string
+  totalBillable: number
+  totalNonBillable: number
+  total: number
+  days: Record<string, number>
+  entries: Record<string, any[]>
+}
+
 const timesheetData = computed(() => {
   if (!items.value.length) return []
 
-  const employeesMap = new Map()
+  const employeesMap = new Map<string, EmployeeData>()
 
   items.value.forEach(item => {
     const empId = item.employeeId || 'unknown'
@@ -206,7 +239,7 @@ const timesheetData = computed(() => {
       })
     }
     
-    const emp = employeesMap.get(empId)
+    const emp = employeesMap.get(empId)!
     const dateKey = item.date.split('T')[0] // Assuming ISO string from backend
     
     // Sum hours
@@ -231,7 +264,12 @@ const timesheetData = computed(() => {
 })
 
 // Modal Logic
-const selectedCell = ref(null)
+interface TimesheetCellDetails {
+  employeeName: string
+  date: string
+  entries: any[]
+}
+const selectedCell = ref<TimesheetCellDetails | null>(null)
 
 const openDetails = (employeeId: string, date: string) => {
   const emp = timesheetData.value.find(e => e.employeeId === employeeId)

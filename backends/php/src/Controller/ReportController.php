@@ -25,6 +25,26 @@ class ReportController extends AbstractController
         ]);
 
         try {
+            // Extract OAuth credentials from JWT payload
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            if (!$jwtPayload) {
+                return new JsonResponse([
+                    'error' => 'Missing JWT payload',
+                    'message' => 'This endpoint requires authentication. Please ensure you are accessing it from within the Bitrix24 application.',
+                ], 401);
+            }
+
+            $domain = $jwtPayload['domain'] ?? null;
+            $accessToken = $jwtPayload['access_token'] ?? null;
+
+            if (!$domain || !$accessToken) {
+                return new JsonResponse([
+                    'error' => 'Invalid JWT payload',
+                    'message' => 'JWT payload must contain domain and access_token',
+                    'payload' => $jwtPayload, // Debug info
+                ], 401);
+            }
+
             $filter = [];
 
             // Date Range
@@ -51,8 +71,8 @@ class ReportController extends AbstractController
                 $filter['=ufCrm87_1764265641'] = $projectName;
             }
 
-            // Fetch Data
-            $data = $this->reportService->getReportData($filter);
+            // Fetch Data with OAuth credentials
+            $data = $this->reportService->getReportData($domain, $accessToken, $filter);
 
             return new JsonResponse([
                 'items' => $data,
