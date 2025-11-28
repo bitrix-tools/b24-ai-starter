@@ -42,13 +42,17 @@ class ReportDataService
     {
         // Field Mapping (based on Master_poley.md and Docs.md)
         // Note: Keys might be camelCase in the response
+        $fieldTimeEntryTitle = 'title'; // Название метки
         $fieldIdZadachi = 'ufCrm87_1761919581';
+        $fieldTaskTitle = 'ufCrm87_1764361585'; // Название задачи
         $fieldIdIerarhiya = 'ufCrm87_1764191110';
         $fieldTitleIerarhiya = 'ufCrm87_1764191133';
-        $fieldProjectName = 'ufCrm87_1764265641'; // Assuming camelCase for UF_CRM_87_1764265641
+        $fieldProjectId = 'ufCrm87_1764265626'; // ID проекта
+        $fieldProjectName = 'ufCrm87_1764265641'; // Название проекта
         $fieldUchityvat = 'ufCrm87_1763717129'; // Boolean/Enum
         $fieldHours = 'ufCrm87_1761919617';
-        $fieldSotrudnik = 'assignedById'; // Standard field
+        $fieldEmployee = 'ufCrm87_1761919601'; // Сотрудник с ФИО
+        $fieldSotrudnik = 'assignedById'; // Standard field (fallback)
 
         // Helper to get value case-insensitively if needed, but usually it's camelCase
         $getValue = fn($key) => $item[$key] ?? $item[strtoupper($key)] ?? null;
@@ -107,26 +111,46 @@ class ReportDataService
         }
 
         // 7. Employee (Sotrudnik)
-        // assignedById is usually an ID. We might need to fetch user details or it might be expanded.
-        // For now, we'll store the ID. If we need the name, we might need a separate user cache or check if it's expanded.
-        // Docs says "ФИО пользователя". Usually crm.item.list doesn't expand users by default unless specified.
-        // We will return the ID for now, and maybe the frontend can map it, or we fetch users separately.
-        // Or maybe 'ufCrm87_1761919601' is the employee field? Master_poley says `ufCrm87_1761919601` | Сотрудник | employee.
-        // If it's a 'user' type field, it might return "12_User Name" or just ID.
-        // Let's use assignedById as a fallback or primary if the custom field is empty.
-        $sotrudnikId = $getValue('assignedById');
+        // Try custom employee field first (might contain name), fallback to assignedById
+        $employeeField = $getValue($fieldEmployee);
+        $employeeName = null;
+        $employeeId = $getValue('assignedById');
+        
+        // If employee field contains name (format: "ID_Name" or just name)
+        if ($employeeField && is_string($employeeField)) {
+            if (strpos($employeeField, '_') !== false) {
+                // Format: "123_John Doe"
+                $parts = explode('_', $employeeField, 2);
+                $employeeName = $parts[1] ?? null;
+                $employeeId = $parts[0] ?? $employeeId;
+            } else {
+                // Just a name
+                $employeeName = $employeeField;
+            }
+        }
+        
+        // 8. Time Entry Title and Task Title
+        $timeEntryTitle = $getValue($fieldTimeEntryTitle) ?: null;
+        $taskTitle = $getValue($fieldTaskTitle) ?: null;
+        
+        // 9. Project ID
+        $projectId = $getValue($fieldProjectId) ?: null;
         
         return [
             'id' => $item['id'],
+            'entryTitle' => $timeEntryTitle,
             'taskId' => $idZadachi,
             'taskName' => $taskName,
+            'taskTitle' => $taskTitle,
+            'projectId' => $projectId,
             'projectName' => $projectName,
             'hierarchyIds' => $idIerarhiya,
             'hierarchyTitles' => $titleIerarhiya,
             'hours' => (float)$getValue($fieldHours),
             'type' => $type,
             'date' => $createdTime,
-            'employeeId' => $sotrudnikId,
+            'employeeId' => $employeeId,
+            'employeeName' => $employeeName,
             // 'raw' => $item // debug
         ];
     }

@@ -9,8 +9,11 @@ export interface ReportFilter {
 
 export interface ReportItem {
     id: number
+    entryTitle?: string | null
     taskId: string
     taskName: string
+    taskTitle?: string | null
+    projectId?: string | null
     projectName: string
     hierarchyIds: string[]
     hierarchyTitles: string[]
@@ -18,6 +21,7 @@ export interface ReportItem {
     type: 'Учитываемые' | 'Неучитываемые'
     date: string
     employeeId: string
+    employeeName?: string | null
 }
 
 export const useBitrixReport = () => {

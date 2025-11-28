@@ -66,15 +66,16 @@
               <tr>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название задачи / Метка</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID задачи</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Часы</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Тип</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Учитываемые</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Неучитываемые</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Всего</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <template v-if="groupedData.length === 0 && !isLoading">
                 <tr>
-                  <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                  <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                     Нет данных для отображения. Нажмите "Сформировать".
                   </td>
                 </tr>
@@ -83,43 +84,56 @@
               <template v-for="employee in groupedData" :key="employee.id">
                 <!-- Level 1: Employee -->
                 <tr class="bg-gray-100">
-                  <td colspan="5" class="px-6 py-3 font-bold text-gray-900">
+                  <td colspan="2" class="px-6 py-3 font-bold text-gray-900">
                     👤 Сотрудник: {{ employee.name }} (ID: {{ employee.id }})
                   </td>
+                  <td class="px-6 py-3 text-right font-bold text-green-600">{{ employee.billableHours.toFixed(2) }} ч.</td>
+                  <td class="px-6 py-3 text-right font-bold text-gray-600">{{ employee.nonBillableHours.toFixed(2) }} ч.</td>
+                  <td class="px-6 py-3 text-right font-bold text-blue-600">{{ employee.totalHours.toFixed(2) }} ч.</td>
+                  <td></td>
                 </tr>
 
                 <template v-for="project in employee.projects" :key="project.name">
                   <!-- Level 2: Project -->
                   <tr class="bg-gray-50">
-                    <td colspan="5" class="px-6 py-2 pl-10 font-semibold text-gray-800">
+                    <td colspan="2" class="px-6 py-2 pl-10 font-semibold text-gray-800">
                       📁 Проект: {{ project.name }}
                     </td>
+                    <td class="px-6 py-2 text-right font-semibold text-green-600">{{ project.billableHours.toFixed(2) }} ч.</td>
+                    <td class="px-6 py-2 text-right font-semibold text-gray-600">{{ project.nonBillableHours.toFixed(2) }} ч.</td>
+                    <td class="px-6 py-2 text-right font-semibold text-blue-600">{{ project.totalHours.toFixed(2) }} ч.</td>
+                    <td></td>
                   </tr>
 
                   <template v-for="task in project.tasks" :key="task.id">
                     <!-- Level 3: Task (Hierarchy) -->
                     <tr>
-                      <td colspan="5" class="px-6 py-2 pl-14 text-sm font-medium text-gray-700">
+                      <td colspan="2" class="px-6 py-2 pl-14 text-sm font-medium text-gray-700">
                          📝 {{ task.name }}
                          <span v-if="task.hierarchy.length > 0" class="text-xs text-gray-400 ml-2">
                            ({{ task.hierarchy.join(' > ') }})
                          </span>
                       </td>
+                      <td class="px-6 py-2 text-right text-sm font-medium text-green-600">{{ task.billableHours.toFixed(2) }} ч.</td>
+                      <td class="px-6 py-2 text-right text-sm font-medium text-gray-600">{{ task.nonBillableHours.toFixed(2) }} ч.</td>
+                      <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">{{ task.totalHours.toFixed(2) }} ч.</td>
+                      <td></td>
                     </tr>
 
                     <!-- Level 4: Time Entries -->
-                    <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-green-50 transition-colors">
+                    <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-blue-50 transition-colors">
                       <td class="px-6 py-2 pl-20 text-sm text-gray-600">
-                        ⏱ Метка #{{ entry.id }}
+                        ⏱ {{ entry.entryTitle || 'Метка #' + entry.id }}
                       </td>
                       <td class="px-6 py-2 text-sm text-gray-500">{{ entry.taskId }}</td>
-                      <td class="px-6 py-2 text-sm font-medium" :class="entry.type === 'Учитываемые' ? 'text-green-600' : 'text-gray-500'">
-                        {{ entry.hours }} ч.
+                      <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Учитываемые' ? 'text-green-600 font-medium' : 'text-gray-400'">
+                        {{ entry.type === 'Учитываемые' ? entry.hours.toFixed(2) : '—' }}
                       </td>
-                      <td class="px-6 py-2 text-sm text-gray-500">
-                        <span class="px-2 py-1 rounded-full text-xs" :class="entry.type === 'Учитываемые' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
-                          {{ entry.type }}
-                        </span>
+                      <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Неучитываемые' ? 'text-gray-600 font-medium' : 'text-gray-400'">
+                        {{ entry.type === 'Неучитываемые' ? entry.hours.toFixed(2) : '—' }}
+                      </td>
+                      <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">
+                        {{ entry.hours.toFixed(2) }}
                       </td>
                       <td class="px-6 py-2 text-sm text-gray-500">
                         {{ new Date(entry.date).toLocaleDateString() }}
@@ -183,43 +197,82 @@ const fetchData = () => {
   store.fetchReports(filters.value)
 }
 
-// Grouping Logic
+// Grouping Logic with Hours Calculation
 const groupedData = computed(() => {
   if (!items.value.length) return []
+
+  // Create employee name mapping from users
+  const userMap = new Map<string, string>()
+  users.value.forEach(user => {
+    userMap.set(user.id, user.name)
+  })
 
   const employeesMap = new Map<string, any>()
 
   items.value.forEach(item => {
     const empId = item.employeeId || 'unknown'
-    const empName = item.employeeId ? `User ${item.employeeId}` : 'Неизвестный' // Placeholder name
+    // Use employeeName from backend if available, otherwise use mapped name, finally fallback to ID
+    const empName = item.employeeName || userMap.get(empId) || `User ${empId}`
 
     if (!employeesMap.has(empId)) {
-      employeesMap.set(empId, { id: empId, name: empName, projects: new Map() })
+      employeesMap.set(empId, { 
+        id: empId, 
+        name: empName, 
+        projects: new Map(),
+        billableHours: 0,
+        nonBillableHours: 0,
+        totalHours: 0
+      })
     }
     const emp = employeesMap.get(empId)
 
+    // Use projectId for grouping if available, otherwise use projectName
+    const projKey = item.projectId || item.projectName || 'Не определён'
     const projName = item.projectName || 'Не определён'
-    if (!emp.projects.has(projName)) {
-      emp.projects.set(projName, { name: projName, tasks: new Map() })
+    
+    if (!emp.projects.has(projKey)) {
+      emp.projects.set(projKey, { 
+        name: projName, 
+        tasks: new Map(),
+        billableHours: 0,
+        nonBillableHours: 0,
+        totalHours: 0
+      })
     }
-    const proj = emp.projects.get(projName)
+    const proj = emp.projects.get(projKey)
 
-    // Task Grouping: Using Task ID as key
-    // We want to show the hierarchy path. 
-    // The requirement says: "Level 3: Hierarchy of tasks... Level 4: Time entries inside their task"
-    // Ideally we should reconstruct the tree, but for a flat table view with grouping:
-    // We can group by the "Leaf" task (where the time was logged).
     const taskId = item.taskId
     if (!proj.tasks.has(taskId)) {
       proj.tasks.set(taskId, {
         id: taskId,
-        name: item.taskName,
-        hierarchy: item.hierarchyTitles.slice(0, -1), // Parent path
-        entries: []
+        name: item.taskTitle || item.taskName,
+        hierarchy: item.hierarchyTitles.slice(0, -1),
+        entries: [],
+        billableHours: 0,
+        nonBillableHours: 0,
+        totalHours: 0
       })
     }
     const task = proj.tasks.get(taskId)
     task.entries.push(item)
+    
+    // Calculate hours
+    const hours = item.hours || 0
+    const isBillable = item.type === 'Учитываемые'
+    
+    if (isBillable) {
+      task.billableHours += hours
+      proj.billableHours += hours
+      emp.billableHours += hours
+    } else {
+      task.nonBillableHours += hours
+      proj.nonBillableHours += hours
+      emp.nonBillableHours += hours
+    }
+    
+    task.totalHours += hours
+    proj.totalHours += hours
+    emp.totalHours += hours
   })
 
   // Convert Maps to Arrays for template
