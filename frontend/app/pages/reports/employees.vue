@@ -203,16 +203,26 @@ const groupedData = computed(() => {
 
   // Create employee name mapping from users
   const userMap = new Map<string, string>()
+  console.log('EmployeesReport: Users loaded:', users.value.length, users.value)
+  
   users.value.forEach(user => {
-    userMap.set(user.id, user.name)
+    // Ensure ID is string for consistent mapping
+    userMap.set(String(user.id), user.name)
   })
+  console.log('EmployeesReport: User map created:', Object.fromEntries(userMap))
 
   const employeesMap = new Map<string, any>()
 
   items.value.forEach(item => {
-    const empId = item.employeeId || 'unknown'
+    const empId = item.employeeId ? String(item.employeeId) : 'unknown'
     // Use employeeName from backend if available, otherwise use mapped name, finally fallback to ID
-    const empName = item.employeeName || userMap.get(empId) || `User ${empId}`
+    const mappedName = userMap.get(empId)
+    const empName = item.employeeName || mappedName || `User ${empId}`
+    
+    // Debug first few items
+    if (employeesMap.size < 3) {
+        console.log(`EmployeesReport: Mapping item ${item.id}: empId=${empId}, backendName=${item.employeeName}, mappedName=${mappedName}, final=${empName}`)
+    }
 
     if (!employeesMap.has(empId)) {
       employeesMap.set(empId, { 

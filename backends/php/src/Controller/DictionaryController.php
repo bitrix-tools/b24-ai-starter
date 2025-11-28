@@ -42,9 +42,13 @@ class DictionaryController extends AbstractController
             
             // Fetch users
             // user.get returns list of users
-            $response = $bitrixClient->call('user.get', [
+            // Use fetchAll to get all users, not just first 50
+            $response = $bitrixClient->fetchAll('user.get', [
                 'FILTER' => ['ACTIVE' => 'Y']
             ]);
+            
+            // fetchAll returns items directly
+            $usersList = $response;
 
             $users = array_map(function($user) {
                 return [
@@ -52,7 +56,7 @@ class DictionaryController extends AbstractController
                     'name' => trim(($user['NAME'] ?? '') . ' ' . ($user['LAST_NAME'] ?? '')),
                     'avatar' => $user['PERSONAL_PHOTO'] ?? null // Photo URL might need processing
                 ];
-            }, $response['result'] ?? []);
+            }, $usersList);
 
             return new JsonResponse(['items' => $users]);
 
