@@ -81,10 +81,15 @@
                 </tr>
               </template>
               
-              <template v-for="project in groupedData" :key="project.name">
+              <template v-for="project in groupedData" :key="project.key">
                 <!-- Level 1: Project -->
-                <tr class="bg-gray-100">
-                  <td colspan="2" class="px-6 py-3 font-bold text-gray-900">
+                <tr class="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors" @click="toggle(project.key)">
+                  <td colspan="2" class="px-6 py-3 font-bold text-gray-900 flex items-center">
+                    <button class="mr-2 text-gray-500 focus:outline-none">
+                      <svg :class="{'transform rotate-90': expandedKeys.has(project.key)}" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </button>
                     📁 Проект: {{ project.name }}
                   </td>
                   <td class="px-6 py-3 text-right font-bold text-green-600">{{ project.billableHours.toFixed(2) }} ч.</td>
@@ -93,52 +98,68 @@
                   <td></td>
                 </tr>
 
-                <template v-for="employee in project.employees" :key="employee.id">
-                  <!-- Level 2: Employee -->
-                  <tr class="bg-gray-50">
-                    <td colspan="2" class="px-6 py-2 pl-10 font-semibold text-gray-800">
-                      👤 Сотрудник: {{ employee.name }} (ID: {{ employee.id }})
-                    </td>
-                    <td class="px-6 py-2 text-right font-semibold text-green-600">{{ employee.billableHours.toFixed(2) }} ч.</td>
-                    <td class="px-6 py-2 text-right font-semibold text-gray-600">{{ employee.nonBillableHours.toFixed(2) }} ч.</td>
-                    <td class="px-6 py-2 text-right font-semibold text-blue-600">{{ employee.totalHours.toFixed(2) }} ч.</td>
-                    <td></td>
-                  </tr>
-
-                  <template v-for="task in employee.tasks" :key="task.id">
-                    <!-- Level 3: Task (Hierarchy) -->
-                    <tr>
-                      <td colspan="2" class="px-6 py-2 pl-14 text-sm font-medium text-gray-700">
-                         📝 {{ task.name }}
-                         <span v-if="task.hierarchy.length > 0" class="text-xs text-gray-400 ml-2">
-                           ({{ task.hierarchy.join(' > ') }})
-                         </span>
+                <template v-if="expandedKeys.has(project.key)">
+                  <template v-for="employee in project.employees" :key="employee.key">
+                    <!-- Level 2: Employee -->
+                    <tr class="bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors" @click="toggle(employee.key)">
+                      <td colspan="2" class="px-6 py-2 pl-10 font-semibold text-gray-800 flex items-center">
+                        <button class="mr-2 text-gray-500 focus:outline-none">
+                          <svg :class="{'transform rotate-90': expandedKeys.has(employee.key)}" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                          </svg>
+                        </button>
+                        👤 Сотрудник: {{ employee.name }} (ID: {{ employee.id }})
                       </td>
-                      <td class="px-6 py-2 text-right text-sm font-medium text-green-600">{{ task.billableHours.toFixed(2) }} ч.</td>
-                      <td class="px-6 py-2 text-right text-sm font-medium text-gray-600">{{ task.nonBillableHours.toFixed(2) }} ч.</td>
-                      <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">{{ task.totalHours.toFixed(2) }} ч.</td>
+                      <td class="px-6 py-2 text-right font-semibold text-green-600">{{ employee.billableHours.toFixed(2) }} ч.</td>
+                      <td class="px-6 py-2 text-right font-semibold text-gray-600">{{ employee.nonBillableHours.toFixed(2) }} ч.</td>
+                      <td class="px-6 py-2 text-right font-semibold text-blue-600">{{ employee.totalHours.toFixed(2) }} ч.</td>
                       <td></td>
                     </tr>
 
-                    <!-- Level 4: Time Entries -->
-                    <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-blue-50 transition-colors">
-                      <td class="px-6 py-2 pl-20 text-sm text-gray-600">
-                        ⏱ {{ entry.entryTitle || 'Метка #' + entry.id }}
-                      </td>
-                      <td class="px-6 py-2 text-sm text-gray-500">{{ entry.taskId }}</td>
-                      <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Учитываемые' ? 'text-green-600 font-medium' : 'text-gray-400'">
-                        {{ entry.type === 'Учитываемые' ? entry.hours.toFixed(2) : '—' }}
-                      </td>
-                      <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Неучитываемые' ? 'text-gray-600 font-medium' : 'text-gray-400'">
-                        {{ entry.type === 'Неучитываемые' ? entry.hours.toFixed(2) : '—' }}
-                      </td>
-                      <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">
-                        {{ entry.hours.toFixed(2) }}
-                      </td>
-                      <td class="px-6 py-2 text-sm text-gray-500">
-                        {{ new Date(entry.date).toLocaleDateString() }}
-                      </td>
-                    </tr>
+                    <template v-if="expandedKeys.has(employee.key)">
+                      <template v-for="task in employee.tasks" :key="task.key">
+                        <!-- Level 3: Task (Hierarchy) -->
+                        <tr class="cursor-pointer hover:bg-gray-50 transition-colors" @click="toggle(task.key)">
+                          <td colspan="2" class="px-6 py-2 pl-14 text-sm font-medium text-gray-700 flex items-center">
+                             <button class="mr-2 text-gray-400 focus:outline-none">
+                               <svg :class="{'transform rotate-90': expandedKeys.has(task.key)}" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                               </svg>
+                             </button>
+                             📝 {{ task.name }}
+                             <span v-if="task.hierarchy.length > 0" class="text-xs text-gray-400 ml-2">
+                               ({{ task.hierarchy.join(' > ') }})
+                             </span>
+                          </td>
+                          <td class="px-6 py-2 text-right text-sm font-medium text-green-600">{{ task.billableHours.toFixed(2) }} ч.</td>
+                          <td class="px-6 py-2 text-right text-sm font-medium text-gray-600">{{ task.nonBillableHours.toFixed(2) }} ч.</td>
+                          <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">{{ task.totalHours.toFixed(2) }} ч.</td>
+                          <td></td>
+                        </tr>
+
+                        <!-- Level 4: Time Entries -->
+                        <template v-if="expandedKeys.has(task.key)">
+                          <tr v-for="entry in task.entries" :key="entry.id" class="hover:bg-blue-50 transition-colors">
+                            <td class="px-6 py-2 pl-20 text-sm text-gray-600">
+                              ⏱ {{ entry.entryTitle || 'Метка #' + entry.id }}
+                            </td>
+                            <td class="px-6 py-2 text-sm text-gray-500">{{ entry.taskId }}</td>
+                            <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Учитываемые' ? 'text-green-600 font-medium' : 'text-gray-400'">
+                              {{ entry.type === 'Учитываемые' ? entry.hours.toFixed(2) : '—' }}
+                            </td>
+                            <td class="px-6 py-2 text-right text-sm" :class="entry.type === 'Неучитываемые' ? 'text-gray-600 font-medium' : 'text-gray-400'">
+                              {{ entry.type === 'Неучитываемые' ? entry.hours.toFixed(2) : '—' }}
+                            </td>
+                            <td class="px-6 py-2 text-right text-sm font-medium text-blue-600">
+                              {{ entry.hours.toFixed(2) }}
+                            </td>
+                            <td class="px-6 py-2 text-sm text-gray-500">
+                              {{ new Date(entry.date).toLocaleDateString() }}
+                            </td>
+                          </tr>
+                        </template>
+                      </template>
+                    </template>
                   </template>
                 </template>
               </template>
@@ -194,6 +215,16 @@ const fetchData = () => {
   store.fetchReports(filters.value)
 }
 
+// Accordion Logic
+const expandedKeys = reactive(new Set<string>())
+const toggle = (key: string) => {
+  if (expandedKeys.has(key)) {
+    expandedKeys.delete(key)
+  } else {
+    expandedKeys.add(key)
+  }
+}
+
 // Grouping Logic for Project -> Employee -> Task
 const groupedData = computed(() => {
   if (!items.value.length) return []
@@ -213,6 +244,7 @@ const groupedData = computed(() => {
     
     if (!projectsMap.has(projKey)) {
       projectsMap.set(projKey, { 
+        key: `proj_${projKey}`,
         name: projName, 
         employees: new Map(),
         billableHours: 0,
@@ -228,6 +260,7 @@ const groupedData = computed(() => {
 
     if (!proj.employees.has(empId)) {
       proj.employees.set(empId, { 
+        key: `proj_${projKey}_emp_${empId}`,
         id: empId, 
         name: empName, 
         tasks: new Map(),
@@ -241,6 +274,7 @@ const groupedData = computed(() => {
     const taskId = item.taskId
     if (!emp.tasks.has(taskId)) {
       emp.tasks.set(taskId, {
+        key: `proj_${projKey}_emp_${empId}_task_${taskId}`,
         id: taskId,
         name: item.taskTitle || item.taskName,
         hierarchy: item.hierarchyTitles.slice(0, -1),
