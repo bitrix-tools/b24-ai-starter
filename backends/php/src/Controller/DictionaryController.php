@@ -65,9 +65,23 @@ class DictionaryController extends AbstractController
     }
 
     #[Route('/api/projects', name: 'api_projects', methods: ['GET'])]
-    public function getProjects(BitrixClient $bitrixClient): JsonResponse
+    public function getProjects(Request $request): JsonResponse
     {
+        $payload = $request->attributes->get('jwt_payload');
+        if (!$payload) {
+            return new JsonResponse(['error' => 'Unauthorized'], 401);
+        }
+
+        $domain = $payload['domain'];
+        $accessToken = $payload['access_token'] ?? null;
+
+        if (!$accessToken) {
+            return new JsonResponse(['error' => 'Access token not found in JWT'], 401);
+        }
+
         try {
+            $bitrixClient = new BitrixClient($this->httpClient, $domain, $accessToken, $this->logger);
+
             // Fetch active projects (workgroups)
             // sonet_group.get
             $response = $bitrixClient->fetchAll('sonet_group.get', [

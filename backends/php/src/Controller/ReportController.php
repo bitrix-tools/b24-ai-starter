@@ -71,6 +71,12 @@ class ReportController extends AbstractController
                 $filter['=ufCrm87_1764265641'] = $projectName;
             }
 
+            // Project (ID)
+            $projectId = $request->query->get('projectId');
+            if ($projectId) {
+                $filter['=ufCrm87_1764265626'] = $projectId;
+            }
+
             // Fetch Data with OAuth credentials
             $data = $this->reportService->getReportData($domain, $accessToken, $filter);
 

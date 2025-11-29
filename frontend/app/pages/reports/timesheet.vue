@@ -75,8 +75,8 @@
                   :class="{'bg-red-50': day.isWeekend}"
                   @click="openDetails(row.employeeId, day.date)">
                 
-                <span v-if="row.days[day.date]" :class="{'font-bold text-blue-600': row.days[day.date] > 0}">
-                  {{ row.days[day.date].toFixed(1) }}
+                <span v-if="row.days[day.date]" :class="{'font-bold text-blue-600': (row.days[day.date] || 0) > 0}">
+                  {{ (row.days[day.date] || 0).toFixed(1) }}
                 </span>
                 <span v-else class="text-gray-300">-</span>
 
@@ -90,44 +90,55 @@
         </table>
       </div>
 
+
+
       <!-- Details Modal -->
-      <!-- Details Modal -->
-      <!-- Details Modal -->
-      <div v-if="selectedCell" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div v-if="selectedCell" class="fixed inset-0 z-50 flex items-center justify-center">
         <!-- Overlay -->
         <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity" @click="selectedCell = null"></div>
         
         <!-- Content -->
-        <div class="bg-white w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-xl sm:rounded-xl p-4 relative z-10 shadow-xl transform transition-transform">
-          <div class="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
-            <h3 class="text-base font-bold text-gray-900">
+        <div class="bg-white w-[90vw] h-[85vh] rounded-xl p-6 relative z-10 shadow-xl transform transition-transform flex flex-col">
+          <div class="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">
               {{ selectedCell.employeeName }}<br>
               <span class="text-sm font-normal text-gray-500">{{ new Date(selectedCell.date).toLocaleDateString() }}</span>
             </h3>
-            <button @click="selectedCell = null" class="text-gray-500 hover:text-gray-700 bg-gray-100 p-2 rounded-full">
+            <button @click="selectedCell = null" class="text-gray-500 hover:text-gray-700 bg-gray-100 p-2 rounded-full transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
           
-          <div class="space-y-3">
-            <div v-for="entry in selectedCell.entries" :key="entry.id" class="bg-gray-50 rounded-lg p-3">
-              <div class="flex justify-between items-start gap-3">
-                <div class="min-w-0 flex-1">
-                  <p class="font-medium text-gray-900 truncate">{{ entry.entryTitle || 'Метка #' + entry.id }}</p>
-                  <p class="text-xs text-gray-600 line-clamp-2">{{ entry.taskTitle || entry.taskName }}</p>
-                  <p class="text-xs text-gray-400 mt-1 truncate">{{ entry.projectName }}</p>
-                </div>
-                <div class="text-right flex-shrink-0">
-                  <span class="block font-bold text-blue-600">{{ Number(entry.hours).toFixed(2) }} ч.</span>
-                  <span class="inline-block px-2 py-0.5 rounded text-[10px] mt-1" 
-                        :class="entry.type === 'Учитываемые' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'">
-                    {{ entry.type }}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div class="overflow-x-auto flex-1">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название метки</th>
+                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Часы</th>
+                  <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Учитываемые</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="entry in selectedCell.entries" :key="entry.id" class="hover:bg-gray-50">
+                  <td class="px-6 py-4 text-sm text-gray-900">
+                    <div class="font-medium">{{ entry.entryTitle || 'Метка #' + entry.id }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ entry.taskTitle || entry.taskName }}</div>
+                    <div class="text-xs text-gray-400">{{ entry.projectName }}</div>
+                  </td>
+                  <td class="px-6 py-4 text-right text-sm font-bold text-blue-600 whitespace-nowrap">
+                    {{ Number(entry.hours).toFixed(2) }} ч.
+                  </td>
+                  <td class="px-6 py-4 text-center text-sm whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          :class="entry.type === 'Учитываемые' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+                      {{ entry.type === 'Учитываемые' ? 'Да' : 'Нет' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -195,7 +206,7 @@ const daysInMonth = computed<DayInfo[]>(() => {
     const d = new Date(year, month, i)
     days.push({
       day: i,
-      date: d.toISOString().split('T')[0],
+      date: d.toISOString().split('T')[0] || '',
       isWeekend: d.getDay() === 0 || d.getDay() === 6
     })
   }
@@ -267,7 +278,8 @@ const timesheetData = computed(() => {
     }
     
     const emp = employeesMap.get(empId)!
-    const dateKey = item.date.split('T')[0] // Assuming ISO string from backend
+    const dateKey = item.date ? item.date.split('T')[0] : ''
+    if (!dateKey) return // Skip invalid dates
     
     // Sum hours
     const hours = Number(item.hours)

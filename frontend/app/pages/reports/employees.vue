@@ -36,9 +36,9 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Проект</label>
-          <select v-model="filters.projectName" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
+          <select v-model="filters.projectId" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
             <option value="">Все проекты</option>
-            <option v-for="project in projects" :key="project.id" :value="project.name">
+            <option v-for="project in projects" :key="project.id" :value="project.id">
               {{ project.name }}
             </option>
           </select>
@@ -197,7 +197,7 @@ const users = ref<{ id: string, name: string }[]>([])
 const projects = ref<{ id: string, name: string }[]>([])
 const filters = ref({
   employeeId: '',
-  projectName: '',
+  projectId: '',
   dateFrom: '',
   dateTo: ''
 })

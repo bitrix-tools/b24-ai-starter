@@ -5,6 +5,7 @@ export interface ReportFilter {
     dateTo?: string
     employeeId?: string
     projectName?: string
+    projectId?: string
 }
 
 export interface ReportItem {
