@@ -19,6 +19,7 @@
         "nelmio/cors-bundle": "^2.0@dev",
         "nesbot/carbon": "^3",
         "odolbeau/phone-number-bundle": "^4.1",
+        "phpoffice/phpspreadsheet": "dev-master",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",
         "symfony/flex": "^2",

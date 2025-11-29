@@ -69,6 +69,30 @@ export const useApiStore = defineStore(
       })
     }
 
+    const getUsers = async (): Promise<{ items: { id: string, name: string, avatar?: string }[] }> => {
+      return await $api('/api/users', {
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        }
+      })
+    }
+
+    const getProjects = async (): Promise<{ items: { id: string, name: string }[] }> => {
+      return await $api('/api/projects', {
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        }
+      })
+    }
+
+    const getDebugSchema = async (): Promise<any> => {
+      return await $api('/api/debug/schema', {
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        }
+      })
+    }
+
     const init = async (b24: B24Frame) => {
       $b24 = b24
       await reinitToken()
@@ -82,7 +106,7 @@ export const useApiStore = defineStore(
 
       const authData = $b24.auth.getAuthData()
 
-      if(authData === false) {
+      if (authData === false) {
         throw new Error('Some problem with auth. See App logic')
       }
 
@@ -107,11 +131,16 @@ export const useApiStore = defineStore(
     }
 
     return {
+      tokenJWT,
+      isInitTokenJWT,
       checkHealth,
       init,
       getEnum,
       getList,
-      postInstall
+      postInstall,
+      getUsers,
+      getProjects,
+      getDebugSchema
     }
   }
 )

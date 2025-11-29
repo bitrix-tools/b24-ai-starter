@@ -27,12 +27,13 @@ class JwtService
     /**
      * Generate JWT token with Bitrix24 domain information.
      *
-     * @param string      $domain   Bitrix24 domain (e.g., "company.bitrix24.com")
-     * @param string|null $memberId Bitrix24 member ID (optional)
+     * @param string      $domain      Bitrix24 domain (e.g., "company.bitrix24.com")
+     * @param string|null $memberId    Bitrix24 member ID (optional)
+     * @param string|null $accessToken Bitrix24 OAuth access token (optional)
      *
      * @return string JWT token
      */
-    public function generateToken(string $domain, ?string $memberId = null): string
+    public function generateToken(string $domain, ?string $memberId = null, ?string $accessToken = null): string
     {
         $issuedAt = time();
         $expiresAt = $issuedAt + $this->ttl;
@@ -50,9 +51,15 @@ class JwtService
             $payload['member_id'] = $memberId;
         }
 
+        // Add access_token if provided
+        if (null !== $accessToken) {
+            $payload['access_token'] = $accessToken;
+        }
+
         $this->logger->debug('Generating JWT token', [
             'domain' => $domain,
             'member_id' => $memberId,
+            'has_access_token' => null !== $accessToken,
             'expires_at' => date('Y-m-d H:i:s', $expiresAt),
         ]);
 

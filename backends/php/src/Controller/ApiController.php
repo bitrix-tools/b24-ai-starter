@@ -48,15 +48,17 @@ class ApiController extends AbstractController
 
             $domain = $data['DOMAIN'];
             $memberId = $data['member_id'] ?? null;
+            $accessToken = $data['AUTH_ID'] ?? null; // OAuth access token from Bitrix24
 
-            // Generate JWT token
+            // Generate JWT token with OAuth access token
             $jsonResponse = new JsonResponse([
-                'token' => $this->jwtService->generateToken($domain, $memberId),
+                'token' => $this->jwtService->generateToken($domain, $memberId, $accessToken),
             ], 200);
 
             $this->logger->debug('ApiController.getToken.finish', [
                 'domain' => $domain,
                 'member_id' => $memberId,
+                'has_access_token' => null !== $accessToken,
                 'expires_in' => $this->jwtService->getTtl(),
             ]);
 
