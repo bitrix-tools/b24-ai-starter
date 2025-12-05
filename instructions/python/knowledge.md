@@ -1,805 +1,234 @@
-# 🐍 Python Backend: Общие знания для разработки с Битрикс24
+# 🐍 Python Backend: Руководство по Django-интеграции с Bitrix24
 
 ## 📋 Обзор
 
-Этот файл содержит **общую информацию по разработке Python-приложений** для Битрикс24, не зависящую от конкретных задач. Для специфических инструкций обратитесь к соответствующим файлам в этой папке.
+- Python backend живёт в `backends/python/api` и построен на Django. FastAPI в проекте не используется.
+- Единственное приложение `main` обслуживает REST-точки `/api*`, реализует авторизацию, работу с моделями и набор служебных декораторов.
+- Аутентификация комбинирует OAuth Bitrix24 (через `b24pysdk`) и собственные JWT, которые выпускаются на основе записей в таблице `bitrix24account`.
+- Ниже описаны настройки, жизненный цикл запросов и практики разработки для поддержки и расширения текущей реализации.
 
 ---
 
-## 🚀 Python экосистема для Битрикс24
+## ⚙️ Стек и зависимости
 
-### Основные инструменты
+### Основные технологии
+- **Django** — веб-фреймворк, управляющий middleware, ORM, admin и точками входа WSGI/ASGI.
+- **b24pysdk==0.2.3a1** — SDK для общения с Bitrix24 (OAuth, REST, события).
+- **PostgreSQL + psycopg2-binary** — БД по умолчанию, используется напрямую из Django.
+- **PyJWT** — генерация и валидация внутренних JWT-токенов.
+- **django-cors-headers** — заголовки CORS/X-Frame для работы внутри интерфейса Bitrix24.
+- **environs** — загрузка конфигурации из `.env` / переменных окружения.
+- **gunicorn** — WSGI-сервер в прод-режиме (см. `Dockerfile`).
 
-#### Bitrix24 Python SDK
-- **Библиотека**: `b24pysdk`
-- **Версия**: Стабильная релизная
-- **Требования**: Python 3.8+, requests, pydantic
-- **Лицензия**: MIT
-
-#### Типичные зависимости (requirements.txt)
+### requirements.txt (`backends/python/api/requirements.txt`)
 ```txt
-b24pysdk>=1.0.0
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
-aiofiles>=23.0.0
-python-dotenv>=1.0.0
-
-# Для разработки
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-black>=23.0.0
-isort>=5.12.0
-mypy>=1.5.0
+Django
+psycopg2-binary
+django-cors-headers
+PyJWT
+gunicorn
+environs
+b24pysdk==0.2.3a1
 ```
 
-### Типичная архитектура Python-проекта
+---
 
-```
-project/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                # FastAPI приложение
-│   ├── config.py              # Конфигурация
-│   ├── models/                # Pydantic модели
-│   │   ├── __init__.py
-│   │   ├── deal.py
-│   │   └── contact.py
-│   ├── services/              # Бизнес-логика
-│   │   ├── __init__.py
-│   │   ├── bitrix24_service.py
-│   │   └── deal_service.py
-│   ├── routers/               # API маршруты
-│   │   ├── __init__.py
-│   │   ├── deals.py
-│   │   └── contacts.py
-│   └── utils/                 # Утилиты
-├── tests/                     # Тесты
+## 🗂️ Структура проекта
+```text
+backends/python/api/
+├── asgi.py / wsgi.py          # стандартные точки входа Django
+├── config.py                  # dataclass Config + загрузка .env
+├── Dockerfile                 # multi-stage (dev/prod)
+├── manage.py                  # CLI Django
 ├── requirements.txt
-├── .env
-└── Dockerfile
+├── settings.py / urls.py      # глобальные настройки и маршрутизация
+└── main/
+    ├── admin.py               # регистрация моделей
+    ├── models.py              # Bitrix24Account, ApplicationInstallation
+    ├── urls.py                # /api*, /api/health и т.д.
+    ├── utils/
+    │   ├── authorized_request.py
+    │   └── decorators/
+    │       ├── auth_required.py
+    │       ├── collect_request_data.py
+    │       └── log_errors.py
+    └── views.py               # обработчики HTTP-запросов
+```
+
+> Таблицы `bitrix24account` и `application_installation` помечены как `managed = False`, поэтому их схемой управляет другой сервис (PHP backend). Django только работает с уже существующими таблицами.
+
+---
+
+## 🔧 Конфигурация
+
+### `config.py`
+`Config` агрегирует параметры окружения через `environs.Env` и экспортируется как синглтон `config`. Все остальные модули (включая `settings.py` и модели) берут значения только отсюда.
+
+| Переменная        | Назначение                                      | Значение по умолчанию |
+|-------------------|--------------------------------------------------|-----------------------|
+| `BUILD_TARGET`    | `dev`/`production`; управляет `DEBUG`            | `dev`                 |
+| `DB_NAME`         | имя БД                                          | `appdb`               |
+| `DB_USER`         | пользователь БД                                 | `appuser`             |
+| `DB_PASSWORD`     | пароль БД                                       | `apppass`             |
+| `DB_HOST` / `PORT`| адрес PostgreSQL (`database`/`5432` в Docker)    | `database` / `5432`   |
+| `CLOUDPUB_TOKEN`  | токен CloudPub                                  | пусто                 |
+| `JWT_SECRET`      | используется и как `SECRET_KEY` Django           | `default_jwt_secret`  |
+| `JWT_ALGORITHM`   | алгоритм подписи JWT                            | `HS256`               |
+| `CLIENT_ID`       | OAuth client ID приложения Bitrix24             | `client_id`           |
+| `CLIENT_SECRET`   | OAuth client secret                             | `client_secret`       |
+| `VIRTUAL_HOST`    | внешний URL; попадает в `CSRF_TRUSTED_ORIGINS`   | `app_base_url`        |
+
+Доп. переменные (например, `ENABLE_RABBITMQ`) читаются Makefile'ом при запуске docker compose.
+
+### `settings.py`
+- `SECRET_KEY = config.jwt_secret`, `DEBUG` определяется `BUILD_TARGET`.
+- `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` автоматически формируются из `VIRTUAL_HOST`, запасные домены — `localhost`, `api-python`.
+- `INSTALLED_APPS` включает стандартный набор Django + `corsheaders` + `main`.
+- `MIDDLEWARE` начинается с `CorsMiddleware`, чтобы корректно проставлять заголовки.
+- `DATABASES['default']` использует `django.db.backends.postgresql_psycopg2` и параметры `Config`.
+- `CORS_ALLOW_ALL_ORIGINS = True` — удобно для dev, но в проде лучше задавать белый список.
+
+```python
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "main",
+]
 ```
 
 ---
 
-## 🔧 Основные паттерны разработки
+## 🚀 Запуск и локальная разработка
 
-### 1. Инициализация SDK
+### Docker / Makefile
+- `make dev-python` — основной сценарий, поднимает профили `frontend,python,cloudpub` (+ `queue`, если в `.env` `ENABLE_RABBITMQ=1`).
+- `make prod-python` — собирает и запускает только Python backend в production-режиме.
 
-#### Простая инициализация
-```python
-from b24pysdk import Bitrix24
-
-# Webhook
-b24 = Bitrix24(
-    webhook_url="https://your-portal.bitrix24.com/rest/1/webhook_key/"
-)
-
-# OAuth
-b24 = Bitrix24(
-    domain="your-portal.bitrix24.com",
-    client_id="your_client_id",
-    client_secret="your_client_secret",
-    access_token="access_token",
-    refresh_token="refresh_token"
-)
+### Без Docker
+```bash
+cd backends/python/api
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate --noinput
+python manage.py runserver 0.0.0.0:8000
 ```
+Конвейер в `Dockerfile` автоматически запускает `makemigrations`, `migrate` и `createsuperuser --noinput`, но локально эти команды можно выполнять вручную.
 
-#### С конфигурацией (рекомендуется)
-```python
-# config.py
-from pydantic_settings import BaseSettings
-
-class Settings(BaseSettings):
-    bitrix24_webhook_url: str
-    bitrix24_domain: str = ""
-    bitrix24_client_id: str = ""
-    bitrix24_client_secret: str = ""
-    
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
-
-# services/bitrix24_service.py
-from b24pysdk import Bitrix24
-from ..config import settings
-
-class Bitrix24Service:
-    def __init__(self):
-        if settings.bitrix24_webhook_url:
-            self.b24 = Bitrix24(webhook_url=settings.bitrix24_webhook_url)
-        else:
-            self.b24 = Bitrix24(
-                domain=settings.bitrix24_domain,
-                client_id=settings.bitrix24_client_id,
-                client_secret=settings.bitrix24_client_secret
-            )
-```
-
-### 2. Работа с данными CRM (асинхронно)
-
-```python
-import asyncio
-from typing import List, Optional
-from b24pysdk import Bitrix24
-
-class DealService:
-    def __init__(self, b24: Bitrix24):
-        self.b24 = b24
-    
-    async def get_deals_list(
-        self, 
-        stage_id: Optional[str] = None,
-        limit: int = 50
-    ) -> List[dict]:
-        """Получение списка сделок"""
-        filter_params = {}
-        if stage_id:
-            filter_params['STAGE_ID'] = stage_id
-            
-        deals = await self.b24.crm.deals.list(
-            filter=filter_params,
-            select=['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID'],
-            limit=limit
-        )
-        return deals
-    
-    async def get_deal_by_id(self, deal_id: int) -> Optional[dict]:
-        """Получение сделки по ID"""
-        try:
-            deal = await self.b24.crm.deals.get(deal_id)
-            return deal
-        except Exception:
-            return None
-    
-    async def create_deal(self, deal_data: dict) -> int:
-        """Создание новой сделки"""
-        deal_id = await self.b24.crm.deals.add(deal_data)
-        return deal_id
-    
-    async def update_deal(self, deal_id: int, update_data: dict) -> bool:
-        """Обновление сделки"""
-        result = await self.b24.crm.deals.update(deal_id, update_data)
-        return result
-```
-
-### 3. Pydantic модели для типизации
-
-```python
-# models/deal.py
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime
-
-class DealBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    opportunity: Optional[float] = Field(None, ge=0)
-    currency_id: str = Field(default="RUB")
-    stage_id: Optional[str] = None
-
-class DealCreate(DealBase):
-    pass
-
-class DealUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    opportunity: Optional[float] = Field(None, ge=0)
-    stage_id: Optional[str] = None
-
-class DealResponse(DealBase):
-    id: int
-    date_create: Optional[datetime] = None
-    date_modify: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
-
-# Конвертация из Bitrix24 API response
-class DealConverter:
-    @staticmethod
-    def from_bitrix24(data: dict) -> DealResponse:
-        """Конвертация ответа API Битрикс24 в Pydantic модель"""
-        return DealResponse(
-            id=int(data['ID']),
-            title=data.get('TITLE', ''),
-            opportunity=float(data.get('OPPORTUNITY', 0)) if data.get('OPPORTUNITY') else None,
-            currency_id=data.get('CURRENCY_ID', 'RUB'),
-            stage_id=data.get('STAGE_ID'),
-            date_create=data.get('DATE_CREATE'),
-            date_modify=data.get('DATE_MODIFY')
-        )
-```
-
-### 4. FastAPI маршруты
-
-```python
-# routers/deals.py
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Optional
-from ..models.deal import DealCreate, DealUpdate, DealResponse
-from ..services.deal_service import DealService
-from ..dependencies import get_deal_service
-
-router = APIRouter(prefix="/deals", tags=["deals"])
-
-@router.get("/", response_model=List[DealResponse])
-async def get_deals(
-    stage_id: Optional[str] = None,
-    limit: int = 50,
-    deal_service: DealService = Depends(get_deal_service)
-):
-    """Получить список сделок"""
-    deals = await deal_service.get_deals_list(stage_id=stage_id, limit=limit)
-    return [DealConverter.from_bitrix24(deal) for deal in deals]
-
-@router.get("/{deal_id}", response_model=DealResponse)
-async def get_deal(
-    deal_id: int,
-    deal_service: DealService = Depends(get_deal_service)
-):
-    """Получить сделку по ID"""
-    deal = await deal_service.get_deal_by_id(deal_id)
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
-    return DealConverter.from_bitrix24(deal)
-
-@router.post("/", response_model=dict)
-async def create_deal(
-    deal_data: DealCreate,
-    deal_service: DealService = Depends(get_deal_service)
-):
-    """Создать новую сделку"""
-    deal_id = await deal_service.create_deal(deal_data.model_dump())
-    return {"id": deal_id, "message": "Deal created successfully"}
-
-@router.patch("/{deal_id}")
-async def update_deal(
-    deal_id: int,
-    update_data: DealUpdate,
-    deal_service: DealService = Depends(get_deal_service)
-):
-    """Обновить сделку"""
-    # Исключаем None значения
-    update_dict = update_data.model_dump(exclude_none=True)
-    
-    result = await deal_service.update_deal(deal_id, update_dict)
-    if not result:
-        raise HTTPException(status_code=404, detail="Deal not found")
-    
-    return {"message": "Deal updated successfully"}
-```
+### Dockerfile (кратко)
+- **base**: `python:3.11-slim`, устанавливает `postgresql-client` и Python-зависимости.
+- **dev**: монтирует проект как volume и запускает `runserver` после миграций.
+- **prod**: копирует код в образ и стартует Gunicorn (`gunicorn wsgi:application --bind 0.0.0.0:8000`).
 
 ---
 
-## 🏗️ Архитектурные подходы
+## 🧱 Приложение `main`
 
-### 1. Dependency Injection с FastAPI
+### URL-маршруты (`main/urls.py`)
+| Метод | Путь             | View        | Описание |
+|-------|------------------|-------------|----------|
+| GET   | `/api`           | `root`      | Быстрый ответ «Python Backend is running»|
+| GET   | `/api/health`    | `health`    | Health-check со статусом и timestamp |
+| GET   | `/api/enum`      | `get_enum`  | Возвращает статический список опций |
+| GET   | `/api/list`      | `get_list`  | Возвращает статический список элементов |
+| POST  | `/api/install`   | `install`   | Создание/обновление `ApplicationInstallation` |
+| POST  | `/api/getToken`  | `get_token` | Выдача нового JWT |
 
-```python
-# dependencies.py
-from functools import lru_cache
-from .services.bitrix24_service import Bitrix24Service
-from .services.deal_service import DealService
+Все обработчики помечены `@xframe_options_exempt`, чтобы их можно было встраивать в iframe Bitrix24.
 
-@lru_cache()
-def get_bitrix24_service() -> Bitrix24Service:
-    """Singleton Bitrix24 сервиса"""
-    return Bitrix24Service()
+### Views (`main/views.py`)
+- Простые GET-эндпоинты служат шаблоном — можно расширять их под нужды проекта.
+- `install` сохраняет `ApplicationInstallation` для портала Bitrix24, используя поля из `request.bitrix24_account`.
+- `get_token` вызывает `Bitrix24Account.create_jwt_token()` (TTL по умолчанию 60 минут).
+- Все view декорированы `@auth_required` и `@log_errors`, поэтому любые ошибки превращаются в JSON с кодом 500 и пишутся в логи.
 
-def get_deal_service(
-    b24_service: Bitrix24Service = Depends(get_bitrix24_service)
-) -> DealService:
-    """Получение сервиса для работы с сделками"""
-    return DealService(b24_service.b24)
-```
-
-### 2. Repository паттерн
-
-```python
-# repositories/deal_repository.py
-from abc import ABC, abstractmethod
-from typing import List, Optional
-from ..models.deal import DealResponse
-
-class DealRepositoryInterface(ABC):
-    @abstractmethod
-    async def find_by_id(self, deal_id: int) -> Optional[DealResponse]:
-        pass
-    
-    @abstractmethod
-    async def find_by_stage(self, stage_id: str) -> List[DealResponse]:
-        pass
-    
-    @abstractmethod
-    async def create(self, deal_data: dict) -> int:
-        pass
-
-class Bitrix24DealRepository(DealRepositoryInterface):
-    def __init__(self, b24: Bitrix24):
-        self.b24 = b24
-    
-    async def find_by_id(self, deal_id: int) -> Optional[DealResponse]:
-        try:
-            deal_data = await self.b24.crm.deals.get(deal_id)
-            return DealConverter.from_bitrix24(deal_data)
-        except Exception:
-            return None
-    
-    async def find_by_stage(self, stage_id: str) -> List[DealResponse]:
-        deals_data = await self.b24.crm.deals.list(
-            filter={'STAGE_ID': stage_id}
-        )
-        return [DealConverter.from_bitrix24(deal) for deal in deals_data]
-    
-    async def create(self, deal_data: dict) -> int:
-        return await self.b24.crm.deals.add(deal_data)
-```
-
-### 3. Service Layer
+### Декораторы и `AuthorizedRequest`
+- `AuthorizedRequest` дополняет `HttpRequest` полем `bitrix24_account` для удобных type hints.
+- `collect_request_data` объединяет JSON-тело, GET и POST-параметры в `request.data`, аккуратно обрабатывая списки значений.
+- `auth_required`:
+  1. Ищет заголовок `Authorization: Bearer <jwt>`.
+  2. При наличии JWT вызывает `Bitrix24Account.get_from_jwt_token()` и кладёт объект в `request.bitrix24_account`.
+  3. Если заголовок отсутствует — собирает `OAuthPlacementData` из `request.data` и вызывает `Bitrix24Account.update_or_create_from_oauth_placement_data()` (через SDK). Объект аккаунта возвращается и также попадает в `request.bitrix24_account`.
+  4. Все ошибки (`DoesNotExist`, `ExpiredSignature`, `BitrixValidationError`) переводятся в JSON-ответы со статусами 400/401.
+- `log_errors("name")` перехватывает исключения и пишет их через стандартный `logging`.
 
 ```python
-# services/deal_service.py
-from typing import List, Optional
-from ..repositories.deal_repository import DealRepositoryInterface
-from ..models.deal import DealResponse, DealCreate
-
-class DealService:
-    def __init__(self, deal_repository: DealRepositoryInterface):
-        self.repository = deal_repository
-    
-    async def get_active_deals(self) -> List[DealResponse]:
-        """Получить активные сделки"""
-        active_stages = ['NEW', 'PREPARATION', 'PROPOSAL']
-        deals = []
-        
-        for stage in active_stages:
-            stage_deals = await self.repository.find_by_stage(stage)
-            deals.extend(stage_deals)
-            
-        return sorted(deals, key=lambda x: x.date_create, reverse=True)
-    
-    async def create_deal_with_validation(self, deal_data: DealCreate) -> int:
-        """Создать сделку с дополнительной валидацией"""
-        
-        # Бизнес-логика валидации
-        if deal_data.opportunity and deal_data.opportunity < 1000:
-            raise ValueError("Минимальная сумма сделки: 1000")
-        
-        # Создание сделки
-        deal_dict = deal_data.model_dump()
-        deal_id = await self.repository.create(deal_dict)
-        
-        # Логирование или дополнительные действия
-        await self._log_deal_creation(deal_id, deal_data)
-        
-        return deal_id
-    
-    async def _log_deal_creation(self, deal_id: int, deal_data: DealCreate):
-        """Логирование создания сделки"""
-        # Здесь может быть логика логирования, уведомлений и т.д.
-        pass
+@log_errors("get_token")
+@auth_required
+def get_token(request: AuthorizedRequest):
+    return JsonResponse({"token": request.bitrix24_account.create_jwt_token()})
 ```
+
+### Модели (`main/models.py`)
+- `Bitrix24Account` наследует `AbstractBitrixToken` и связан с таблицей `bitrix24account` (UUID PK). Важные методы:
+  - `bitrix_app` — класс-свойство, строящее `BitrixApp` из `CLIENT_ID/CLIENT_SECRET`.
+  - `client` — враппер над `b24pysdk.Client` для работы с REST API.
+  - `create_jwt_token(minutes=60)` / `get_from_jwt_token` — выпуск и проверка внутренних токенов PyJWT.
+  - `update_or_create_from_oauth_placement_data` — центральная точка входа из `auth_required`, создаёт или обновляет аккаунт по данным OAuth.
+  - Обработчики сигналов (`portal_domain_changed_signal`, `oauth_token_renewed_signal`) синхронизируют поля записи при событиях Bitrix24.
+- `ApplicationInstallation` хранит статус установки приложения на портале и связан `OneToOne` с `Bitrix24Account`.
+
+### Админ-панель (`main/admin.py`)
+- Обе модели зарегистрированы с динамическим `list_display`; поле `id` только для чтения.
+- Суперпользователь для dev создаётся автоматически (команда `createsuperuser --noinput` в Docker). URL админки — `/api/admin/`.
 
 ---
 
-## 🔐 Безопасность и best practices
-
-### 1. Валидация и обработка ошибок
-
-```python
-from fastapi import HTTPException
-from pydantic import ValidationError
-import logging
-
-logger = logging.getLogger(__name__)
-
-class DealService:
-    async def safe_create_deal(self, deal_data: dict) -> dict:
-        """Безопасное создание сделки с обработкой ошибок"""
-        try:
-            # Валидация через Pydantic
-            validated_data = DealCreate(**deal_data)
-            
-            # Создание сделки
-            deal_id = await self.repository.create(validated_data.model_dump())
-            
-            logger.info(f"Deal created successfully: {deal_id}")
-            return {"success": True, "deal_id": deal_id}
-            
-        except ValidationError as e:
-            logger.error(f"Validation error: {e}")
-            raise HTTPException(status_code=422, detail=str(e))
-            
-        except Exception as e:
-            logger.error(f"Unexpected error creating deal: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error")
-```
-
-### 2. Кэширование с Redis
-
-```python
-import redis.asyncio as redis
-import json
-from typing import Optional
-
-class CachedDealService:
-    def __init__(self, deal_service: DealService, redis_client: redis.Redis):
-        self.deal_service = deal_service
-        self.redis = redis_client
-        self.cache_ttl = 300  # 5 минут
-    
-    async def get_deal_by_id(self, deal_id: int) -> Optional[DealResponse]:
-        """Получение сделки с кэшированием"""
-        cache_key = f"deal:{deal_id}"
-        
-        # Проверяем кэш
-        cached = await self.redis.get(cache_key)
-        if cached:
-            deal_data = json.loads(cached)
-            return DealResponse(**deal_data)
-        
-        # Получаем из API
-        deal = await self.deal_service.get_deal_by_id(deal_id)
-        if deal:
-            # Сохраняем в кэш
-            await self.redis.setex(
-                cache_key, 
-                self.cache_ttl, 
-                deal.model_dump_json()
-            )
-        
-        return deal
-```
-
-### 3. Асинхронные batch-запросы
-
-```python
-import asyncio
-from typing import List
-
-class BatchDealService:
-    def __init__(self, b24: Bitrix24):
-        self.b24 = b24
-    
-    async def get_deals_with_contacts(self, deal_ids: List[int]) -> dict:
-        """Получение сделок и их контактов параллельно"""
-        
-        # Создаем задачи для параллельного выполнения
-        deal_tasks = [self.b24.crm.deals.get(deal_id) for deal_id in deal_ids]
-        contact_tasks = [
-            self.b24.crm.deals.contacts.get(deal_id) 
-            for deal_id in deal_ids
-        ]
-        
-        # Выполняем все запросы параллельно
-        deals_results = await asyncio.gather(*deal_tasks, return_exceptions=True)
-        contacts_results = await asyncio.gather(*contact_tasks, return_exceptions=True)
-        
-        # Обрабатываем результаты
-        result = {}
-        for i, deal_id in enumerate(deal_ids):
-            if not isinstance(deals_results[i], Exception):
-                result[deal_id] = {
-                    'deal': deals_results[i],
-                    'contacts': contacts_results[i] if not isinstance(contacts_results[i], Exception) else []
-                }
-        
-        return result
-```
+## 🔄 Жизненный цикл установки и выдачи токенов
+1. Bitrix24 вызывает backend и передаёт payload OAuth placement.
+2. `collect_request_data` кладёт JSON + query-параметры в `request.data`.
+3. `auth_required` конвертирует payload в `OAuthPlacementData` и вызывает `Bitrix24Account.update_or_create_from_oauth_placement_data()` (SDK дополнительно тянет `app_info`).
+4. После успешной авторизации:
+   - `install` создаёт/обновляет `ApplicationInstallation`.
+   - `get_token` выпускает JWT и отдаёт его клиенту.
+5. Фронтенд сохраняет JWT и передаёт его в заголовке `Authorization` при всех будущих запросах; `auth_required` в этом случае просто валидирует токен и не обращается к API Bitrix24.
 
 ---
 
-## 🧪 Тестирование
-
-### Unit тесты с pytest
-
-```python
-# tests/test_deal_service.py
-import pytest
-from unittest.mock import AsyncMock, Mock
-from app.services.deal_service import DealService
-from app.models.deal import DealCreate, DealResponse
-
-@pytest.fixture
-def mock_repository():
-    """Mock репозитория для тестов"""
-    repository = Mock()
-    repository.create = AsyncMock(return_value=123)
-    repository.find_by_id = AsyncMock(return_value=None)
-    return repository
-
-@pytest.fixture
-def deal_service(mock_repository):
-    """Сервис сделок с mock репозиторием"""
-    return DealService(mock_repository)
-
-@pytest.mark.asyncio
-async def test_create_deal_with_validation_success(deal_service, mock_repository):
-    """Тест успешного создания сделки"""
-    deal_data = DealCreate(
-        title="Test Deal",
-        opportunity=50000.0,
-        currency_id="RUB"
-    )
-    
-    result = await deal_service.create_deal_with_validation(deal_data)
-    
-    assert result == 123
-    mock_repository.create.assert_called_once()
-
-@pytest.mark.asyncio
-async def test_create_deal_validation_error(deal_service):
-    """Тест ошибки валидации"""
-    deal_data = DealCreate(
-        title="Small Deal",
-        opportunity=500.0  # Меньше минимальной суммы
-    )
-    
-    with pytest.raises(ValueError, match="Минимальная сумма сделки: 1000"):
-        await deal_service.create_deal_with_validation(deal_data)
-```
-
-### Integration тесты
-
-```python
-# tests/test_integration.py
-import pytest
-from httpx import AsyncClient
-from app.main import app
-
-@pytest.mark.asyncio
-async def test_create_and_get_deal():
-    """Интеграционный тест создания и получения сделки"""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        # Создаем сделку
-        create_response = await client.post(
-            "/deals/",
-            json={
-                "title": "Integration Test Deal",
-                "opportunity": 75000.0,
-                "currency_id": "RUB"
-            }
-        )
-        
-        assert create_response.status_code == 200
-        deal_id = create_response.json()["id"]
-        
-        # Получаем созданную сделку
-        get_response = await client.get(f"/deals/{deal_id}")
-        
-        assert get_response.status_code == 200
-        deal_data = get_response.json()
-        assert deal_data["title"] == "Integration Test Deal"
-        assert deal_data["opportunity"] == 75000.0
-```
+## 🛡️ Безопасность
+- Храните `JWT_SECRET`, OAuth-ключи и параметры БД в `.env` / секретах CI/CD. В продакшене не используйте дефолтные значения.
+- Регулярно обновляйте JWT (TTL задаётся параметром `minutes` в `create_jwt_token`). При истечении срока фронтенд должен заново вызвать `/api/getToken` или повторить OAuth-поток.
+- `CSRF_TRUSTED_ORIGINS` формируется автоматически, но при работе с несколькими доменами Bitrix24 лучше явно перечислить их в `VIRTUAL_HOST` или расширить логику.
+- В продакшене задайте `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_CREDENTIALS`, чтобы ограничить источники запросов.
+- Подключите централизованный сбор логов (Sentry/ELK). Сейчас `log_errors` выводит в стандартный `logging`.
 
 ---
 
-## 📊 Мониторинг и производительность
-
-### 1. Логирование с структурированными данными
-
-```python
-import logging
-import structlog
-from typing import Any, Dict
-
-# Конфигурация structlog
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
-)
-
-logger = structlog.get_logger()
-
-class DealService:
-    async def create_deal(self, deal_data: dict) -> int:
-        """Создание сделки с логированием"""
-        logger.info(
-            "Creating new deal",
-            deal_title=deal_data.get('title'),
-            deal_amount=deal_data.get('opportunity')
-        )
-        
-        try:
-            deal_id = await self.repository.create(deal_data)
-            
-            logger.info(
-                "Deal created successfully",
-                deal_id=deal_id,
-                deal_title=deal_data.get('title')
-            )
-            
-            return deal_id
-            
-        except Exception as e:
-            logger.error(
-                "Failed to create deal",
-                error=str(e),
-                deal_data=deal_data,
-                exc_info=True
-            )
-            raise
-```
-
-### 2. Метрики производительности
-
-```python
-import time
-from functools import wraps
-from typing import Callable
-
-def measure_time(func_name: str = None):
-    """Декоратор для измерения времени выполнения"""
-    def decorator(func: Callable):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            name = func_name or f"{func.__module__}.{func.__name__}"
-            start_time = time.perf_counter()
-            
-            try:
-                result = await func(*args, **kwargs)
-                duration = time.perf_counter() - start_time
-                
-                logger.info(
-                    "Function executed successfully",
-                    function_name=name,
-                    duration_seconds=duration
-                )
-                
-                return result
-                
-            except Exception as e:
-                duration = time.perf_counter() - start_time
-                
-                logger.error(
-                    "Function execution failed",
-                    function_name=name,
-                    duration_seconds=duration,
-                    error=str(e)
-                )
-                raise
-                
-        return wrapper
-    return decorator
-
-# Использование
-class DealService:
-    @measure_time("deal_service.get_deals_list")
-    async def get_deals_list(self, stage_id: str = None) -> List[dict]:
-        # Реализация метода
-        pass
-```
-
-### 3. Health check endpoints
-
-```python
-# routers/health.py
-from fastapi import APIRouter, HTTPException
-from ..services.bitrix24_service import Bitrix24Service
-
-router = APIRouter(prefix="/health", tags=["health"])
-
-@router.get("/")
-async def health_check():
-    """Базовая проверка здоровья приложения"""
-    return {"status": "healthy", "timestamp": time.time()}
-
-@router.get("/bitrix24")
-async def bitrix24_health_check(
-    b24_service: Bitrix24Service = Depends(get_bitrix24_service)
-):
-    """Проверка подключения к Битрикс24"""
-    try:
-        # Простой запрос для проверки связи
-        result = await b24_service.b24.crm.deals.list(limit=1)
-        
-        return {
-            "status": "healthy",
-            "bitrix24_connection": "ok",
-            "timestamp": time.time()
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Bitrix24 connection failed: {str(e)}"
-        )
-```
+## 📦 Развёртывание
+- Docker-образ собирается из `python:3.11-slim`. Следите, чтобы в `requirements.txt` не было лишних пакетов, иначе образ разрастётся.
+- Перед деплоем обновите `.env`: параметры БД, OAuth, JWT, `VIRTUAL_HOST`.
+- `docker compose --env-file .env up --build` использует указанные профили (`COMPOSE_PROFILES=python` для прод-режима).
+- В Kubernetes/аналогах выполняйте `python manage.py migrate` отдельным job, чтобы исключить гонки миграций.
 
 ---
 
-## 🔧 DevOps и развертывание
-
-### Docker
-
-```dockerfile
-# Dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Установка зависимостей
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копирование кода
-COPY ./app ./app
-
-# Переменные окружения
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-
-# Запуск приложения
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### docker-compose для разработки
-
-```yaml
-# docker-compose.dev.yml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - BITRIX24_WEBHOOK_URL=${BITRIX24_WEBHOOK_URL}
-    volumes:
-      - ./app:/app/app
-    depends_on:
-      - redis
-    
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-```
+## 🧪 Тестирование (рекомендации)
+- Настройте `pytest` + `pytest-django` или используйте встроенный `manage.py test`.
+- Покройте:
+  - `auth_required` (ветки JWT vs OAuth payload, ошибки PyJWT, BitrixValidationError).
+  - `Bitrix24Account.create_jwt_token` / `get_from_jwt_token` (некорректный секрет, истечение срока).
+  - Views `install`/`get_token` с mock'ами моделей и SDK.
+- Для интеграционных тестов можно использовать `django.test.Client` и monkeypatch `b24pysdk`.
 
 ---
 
-## 📚 Специфические инструкции
-
-### Детальные руководства в этой папке:
-
-**➡️ SDK и API интеграция:** [`bitrix24-python-sdk.md`](bitrix24-python-sdk.md)
-
-**➡️ Code Review стандарты:** [`code-review.md`](code-review.md)
-
----
-
-## ⚠️ Часто встречающиеся проблемы
-
-### 1. Асинхронность и блокирующие операции
-
-**Проблема:** Использование синхронных библиотек в асинхронном коде
-**Решение:** Использовать `asyncio.to_thread()` для блокирующих операций
-
-### 2. Управление соединениями
-
-**Проблема:** Слишком много открытых соединений к API
-**Решение:** Использовать connection pooling и правильный lifecycle
-
-### 3. Memory leaks в long-running приложениях
-
-**Проблема:** Утечки памяти при длительной работе
-**Решение:** Правильное управление объектами, профилирование памяти
+## 🐞 Траблшутинг
+- **`Invalid JWT token`** — секрет в `.env` не совпадает с тем, что использовался при выдаче токена. Перевыпустите JWT через `/api/getToken`.
+- **`JWT token has expired`** — увеличьте TTL или настроьте автообновление токена на фронте.
+- **Ошибки CSRF/iframe** — проверьте `VIRTUAL_HOST` и корректность домена портала.
+- **`BitrixValidationError`** при установке — проверьте, что в payload есть обязательные поля (`domain`, `member_id`, `auth[access_token]`, и т.д.).
+- **Проблемы с БД** — убедитесь, что контейнер `database` запущен и доступен по `DB_HOST`.
 
 ---
 
-*Обновлено: 25 ноября 2025*
-*Версия: 2.0 - Модульная архитектура знаний*
+## 📚 Дополнительные материалы
+- `instructions/python/bitrix24-python-sdk.md` — детали работы с SDK и примеры REST-запросов.
+- `instructions/python/code-review.md` — чек-лист ревью Python-кода.
+- `instructions/queues/python.md` — рекомендации по фоновой обработке (Celery/RabbitMQ).
+- `README.md` и `makefile` в корне описывают общую структуру docker-профилей и сценарии запуска стенда.
+
+*Обновлено: 5 декабря 2025 года.*
