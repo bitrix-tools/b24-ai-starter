@@ -1,4 +1,4 @@
-.PHONY: help dev-init dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs logs-nginxproxy clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate
+.PHONY: help dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs logs-nginxproxy clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down
 
 # Variables
 DOCKER_COMPOSE = docker compose
@@ -10,6 +10,8 @@ help: ## Show this help message
 	@echo ""
 	@echo "📋 Setup & Initialization:"
 	@echo "  dev-init          Interactive project setup (recommended)"
+	@echo "  create-version    Clone current project into versions/<name>"
+	@echo "  delete-version    Remove versions/<name>"
 	@echo ""
 	@echo "🛠  Development:"
 	@echo "  dev-front         Start frontend only"
@@ -42,8 +44,15 @@ help: ## Show this help message
 	@echo "  clean             Complete Docker cleanup (containers, networks, volumes)"
 	@echo "  down-all          Stop all containers including server compose"
 	@echo ""
+	@echo "📨 Queues:"
+	@echo "  queue-up          Start RabbitMQ only (profile queue)"
+	@echo "  queue-down        Stop RabbitMQ only"
+	@echo ""
 	@echo "🔧 Troubleshooting:"
 	@echo "  fix-php           Fix PHP backend dependencies"
+	@echo ""
+	@echo "🛡  Security:"
+	@echo "  security-scan     Run dependency vulnerability audit"
 	@echo ""
 	@echo "💡 Quick start: make dev-init"
 	@echo ""
@@ -54,6 +63,14 @@ help: ## Show this help message
 dev-init:
 	@echo "🚀 Initializing Bitrix24 AI Starter project..."
 	@./scripts/dev-init.sh
+
+create-version:
+	@echo "📂 Creating a new project version..."
+	@./scripts/create-version.sh $(VERSION)
+
+delete-version:
+	@echo "🗑 Removing a project version..."
+	@./scripts/delete-version.sh $(VERSION)
 
 fix-php:
 	@echo "🔧 Fixing PHP backend dependencies..."
@@ -67,7 +84,14 @@ dev-front:
 ## PHP
 dev-php:
 	@echo "Starting dev php"
-	COMPOSE_PROFILES=frontend,php,cloudpub docker compose --env-file .env up --build
+	@ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
+	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
+	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
+	  PROFILES="frontend,php,cloudpub,queue"; \
+	else \
+	  PROFILES="frontend,php,cloudpub"; \
+	fi; \
+	COMPOSE_PROFILES=$$PROFILES docker compose --env-file .env up --build
 
 # work with composer
 .PHONY: composer-install
@@ -117,6 +141,10 @@ lint-cs-fixer:
 lint-cs-fixer-fix:
 	COMPOSE_PROFILES=php-cli $(DOCKER_COMPOSE) run --rm --workdir /var/www php-cli vendor/bin/php-cs-fixer fix --verbose --diff
 
+.PHONY: security-scan
+security-scan:
+	@./scripts/security-scan.sh
+
 # Doctrine/Symfony database commands
 
 # ATTENTION!
@@ -150,12 +178,26 @@ dev-php-db-schema-validate:
 ## Python
 dev-python:
 	@echo "Starting dev python"
-	COMPOSE_PROFILES=frontend,python,cloudpub docker compose --env-file .env up --build
+	@ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
+	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
+	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
+	  PROFILES="frontend,python,cloudpub,queue"; \
+	else \
+	  PROFILES="frontend,python,cloudpub"; \
+	fi; \
+	COMPOSE_PROFILES=$$PROFILES docker compose --env-file .env up --build
 
 ## NodeJs
 dev-node:
 	@echo "Starting dev node"
-	COMPOSE_PROFILES=frontend,node,cloudpub docker compose --env-file .env up --build
+	@ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
+	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
+	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
+	  PROFILES="frontend,node,cloudpub,queue"; \
+	else \
+	  PROFILES="frontend,node,cloudpub"; \
+	fi; \
+	COMPOSE_PROFILES=$$PROFILES docker compose --env-file .env up --build
 
 # Production
 prod-php:
@@ -179,8 +221,21 @@ ps:
 
 down:
 	@echo "🛑 Останавливаем все контейнеры..."
-	COMPOSE_PROFILES=frontend,php,python,node,cloudpub docker compose down --remove-orphans || true
+	COMPOSE_PROFILES=frontend,php,python,node,cloudpub,queue docker compose down --remove-orphans || true
 	docker container stop $$(docker container ls -q --filter "name=b24" --filter "name=frontend" --filter "name=api" --filter "name=cloudpub") 2>/dev/null || true
+
+queue-up:
+	@echo "▶️ Запускаем только RabbitMQ"
+	@ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
+	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
+	if [ "$$ENABLE_RABBITMQ_VALUE" != "1" ]; then \
+	  echo "⚠️  ENABLE_RABBITMQ=0 в .env — сервис запустится, но переменные стоит обновить"; \
+	fi; \
+	COMPOSE_PROFILES=queue docker compose --env-file .env up rabbitmq --build -d
+
+queue-down:
+	@echo "⏹ Останавливаем только RabbitMQ"
+	COMPOSE_PROFILES=queue docker compose --env-file .env stop rabbitmq || true
 
 down-all:
 	docker compose down --remove-orphans

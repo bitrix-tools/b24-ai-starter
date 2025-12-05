@@ -20,6 +20,28 @@ services:
     networks:
       - internal-net
 
+  # (~) RabbitMQ
+  rabbitmq:
+    profiles: ["queue"]
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-queue_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-queue_password}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./logs/rabbitmq:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal-net
+
   # (~) Frontend
   frontend:
     profiles: [ "frontend" ]
@@ -170,3 +192,4 @@ networks:
 volumes:
   postgres_data:
   cloudpub-config:
+  rabbitmq_data:

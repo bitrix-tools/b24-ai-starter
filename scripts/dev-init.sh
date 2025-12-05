@@ -1,11 +1,60 @@
 #!/bin/bash
 
-# Цвета для вывода
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+set -euo pipefail
+
+# Цвета для вывода (отключаем, если stdout не TTY)
+if [ -t 1 ]; then
+    ESC="$(printf '\033')"
+    RED="${ESC}[0;31m"
+    GREEN="${ESC}[0;32m"
+    YELLOW="${ESC}[1;33m"
+    BLUE="${ESC}[0;34m"
+    NC="${ESC}[0m"
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    NC=''
+fi
+
+# Helpers for environment manipulations
+set_env_var() {
+    local key="$1"
+    local value="$2"
+
+    if grep -q "^${key}=" .env 2>/dev/null; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|^${key}=.*|${key}=${value}|" .env
+        else
+            sed -i "s|^${key}=.*|${key}=${value}|" .env
+        fi
+    else
+        echo "${key}=${value}" >> .env
+    fi
+}
+
+get_env_var() {
+    local key="$1"
+    local default_value="$2"
+    local current_value
+
+    current_value=$(grep -E "^${key}=" .env 2>/dev/null | tail -n1 | cut -d= -f2- )
+    if [ -z "$current_value" ]; then
+        echo "$default_value"
+    else
+        echo "$current_value"
+    fi
+}
+
+generate_random_string() {
+    local length="${1:-8}"
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex $((length / 2))
+    else
+        tr -dc 'a-z0-9' </dev/urandom | head -c "$length"
+    fi
+}
 
 # Функция для вывода заголовков
 print_header() {
@@ -31,6 +80,159 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
+# Определяем пути
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VERSIONS_DIR="$REPO_ROOT/versions"
+WORKDIR="$REPO_ROOT"
+SELECTED_VERSION=""
+ACTIVE_CONTEXT_LABEL="корневая копия"
+
+# Обработка аргументов/переменных
+REQUESTED_VERSION=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -v|--version)
+            shift
+            if [ $# -eq 0 ]; then
+                print_error "Для параметра --version укажите имя версии (или root)"
+                exit 1
+            fi
+            REQUESTED_VERSION="$1"
+            shift
+            ;;
+        -h|--help)
+            echo "Использование: $0 [--version <имя>|root]"
+            exit 0
+            ;;
+        *)
+            print_error "Неизвестный аргумент: $1"
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$REQUESTED_VERSION" ] && [ -n "${DEV_INIT_VERSION:-}" ]; then
+    REQUESTED_VERSION="${DEV_INIT_VERSION}"
+fi
+
+# Сканируем доступные версии
+AVAILABLE_VERSIONS=()
+if [ -d "$VERSIONS_DIR" ]; then
+    while IFS= read -r dir; do
+        [ -z "$dir" ] && continue
+        AVAILABLE_VERSIONS+=("$(basename "$dir")")
+    done < <(find "$VERSIONS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+fi
+
+DEFAULT_VERSION_FROM_ENV=""
+if [ -f "$REPO_ROOT/.env" ]; then
+    if grep -qE '^APP_VERSION=' "$REPO_ROOT/.env"; then
+        DEFAULT_VERSION_FROM_ENV=$(grep -E '^APP_VERSION=' "$REPO_ROOT/.env" | tail -n1 | cut -d= -f2- | tr -d '[:space:]')
+    fi
+fi
+
+select_version_interactively() {
+    local total="$1"
+    local default_choice="$2"
+    local choice=""
+
+    while true; do
+        read -p "Введите номер [${default_choice}]: " choice
+        choice=${choice:-$default_choice}
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 0 ] && [ "$choice" -le "$total" ]; then
+            echo "$choice"
+            return 0
+        fi
+
+        print_warning "Некорректный выбор, попробуйте снова."
+    done
+}
+
+if [ ${#AVAILABLE_VERSIONS[@]} -gt 0 ]; then
+    TOTAL_OPTIONS=${#AVAILABLE_VERSIONS[@]}
+    DEFAULT_CHOICE=0
+
+    if [ -n "$DEFAULT_VERSION_FROM_ENV" ]; then
+        for idx in "${!AVAILABLE_VERSIONS[@]}"; do
+            if [ "${AVAILABLE_VERSIONS[$idx]}" = "$DEFAULT_VERSION_FROM_ENV" ]; then
+                DEFAULT_CHOICE=$((idx + 1))
+                break
+            fi
+        done
+    fi
+
+    if [ -n "$REQUESTED_VERSION" ]; then
+        REQ_LOWER=$(printf '%s' "$REQUESTED_VERSION" | tr '[:upper:]' '[:lower:]')
+        if [ "$REQ_LOWER" = "root" ]; then
+            SELECTED_VERSION=""
+        else
+            FOUND=false
+            for name in "${AVAILABLE_VERSIONS[@]}"; do
+                if [ "$name" = "$REQUESTED_VERSION" ]; then
+                    FOUND=true
+                    break
+                fi
+            done
+
+            if [ "$FOUND" = false ]; then
+                print_error "Версия '$REQUESTED_VERSION' не найдена в каталоге versions/"
+                exit 1
+            fi
+
+            SELECTED_VERSION="$REQUESTED_VERSION"
+        fi
+    else
+        print_header "📦 Обнаружены версии проекта"
+        ROOT_SUFFIX=""
+        if [ "$DEFAULT_CHOICE" -eq 0 ]; then
+            ROOT_SUFFIX=" (по умолчанию)"
+        fi
+        echo "0) Корневая копия репозитория${ROOT_SUFFIX}"
+        for idx in "${!AVAILABLE_VERSIONS[@]}"; do
+            num=$((idx + 1))
+            suffix=""
+            if [ "$num" -eq "$DEFAULT_CHOICE" ]; then
+                suffix=" (по умолчанию)"
+            fi
+            echo "${num}) versions/${AVAILABLE_VERSIONS[$idx]}${suffix}"
+        done
+
+        SELECTED_NUMBER=$(select_version_interactively "$TOTAL_OPTIONS" "$DEFAULT_CHOICE")
+        if [ "$SELECTED_NUMBER" -eq 0 ]; then
+            SELECTED_VERSION=""
+        else
+            array_index=$((SELECTED_NUMBER - 1))
+            SELECTED_VERSION="${AVAILABLE_VERSIONS[$array_index]}"
+        fi
+    fi
+else
+    if [ -n "$REQUESTED_VERSION" ]; then
+        REQ_LOWER=$(printf '%s' "$REQUESTED_VERSION" | tr '[:upper:]' '[:lower:]')
+        if [ "$REQ_LOWER" != "root" ]; then
+            print_error "Каталог versions/ отсутствует, невозможно выбрать '$REQUESTED_VERSION'"
+            exit 1
+        fi
+    fi
+fi
+
+if [ -n "$SELECTED_VERSION" ]; then
+    WORKDIR="$VERSIONS_DIR/$SELECTED_VERSION"
+    if [ ! -d "$WORKDIR" ]; then
+        print_error "Каталог versions/$SELECTED_VERSION не найден"
+        exit 1
+    fi
+    ACTIVE_CONTEXT_LABEL="versions/$SELECTED_VERSION"
+else
+    WORKDIR="$REPO_ROOT"
+    ACTIVE_CONTEXT_LABEL="корневая копия"
+fi
+
+cd "$WORKDIR"
+
+print_header "📁 Контекст: $ACTIVE_CONTEXT_LABEL"
+
 # Проверяем наличие .env файла
 if [ ! -f ".env" ]; then
     print_warning "Файл .env не найден. Копируем из .env.example..."
@@ -47,7 +249,7 @@ else
     print_success "Файл .env найден"
 fi
 
-print_header "🚀 Bitrix24 AI Starter - Инициализация проекта"
+print_header "🚀 Bitrix24 AI Starter - Инициализация проекта (${ACTIVE_CONTEXT_LABEL})"
 
 # 1. Запрос API ключа CloudPub
 print_header "🔑 Настройка CloudPub"
@@ -130,6 +332,57 @@ else
 fi
 
 print_success "SERVER_HOST обновлен в .env: $SERVER_HOST"
+
+print_header "🐇 Настройка RabbitMQ"
+read -p "Включить RabbitMQ для фоновых задач? (y/N, по умолчанию n): " RABBITMQ_TOGGLE
+RABBITMQ_TOGGLE=${RABBITMQ_TOGGLE:-n}
+
+RABBITMQ_ENABLED="0"
+
+if [[ "$RABBITMQ_TOGGLE" =~ ^[Yy]$ ]]; then
+    RABBITMQ_ENABLED="1"
+
+    print_header "⚙ Режим настройки RabbitMQ"
+    echo "1) Автоматически (рекомендуется)"
+    echo "2) Вручную"
+    read -p "Выберите режим [1]: " RABBITMQ_MODE
+    RABBITMQ_MODE=${RABBITMQ_MODE:-1}
+
+    if [ "$RABBITMQ_MODE" -eq 1 ]; then
+        RABBITMQ_USER="queue_$(generate_random_string 6)"
+        RABBITMQ_PASSWORD="$(generate_random_string 12)"
+        RABBITMQ_PREFETCH="5"
+
+        print_success "RabbitMQ будет настроен автоматически"
+        echo "Имя пользователя: $RABBITMQ_USER"
+        echo "Пароль: $RABBITMQ_PASSWORD"
+        echo "Prefetch: $RABBITMQ_PREFETCH"
+    else
+        EXISTING_RABBITMQ_USER=$(get_env_var "RABBITMQ_USER" "queue_user")
+        read -p "Имя пользователя [${EXISTING_RABBITMQ_USER}]: " RABBITMQ_USER
+        RABBITMQ_USER=${RABBITMQ_USER:-$EXISTING_RABBITMQ_USER}
+
+        EXISTING_RABBITMQ_PASSWORD=$(get_env_var "RABBITMQ_PASSWORD" "queue_password")
+        read -p "Пароль [${EXISTING_RABBITMQ_PASSWORD}]: " RABBITMQ_PASSWORD
+        RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-$EXISTING_RABBITMQ_PASSWORD}
+
+        EXISTING_RABBITMQ_PREFETCH=$(get_env_var "RABBITMQ_PREFETCH" "5")
+        read -p "Prefetch (размер выборки сообщений) [${EXISTING_RABBITMQ_PREFETCH}]: " RABBITMQ_PREFETCH
+        RABBITMQ_PREFETCH=${RABBITMQ_PREFETCH:-$EXISTING_RABBITMQ_PREFETCH}
+    fi
+else
+    print_warning "RabbitMQ будет отключен. Вы сможете включить его позднее вручную."
+fi
+
+set_env_var "ENABLE_RABBITMQ" "$RABBITMQ_ENABLED"
+
+if [ "$RABBITMQ_ENABLED" = "1" ]; then
+    set_env_var "RABBITMQ_USER" "$RABBITMQ_USER"
+    set_env_var "RABBITMQ_PASSWORD" "$RABBITMQ_PASSWORD"
+    set_env_var "RABBITMQ_PREFETCH" "$RABBITMQ_PREFETCH"
+    set_env_var "RABBITMQ_DSN" "amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/%2f"
+    print_success "Параметры RabbitMQ сохранены в .env"
+fi
 
 # Удаляем неиспользуемые папки бэкендов и инструкций
 print_header "🗂 Очистка неиспользуемых бэкендов и инструкций"
@@ -214,13 +467,30 @@ docker network prune -f > /dev/null 2>&1 || true
 docker volume prune -f > /dev/null 2>&1 || true
 sleep 5  # Даём больше времени Docker'у для полной очистки
 
+# Дополнительно удаляем стандартные контейнеры, если они зависли с прошлого запуска
+for stuck_container in frontend cloudpubFront; do
+    if docker ps -a --format '{{.Names}}' | grep -qx "$stuck_container"; then
+        print_warning "Удаляем зависший контейнер $stuck_container..."
+        docker rm -f "$stuck_container" > /dev/null 2>&1 || true
+    fi
+done
+
 # ЭТАП 1: Запускаем только CloudPub и минимальный frontend для получения домена
 print_header "🌐 ЭТАП 1: Получение CloudPub домена"
 echo "Запускаем CloudPub для получения публичного домена..."
 echo "Важно: запускаем только frontend + CloudPub для получения домена, БД не нужна"
 
 # Запускаем только frontend и cloudpub без БД - этого достаточно для получения домена
-COMPOSE_PROFILES=frontend,cloudpub docker compose up frontend cloudpub --build -d > "$TEMP_OUTPUT" 2>&1
+if ! COMPOSE_PROFILES=frontend,cloudpub docker compose up frontend cloudpub --build -d > "$TEMP_OUTPUT" 2>&1; then
+    print_error "Не удалось запустить контейнеры frontend и cloudpub на первом этапе."
+    if [ -s "$TEMP_OUTPUT" ]; then
+        echo ""
+        echo "=== Вывод docker compose ==="
+        cat "$TEMP_OUTPUT"
+        echo "=== Конец вывода ==="
+    fi
+    exit 1
+fi
 
 # Ждем запуск CloudPub
 print_warning "Ожидание запуска CloudPub..."
@@ -274,7 +544,7 @@ CLOUDPUB_DOMAIN=""
 
 # Сначала ищем в выводе сборки
 if [ -f "$TEMP_OUTPUT" ]; then
-    CLOUDPUB_DOMAIN=$(grep -o 'https://[a-zA-Z0-9.-]*\.cloudpub\.[a-z]*' "$TEMP_OUTPUT" | head -1)
+    CLOUDPUB_DOMAIN=$(grep -o 'https://[a-zA-Z0-9.-]*\.cloudpub\.[a-z]*' "$TEMP_OUTPUT" | head -1 || true)
 fi
 
 # Если не найден в выводе сборки, ищем в логах контейнера
@@ -285,18 +555,20 @@ if [ -z "$CLOUDPUB_DOMAIN" ]; then
     CLOUDPUB_CONTAINER=$(docker container ls -a --filter "name=cloudpubFront" --format "{{.Names}}")
     
     if [ ! -z "$CLOUDPUB_CONTAINER" ]; then
+        FOUND_IN_LOGS=false
         # Ждем, чтобы CloudPub успел зарегистрировать сервис
         for i in {1..15}; do
             sleep 3
-            CLOUDPUB_LOGS=$(docker logs cloudpubFront 2>&1)
+            CLOUDPUB_LOGS=$(docker logs cloudpubFront 2>&1 || true)
             
             # Ищем строку регистрации сервиса (несколько вариантов)
             if echo "$CLOUDPUB_LOGS" | grep -q "Сервис зарегистрирован\|Сервис опубликован\|https://.*\.cloudpub\."; then
                 # Пробуем несколько паттернов для извлечения домена
-                CLOUDPUB_DOMAIN=$(echo "$CLOUDPUB_LOGS" | grep -o 'https://[a-zA-Z0-9.-]*\.cloudpub\.[a-z]*' | head -1)
+                CLOUDPUB_DOMAIN=$(echo "$CLOUDPUB_LOGS" | grep -o 'https://[a-zA-Z0-9.-]*\.cloudpub\.[a-z]*' | head -1 || true)
                 
                 if [ ! -z "$CLOUDPUB_DOMAIN" ]; then
                     print_success "CloudPub сервис зарегистрирован: $CLOUDPUB_DOMAIN"
+                    FOUND_IN_LOGS=true
                     break
                 fi
             fi
@@ -307,7 +579,7 @@ if [ -z "$CLOUDPUB_DOMAIN" ]; then
                 print_warning "Пожалуйста, проверьте ваш API ключ на https://cloudpub.ru/"
                 print_warning "Обновите CLOUDPUB_TOKEN в файле .env с правильным ключом"
                 print_warning "После этого перезапустите контейнеры командой: make down && make dev-$BACKEND"
-                break
+                exit 1
             fi
             
             # Показываем прогресс
@@ -318,10 +590,21 @@ if [ -z "$CLOUDPUB_DOMAIN" ]; then
                 echo ""
             fi
         done
+
+        if [ "$FOUND_IN_LOGS" = false ]; then
+            print_error "Не удалось извлечь домен из логов CloudPub."
+            echo ""
+            echo "Советы:"
+            echo "  • Убедитесь, что API ключ CloudPub активен и не превышен лимит."
+            echo "  • Проверьте логи: docker logs cloudpubFront"
+            echo "  • Попробуйте перезапустить: make down && docker rm -f cloudpubFront frontend && make dev-init"
+            exit 1
+        fi
     else
         print_error "Контейнер cloudpubFront не найден!"
         echo "Доступные контейнеры:"
         docker ps -a --format "table {{.Names}}\t{{.Status}}"
+        exit 1
     fi
 fi
 
@@ -439,6 +722,13 @@ echo "✅ Что сделано:"
 echo "   - Получен CloudPub домен: ${BLUE}$(grep VIRTUAL_HOST .env | cut -d"'" -f2)${NC}"
 echo "   - Обновлены переменные окружения"
 echo "   - Запущены все контейнеры с правильным доменом"
+if [ "$RABBITMQ_ENABLED" = "1" ]; then
+    RABBITMQ_USER_SUMMARY="${RABBITMQ_USER:-$(get_env_var "RABBITMQ_USER" "queue_user")}"
+    RABBITMQ_PASSWORD_SUMMARY="${RABBITMQ_PASSWORD:-$(get_env_var "RABBITMQ_PASSWORD" "queue_password")}"
+    RABBITMQ_PREFETCH_SUMMARY="${RABBITMQ_PREFETCH:-$(get_env_var "RABBITMQ_PREFETCH" "5")}"
+    echo "   - Запущен RabbitMQ (профиль queue включён)"
+    echo "   - Учётные данные RabbitMQ: ${BLUE}${RABBITMQ_USER_SUMMARY}:${RABBITMQ_PASSWORD_SUMMARY}${NC} (prefetch ${RABBITMQ_PREFETCH_SUMMARY})"
+fi
 if [ "$BACKEND" = "php" ]; then
 echo "   - Настроена база данных PHP"
 fi
