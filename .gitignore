@@ -13,6 +13,9 @@ node_modules
 # Logs
 *.log
 
+# Python compiled files
+*.pyc
+
 # Misc
 .DS_Store
 .fleet
