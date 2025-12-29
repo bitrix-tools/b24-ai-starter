@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ApplicationInstallation, Bitrix24Account
+from bitrix_auth.models import ApplicationInstallation, Bitrix24Account
 
 
 @admin.register(Bitrix24Account)

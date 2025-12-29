@@ -1,6 +1,7 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
+from b24pysdk import Config as B24Config
 from config import config
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,14 +32,22 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "bitrix_auth",
     "main",
 ]
+
+# Configure Bitrix24 SDK logging with application logger and level.
+B24Config().configure(
+    logger=config.logger,
+    log_level=config.log_level,
+)
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "middleware.LogErrorsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

@@ -1,17 +1,15 @@
 from functools import wraps
 from http import HTTPStatus
-from typing import cast
 
 import jwt
 
 from django.http import JsonResponse, HttpRequest
 
-from b24pysdk.bitrix_api.credentials import OAuthPlacementData
 from b24pysdk.error import BitrixValidationError
-from b24pysdk.utils.types import JSONDict
 
-from ...models import Bitrix24Account
-from .collect_request_data import collect_request_data
+from bitrix_auth.models import Bitrix24Account
+from bitrix_auth.utils.decorators import placement_required
+from main.utils.decorators.collect_request_data import collect_request_data
 
 
 def auth_required(view_func):
@@ -39,13 +37,19 @@ def auth_required(view_func):
                 return JsonResponse({"error": str(error)}, status=HTTPStatus.BAD_REQUEST)
 
         else:
-            # Create OAuthData and pass it in the request
-            try:
-                oauth_placement_data = OAuthPlacementData.from_dict(cast(JSONDict, request.data))
-                request.bitrix24_account, _ = Bitrix24Account.update_or_create_from_oauth_placement_data(oauth_placement_data)
+            # Validate placement payload and enrich request data (domain/member_id).
+            placement_validator = placement_required(lambda req, *_a, **_kw: req)
+            placement_result = placement_validator(request)
 
+            if isinstance(placement_result, JsonResponse):
+                return placement_result
+
+            try:
+                request.bitrix24_account, _ = Bitrix24Account.update_or_create_from_oauth_placement_data(request.oauth_placement_data)
             except BitrixValidationError as error:
                 return JsonResponse({"error": str(error)}, status=HTTPStatus.BAD_REQUEST)
+
+            return view_func(request, *args, **kwargs)
 
         return view_func(request, *args, **kwargs)
 

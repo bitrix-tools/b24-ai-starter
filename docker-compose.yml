@@ -140,7 +140,7 @@ services:
     profiles: ["python"]
     build:
       context: ./backends/python
-      dockerfile: api/Dockerfile
+      dockerfile: ./Dockerfile
       target: ${BUILD_TARGET:-dev}
     container_name: api
     env_file: .env
@@ -153,7 +153,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backends/python/api:/var/www/api
+      - ./backends/python:/var/www/api
       - ./logs/python:/var/log/python
     depends_on:
       - database

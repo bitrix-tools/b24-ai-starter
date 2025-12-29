@@ -4,11 +4,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from .utils.decorators import auth_required, log_errors
+from bitrix_auth.utils.decorators import auth_required
 from .utils import AuthorizedRequest
-from .models import ApplicationInstallation
-
-from config import load_config
+from bitrix_auth.models import ApplicationInstallation
 
 __all__ = [
     "root",
@@ -19,12 +17,9 @@ __all__ = [
     "get_token",
 ]
 
-config = load_config()
-
 
 @xframe_options_exempt
 @require_GET
-@log_errors("root")
 @auth_required
 def root(request: AuthorizedRequest):
     return JsonResponse({"message": "Python Backend is running"})
@@ -32,7 +27,6 @@ def root(request: AuthorizedRequest):
 
 @xframe_options_exempt
 @require_GET
-@log_errors("health")
 @auth_required
 def health(request: AuthorizedRequest):
     return JsonResponse({
@@ -44,7 +38,6 @@ def health(request: AuthorizedRequest):
 
 @xframe_options_exempt
 @require_GET
-@log_errors("get_enum")
 @auth_required
 def get_enum(request: AuthorizedRequest):
     options = ["option 1", "option 2", "option 3"]
@@ -53,7 +46,6 @@ def get_enum(request: AuthorizedRequest):
 
 @xframe_options_exempt
 @require_GET
-@log_errors("get_list")
 @auth_required
 def get_list(request: AuthorizedRequest):
     elements = ["element 1", "element 2", "element 3"]
@@ -63,7 +55,6 @@ def get_list(request: AuthorizedRequest):
 @xframe_options_exempt
 @csrf_exempt
 @require_POST
-@log_errors("install")
 @auth_required
 def install(request: AuthorizedRequest):
     bitrix24_account = request.bitrix24_account
@@ -83,7 +74,6 @@ def install(request: AuthorizedRequest):
 @xframe_options_exempt
 @csrf_exempt
 @require_POST
-@log_errors("get_token")
 @auth_required
 def get_token(request: AuthorizedRequest):
     return JsonResponse({"token": request.bitrix24_account.create_jwt_token()})
