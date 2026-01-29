@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import Tuple
 
 import jwt
 import uuid
@@ -16,19 +15,30 @@ from config import config
 
 
 class Bitrix24Account(models.Model, AbstractBitrixToken):
+    STATUS_NEW = "new"
+    STATUS_ACTIVE = "active"
+    STATUS_DELETED = "deleted"
+    STATUS_BLOCKED = "blocked"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DELETED, "Deleted"),
+        (STATUS_BLOCKED, "Blocked"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    bitrix_id = models.IntegerField(db_column="b24_user_id")
+    b24_user_id = models.IntegerField()
     is_b24_user_admin = models.BooleanField(default=False)
     member_id = models.CharField(max_length=255)
-    is_master_account = models.BooleanField(null=True)
+    is_master_account = models.BooleanField(null=True, help_text="True for the user who installed the app; False for additional user tokens.")
     domain = models.CharField(max_length=255, db_column="domain_url")
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_NEW)
     application_token = models.CharField(max_length=255, null=True)
     created_at_utc = models.DateTimeField(auto_now_add=True)
     updated_at_utc = models.DateTimeField(auto_now=True)
     application_version = models.IntegerField()
-    comment = models.TextField(null=True)
-    access_token = models.CharField(max_length=255, null=True)
+    comment = models.TextField(null=True, help_text="Internal developer notes")
+    auth_token = models.CharField(max_length=255, null=True, db_column="access_token")
     refresh_token = models.CharField(max_length=255, null=True)
     expires = models.IntegerField(null=True)
     expires_in = models.IntegerField(null=True)
@@ -37,26 +47,18 @@ class Bitrix24Account(models.Model, AbstractBitrixToken):
     class Meta:
         managed = False
         db_table = "bitrix24account"
-        unique_together = ("bitrix_id", "domain")
+        unique_together = ("b24_user_id", "domain")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.portal_domain_changed_signal.connect(self._on_portal_domain_changed_event)
         self.oauth_token_renewed_signal.connect(self._on_oauth_token_renewed_event)
 
-    @property
-    def auth_token(self) -> str:
-        return self.access_token
-
-    @auth_token.setter
-    def auth_token(self, auth_token: str):
-        self.access_token = auth_token
-
     def _on_portal_domain_changed_event(self, _: PortalDomainChangedEvent):
-        self.save(update_fields=["portal_url"])
+        self.save(update_fields=["domain"])
 
     def _on_oauth_token_renewed_event(self, _event: OAuthTokenRenewedEvent):
-        self.save(update_fields=["access_token", "refresh_token", "expires", "expires_in"])
+        self.save(update_fields=["auth_token", "refresh_token", "expires", "expires_in"])
 
     def create_jwt_token(self, minutes: int = 60) -> str:
         now_dt = timezone.now()
@@ -83,48 +85,32 @@ class Bitrix24Account(models.Model, AbstractBitrixToken):
         account_uuid = cls._validate_jwt_token(jwt_token)
         return cls.objects.get(pk=account_uuid)
 
-    @classmethod
-    def update_or_create_from_oauth_placement_data(cls, oauth_placement_data: "OAuthPlacementData") -> Tuple["Bitrix24Account", bool]:
-        """Create or update Bitrix24Account"""
-
-        try:
-            bitrix_token = BitrixToken.from_oauth_placement_data(oauth_placement_data, bitrix_app=config.bitrix_app)
-            app_info = bitrix_token.get_app_info().result
-        except BitrixAPIError as error:
-            raise BitrixValidationError(error.message) from error
-
-        defaults = {
-            "member_id": oauth_placement_data.member_id,
-            "status": oauth_placement_data.status,
-            "access_token": oauth_placement_data.oauth_token.access_token,
-            "refresh_token": oauth_placement_data.oauth_token.refresh_token,
-            "expires": int(oauth_placement_data.oauth_token.expires.timestamp()),
-            "application_version": app_info.install.version,
-        }
-
-        bitrix24_account, is_created = cls.objects.update_or_create(
-            domain=oauth_placement_data.domain,
-            bitrix_id=app_info.user_id,
-            defaults=defaults,
-        )
-
-        return bitrix24_account, is_created
-
 
 class ApplicationInstallation(models.Model):
+    STATUS_NEW = "new"
+    STATUS_ACTIVE = "active"
+    STATUS_DELETED = "deleted"
+    STATUS_BLOCKED = "blocked"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DELETED, "Deleted"),
+        (STATUS_BLOCKED, "Blocked"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_NEW)
     created_at_utc = models.DateTimeField(auto_now_add=True)
     update_at_utc = models.DateTimeField(auto_now=True)
-    bitrix_24_account = models.OneToOneField(Bitrix24Account, on_delete=models.CASCADE, db_column="bitrix_24_account_id")
-    contact_person_id = models.UUIDField(null=True)
-    bitrix_24_partner_contact_person_id = models.UUIDField(null=True)
-    bitrix_24_partner_id = models.UUIDField(null=True)
-    external_id = models.CharField(max_length=255, null=True)
-    portal_license_family = models.CharField(max_length=255)
-    portal_users_count = models.IntegerField(null=True)
-    application_token = models.CharField(max_length=255, null=True)
-    comment = models.TextField(null=True)
+    bitrix_24_account = models.OneToOneField(Bitrix24Account, on_delete=models.CASCADE, help_text="Master Bitrix24 account that installed the application.")
+    contact_person_id = models.UUIDField(null=True, help_text="Optional client contact person GUID (if provided).")
+    bitrix_24_partner_contact_person_id = models.UUIDField(null=True, help_text="Optional partner contact person GUID.")
+    bitrix_24_partner_id = models.UUIDField(null=True, help_text="Optional partner GUID supporting the portal.")
+    external_id = models.CharField(max_length=255, null=True, help_text="External CRM/ERP identifier linked to the installation.")
+    portal_license_family = models.CharField(max_length=255, help_text="Portal license family snapshot for analytics.")
+    portal_users_count = models.IntegerField(null=True, help_text="Portal users count snapshot for analytics.")
+    application_token = models.CharField(max_length=255, null=True, help_text="Application token mirrored for convenience.")
+    comment = models.TextField(null=True, help_text="Internal developer notes about the installation.")
     status_code = models.JSONField(null=True)
 
     class Meta:

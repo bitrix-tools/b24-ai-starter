@@ -1,86 +1,88 @@
 import logging
 from functools import wraps
 from http import HTTPStatus
-from typing import Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, cast
 
-import requests
-from django.http import HttpRequest, JsonResponse
+from django.conf import settings
+from django.http import JsonResponse
 
+from b24pysdk import BitrixToken, BitrixApp
 from b24pysdk.bitrix_api.credentials import OAuthPlacementData
-from b24pysdk.error import BitrixValidationError
-from b24pysdk.utils.types import JSONDict
+from b24pysdk.error import BitrixAPIError, BitrixValidationError
 
-LoggerType = Union[logging.Logger, logging.LoggerAdapter]
+from bitrix_auth.utils.decorators._collect_request_data import collect_request_data
 
-BITRIX_AUTH_SERVER = "https://oauth.bitrix.info"
+if TYPE_CHECKING:
+    from bitrix_auth.utils.types import CollectedDataRequest, AppInfoPlacementDataRequest
+
+_FT = TypeVar("_FT", bound=Callable[..., Any])
+
+_logger = getattr(settings, "logger", logging.getLogger(__name__))
 
 
-def _get_portal_domain_and_member_id(
-        data: dict,
-        *,
-        logger: LoggerType = logging.getLogger(__name__),
-) -> Tuple[Union[str, None], Union[str, None]]:
+def _validate_placement_request(
+    request: "CollectedDataRequest",
+    *,
+    bitrix_app: BitrixApp,
+) -> Union["AppInfoPlacementDataRequest", JsonResponse]:
     """
-    Resolve portal domain and member_id from placement payload.
+    Validate placement payload and enrich request with resolved domain/member.
+    Returns JsonResponse on failure, otherwise returns validated request.
     """
-    domain = data.get("DOMAIN") or data.get("domain")
-    member_id = data.get("member_id")
-    auth_id = data.get("AUTH_ID")
+    try:
+        oauth_placement_data = OAuthPlacementData.from_dict(request.data)
+        bitrix_token = BitrixToken.from_oauth_placement_data(oauth_placement_data, bitrix_app=bitrix_app)
+        app_info = bitrix_token.get_app_info().result
 
-    if domain and member_id:
-        return domain, member_id
+        if not (oauth_placement_data.validate_against_app_info(app_info) and app_info.client_id == bitrix_app.client_id):
+            return JsonResponse({"error": "Invalid placement auth data"}, status=HTTPStatus.UNAUTHORIZED)
 
-    if member_id is None and auth_id:
-        try:
-            response = requests.get(
-                f"{BITRIX_AUTH_SERVER}/rest/app.info",
-                params={"auth": auth_id},
-                timeout=10,
-            )
-            response.raise_for_status()
-            payload = response.json()
-            install = payload.get("result", {}).get("install", {})
+    except BitrixValidationError as error:
+        return JsonResponse({"error": str(error)}, status=HTTPStatus.UNAUTHORIZED)
 
-            domain = install.get("domain")
-            member_id = install.get("member_id")
-        except (requests.RequestException, ValueError, TypeError) as error:
-            logger.warning("Failed to fetch portal info via app.info", extra={"error": str(error)})
-            return None, None
+    except BitrixAPIError as error:
+        _logger.info(f"Failed to fetch portal info via SDK: {error.message}")
+        return JsonResponse({"error": error.message}, status=error.status_code)
 
-    return domain, member_id
+    else:
+        request.app_info = app_info
+        request.oauth_placement_data = oauth_placement_data
+
+        return cast(AppInfoPlacementDataRequest, request)
 
 
-def placement_required(view_func):
+def placement_required(
+    view_func: Optional[_FT] = None,
+    /,
+    *,
+    validate: bool = False,
+    bitrix_app: Optional[BitrixApp] = None,
+) -> Union[_FT, Callable[[_FT], _FT]]:
     """
-    Validate placement request data (iframe scenario).
+    Decorator to normalize placement requests and optionally validate Bitrix auth payloads.
 
-    Ensures required placement fields exist and member/domain are resolved.
+    When `validate` is True, the request is enriched with OAuth placement data and application info
+    or short-circuits with a JsonResponse on validation failure.
     """
 
-    @wraps(view_func)
-    def wrapped(request: HttpRequest, *args, **kwargs):
-        placement = request.data.get("PLACEMENT")
-        auth_id = request.data.get("AUTH_ID")
+    if validate and bitrix_app is None:
+        raise ValueError("bitrix_app is required when validate is True")
 
-        if not placement:
-            return JsonResponse({"error": "Missing PLACEMENT"}, status=HTTPStatus.BAD_REQUEST)
+    def decorator(func: _FT) -> _FT:
+        @wraps(func)
+        @collect_request_data
+        def wrapper(request: "CollectedDataRequest", *args: Any, **kwargs: Any):
+            if validate:
+                request_or_response: Union["AppInfoPlacementDataRequest", JsonResponse] = _validate_placement_request(request, bitrix_app=bitrix_app)
 
-        if not auth_id:
-            return JsonResponse({"error": "Missing AUTH_ID"}, status=HTTPStatus.BAD_REQUEST)
+                if isinstance(request_or_response, JsonResponse):
+                    return request_or_response
 
-        domain, member_id = _get_portal_domain_and_member_id(request.data)
+            return func(request, *args, **kwargs)
 
-        if not domain or not member_id:
-            return JsonResponse({"error": "Invalid placement auth data"}, status=HTTPStatus.BAD_REQUEST)
+        return wrapper
 
-        request.data["DOMAIN"] = domain
-        request.data["member_id"] = member_id
+    if view_func is None:
+        return decorator
 
-        try:
-            request.oauth_placement_data = OAuthPlacementData.from_dict(cast(JSONDict, request.data))
-        except BitrixValidationError as error:
-            return JsonResponse({"error": str(error)}, status=HTTPStatus.BAD_REQUEST)
-
-        return view_func(request, *args, **kwargs)
-
-    return wrapped
+    return decorator(view_func)

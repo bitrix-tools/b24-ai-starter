@@ -1,8 +1,8 @@
 from http import HTTPStatus
+from typing import Callable
 
-from django.http import JsonResponse
-
-from config import config
+from django.conf import settings
+from django.http import HttpRequest, HttpResponse, JsonResponse
 
 
 class LogErrorsMiddleware:
@@ -10,11 +10,10 @@ class LogErrorsMiddleware:
     Catch unhandled view errors, log them, and return a JSON 500 response.
     """
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
         self.get_response = get_response
-        self.logger = config.logger
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> HttpResponse:
         try:
             return self.get_response(request)
         except Exception as exc:  # noqa: BLE001 - intentionally catch all to serialize
@@ -23,11 +22,6 @@ class LogErrorsMiddleware:
             view_func = getattr(resolver, "func", None)
             view_ref = view_name or getattr(view_func, "__name__", None) or "<unknown_view>"
 
-            self.logger.exception(
-                "Unhandled exception in %s %s (%s)",
-                request.method,
-                request.path,
-                view_ref,
-            )
+            settings.logger.error(f"Unhandled exception in {request.method} {request.path} ({view_ref})")
 
             return JsonResponse({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
