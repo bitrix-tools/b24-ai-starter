@@ -73,7 +73,7 @@ b24-ai-starter/
 │   ├── python/               # Django + b24pysdk
 │   └── node/                 # Express + Node.js
 ├── infrastructure/
-│   └── database/             # PostgreSQL (init.sql)
+│   └── database/             # PostgreSQL/MySQL init-скрипты
 ├── instructions/             # 📚 Модульные инструкции для AI-агентов
 │   ├── knowledge.md          # Центральный узел знаний
 │   ├── php/                  # PHP-специфичные инструкции
@@ -83,11 +83,24 @@ b24-ai-starter/
 │   ├── versioning/           # Инструкции для версионности проекта
 │   ├── queues/               # Инструкции для сервиса очередей RabbitMQ
 │   └── bitrix24/             # Платформенные инструкции
+├── .cursor/
+│   └── skills/               # Skills для Cursor Agent
+├── .claude/
+│   └── skills/               # Skills для Claude Code
 ├── logs/                     # Логи вне контейнеров
 ├── versions/                 # Версии проекта
 ├── README.md                 # 🤖 Главный промпт для AI
 └── docker-compose.yml        # Docker конфигурация
 ```
+
+## 🤖 Skills для AI-агентов
+
+Проект содержит готовые skills для двух сред:
+
+- `.cursor/skills/` — инструкции и сценарии для Cursor Agent
+- `.claude/skills/` — зеркальные инструкции для Claude Code
+
+Skills покрывают навигацию по проекту, работу с окружением и разработку по каждому стеку (frontend/php/python/node), чтобы ускорить типовые задачи и унифицировать поведение ассистентов.
 
 ## 🚀 Быстрый старт
 
