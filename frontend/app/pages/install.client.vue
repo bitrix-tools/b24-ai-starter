@@ -22,6 +22,14 @@ const { $initializeB24Frame } = useNuxtApp()
 const $b24: B24Frame = await $initializeB24Frame()
 await initLang($b24, localesI18n, setLocale)
 
+// Логируем конфигурацию для отладки
+$logger.log('Installation started', {
+  appUrl,
+  configPublicAppUrl: config.public.appUrl,
+  configPublicApiUrl: config.public.apiUrl,
+  isDev: import.meta.dev
+})
+
 const confetti = useConfetti()
 
 const isShowDebug = ref(false)
@@ -89,7 +97,18 @@ const steps = ref<Record<string, IStep>>({
         placement: 'CRM_DEAL_DETAIL_TAB',
         handler: `${appUrl}/handler/placement-crm-deal-detail-tab`
       }
-      const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement && item.handler === key.handler )
+      const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement)
+
+      // Логируем для отладки
+      $logger.log('Placement registration', {
+        appUrl,
+        placement: key.placement,
+        handler: key.handler,
+        exists,
+        existingPlacements: steps.value.init?.data?.placementList
+      })
+
+      // Всегда делаем unbind если placement существует, затем bind с новым handler
       if (exists) {
         await $b24.callBatch([
           {
@@ -135,6 +154,16 @@ const steps = ref<Record<string, IStep>>({
       const typeId = `some_type_${import.meta.dev ? 'dev' : 'prod'}`
 
       const exists = (steps.value.init?.data?.userFieldTypeList as { USER_TYPE_ID: string }[]).some(item => item.USER_TYPE_ID === typeId)
+
+      // Логируем для отладки
+      $logger.log('UserField registration', {
+        appUrl,
+        typeId,
+        handler: `${appUrl}/handler/uf.demo`,
+        exists,
+        existingUserFieldTypes: steps.value.init?.data?.userFieldTypeList
+      })
+
       if (exists) {
         await $b24.callBatch([
           {

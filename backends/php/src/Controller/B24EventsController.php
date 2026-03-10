@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
+use App\Service\Telemetry\TelemetryInterface;
 use Bitrix24\SDK\Application\Contracts\Bitrix24Accounts\Entity\Bitrix24AccountInterface;
 use Bitrix24\SDK\Application\Contracts\Bitrix24Accounts\Exceptions\Bitrix24AccountNotFoundException;
 use Bitrix24\SDK\Application\Contracts\Bitrix24Accounts\Repository\Bitrix24AccountRepositoryInterface;
@@ -32,6 +33,7 @@ class B24EventsController extends AbstractController
         private readonly Bitrix24AccountRepositoryInterface $bitrix24AccountRepository,
         private readonly Bitrix24ServiceBuilderFactory $bitrix24ServiceBuilderFactory,
         private readonly LoggerInterface $logger,
+        private readonly TelemetryInterface $telemetry,
     ) {
     }
 
@@ -88,11 +90,44 @@ class B24EventsController extends AbstractController
                         'PAYLOAD' => $b24Event->getEventPayload(),
                     ]);
 
+                    // Telemetry: action initiated
+                    $actionStartTime = hrtime(true);
+                    $this->telemetry->trackEvent('b24_event_action_initiated', [
+                        'action.name'      => 'process_crm_contact_add',
+                        'action.type'      => 'b24_event_handler',
+                        'action.status'    => 'initiated',
+                        'b24.event_code'   => OnCrmContactAdd::CODE,
+                        'portal.member_id' => $b24Event->getAuth()->member_id,
+                    ]);
+
+                    // Telemetry: track Bitrix24 API call
+                    $apiCallStart = hrtime(true);
                     $b24Contact = $sb->getCRMScope()->contact()->get((int) $b24Event->getEventPayload()['data']['FIELDS']['ID'])->contact();
+                    $apiDurationMs = (int) round((hrtime(true) - $apiCallStart) / 1_000_000);
+
+                    $this->telemetry->trackEvent('bitrix_api_call', [
+                        'api.provider'     => 'bitrix24',
+                        'api.method'       => 'crm.contact.get',
+                        'api.duration_ms'  => (string) $apiDurationMs,
+                        'api.status'       => 'success',
+                        'portal.domain'    => $b24Account->getDomainUrl(),
+                    ]);
 
                     $this->logger->debug('B24EventsController.processEvent.OnCrmContactAdd.finish', [
                         'b24ContactId' => $b24Contact->ID,
                         'b24ContactName' => $b24Contact->NAME,
+                    ]);
+
+                    // Telemetry: action completed
+                    $actionDurationMs = (int) round((hrtime(true) - $actionStartTime) / 1_000_000);
+                    $this->telemetry->trackEvent('b24_event_processed', [
+                        'b24.event'          => OnCrmContactAdd::CODE,
+                        'b24.entity'         => 'contact',
+                        'action.name'        => 'process_crm_contact_add',
+                        'action.type'        => 'b24_event_handler',
+                        'action.status'      => 'completed',
+                        'action.duration_ms' => (string) $actionDurationMs,
+                        'portal.member_id'   => $b24Event->getAuth()->member_id,
                     ]);
 
                     break;
@@ -109,6 +144,13 @@ class B24EventsController extends AbstractController
             $this->logger->error('B24EventsController.processEvent.error', [
                 'message' => $throwable->getMessage(),
                 'trace' => $throwable->getTraceAsString(),
+            ]);
+
+            // Telemetry: action failed
+            $this->telemetry->trackError($throwable, [
+                'error.category'   => 'b24_event_processing_failed',
+                'action.name'      => 'process_crm_event',
+                'action.status'    => 'failed',
             ]);
 
             return new JsonResponse(['error' => $throwable->getMessage()], 500);

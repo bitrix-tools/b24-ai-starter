@@ -11,6 +11,44 @@
       "message": {
         "title": "Привет!",
         "line1": "Давайте протестируем работу приложения в Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Тест телеметрии"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Тест телеметрии"
+      },
+      "title": "Тест телеметрии",
+      "description": "Визуальная проверка всех каналов телеметрии: бэкенд-события, фронтенд-события, вызовы API Bitrix24.",
+      "section": {
+        "backend": "Бэкенд-события (PHP)",
+        "backend_desc": "Нажмите кнопку — PHP-бэкенд отправит 7 различных событий в OTel Collector.",
+        "frontend": "Фронтенд-события",
+        "frontend_desc": "Каждая кнопка / поле / форма отправляет соответствующее событие через useTelemetry.",
+        "b24api": "Вызовы Bitrix24 API",
+        "b24api_desc": "Прямые вызовы JS SDK с трекингом b24_api_call."
+      },
+      "action": {
+        "run_backend": "Запустить бэкенд-события",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (мягкий)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "\u2190 Назад"
+      },
+      "label": {
+        "select": "Выбор (ui_select_change)",
+        "form_field": "Поле формы"
+      },
+      "status": {
+        "idle": "Ожидание",
+        "ok": "\u2713 Отправлено",
+        "error": "\u2717 Ошибка",
+        "result": "Результат"
       }
     },
     "install": {

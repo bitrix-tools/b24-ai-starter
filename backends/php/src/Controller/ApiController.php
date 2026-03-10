@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\JwtService;
+use App\Service\Telemetry\SessionContextTrait;
+use App\Service\Telemetry\TelemetryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,9 +24,12 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class ApiController extends AbstractController
 {
+    use SessionContextTrait;
+
     public function __construct(
         private readonly JwtService $jwtService,
         private readonly LoggerInterface $logger,
+        private readonly TelemetryInterface $telemetry,
     ) {
     }
 
@@ -78,6 +83,23 @@ class ApiController extends AbstractController
             'request' => $request->request->all(),
             'baseUrl' => $request->getBaseUrl(),
         ]);
+
+        // Telemetry: track API endpoint usage (Sprint 1 smoke test)
+        $this->telemetry->trackEvent('api_list_called', [
+            'endpoint'        => '/api/list',
+            'method'          => 'GET',
+            'timestamp'       => time(),
+        ]);
+
+        // Telemetry: UI event — app opened (Sprint 5)
+        $this->telemetry->trackEvent('app_opened', [
+            'ui.endpoint'     => '/api/list',
+            'ui.method'       => 'GET',
+            'session.id'      => $this->getSessionId($request),
+            'portal.member_id' => $this->getMemberIdFromRequest($request),
+            'portal.domain'   => $this->getDomainFromRequest($request),
+        ]);
+
         // JWT payload is stored in request attributes by JwtAuthenticationListener
         $jwtPayload = $request->attributes->get('jwt_payload');
         $this->logger->debug('ApiController.getEnum.jwtPayload', [

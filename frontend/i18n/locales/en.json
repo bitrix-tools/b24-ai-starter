@@ -11,6 +11,44 @@
       "message": {
         "title": "Hello!",
         "line1": "Let's test the application's operation in Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Telemetry Test"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Telemetry Test"
+      },
+      "title": "Telemetry Test",
+      "description": "Visual verification of all telemetry channels: backend events, frontend events, Bitrix24 API calls.",
+      "section": {
+        "backend": "Backend Events (PHP)",
+        "backend_desc": "Press the button — PHP backend will send 7 different events to OTel Collector.",
+        "frontend": "Frontend Events",
+        "frontend_desc": "Each button / field / form sends the corresponding event via useTelemetry.",
+        "b24api": "Bitrix24 API Calls",
+        "b24api_desc": "Direct JS SDK calls with b24_api_call tracking."
+      },
+      "action": {
+        "run_backend": "Fire backend events",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (soft)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "\u2190 Back"
+      },
+      "label": {
+        "select": "Select (ui_select_change)",
+        "form_field": "Form field"
+      },
+      "status": {
+        "idle": "Idle",
+        "ok": "\u2713 Sent",
+        "error": "\u2717 Error",
+        "result": "Result"
       }
     },
     "install": {

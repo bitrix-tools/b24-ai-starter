@@ -7,16 +7,12 @@ doctrine:
         #server_version: '16'
 
         profiling_collect_backtrace: '%kernel.debug%'
-        use_savepoints: true
         types:
             carbon_immutable: Carbon\Doctrine\CarbonImmutableType
             carbon: \Carbon\Doctrine\CarbonType
             phone_number: Misd\PhoneNumberBundle\Doctrine\DBAL\Types\PhoneNumberType
             ip: Darsyn\IP\Doctrine\MultiType
     orm:
-        auto_generate_proxy_classes: true
-        enable_lazy_ghost_objects: true
-        report_fields_where_declared: true
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         identity_generation_preferences:
@@ -47,7 +43,7 @@ when@test:
 when@prod:
     doctrine:
         orm:
-            auto_generate_proxy_classes: false
+            proxy_auto_generate: 0
             proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
             query_cache_driver:
                 type: pool

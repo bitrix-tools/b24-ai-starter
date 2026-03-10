@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+    <php>
+        <env name="KERNEL_CLASS" value="App\Kernel"/>
+        <env name="APP_ENV" value="test"/>
+        <env name="TELEMETRY_ENABLED" value="false"/>
+        <env name="DATABASE_URL" value="postgresql://test:test@localhost:5432/test_db?serverVersion=17&amp;charset=utf8"/>
+        <env name="DEFAULT_URI" value="http://localhost"/>
+        <env name="OTEL_EXPORTER_OTLP_ENDPOINT" value="http://localhost:4318"/>
+        <env name="OTEL_SERVICE_NAME" value="test-app"/>
+        <env name="OTEL_SERVICE_VERSION" value="1.0.0"/>
+        <env name="OTEL_ENVIRONMENT" value="test"/>
+        <env name="JWT_SECRET" value="test-secret-key-for-phpunit-tests-32chars" force="true"/>
+        <env name="JWT_ALGORITHM" value="HS256" force="true"/>
+    </php>
+    <testsuites>
+        <testsuite name="telemetry-all">
+            <directory>tests/Telemetry</directory>
+            <exclude>tests/Telemetry/E2E</exclude>
+        </testsuite>
+        <testsuite name="telemetry-null-service">
+            <file>tests/Telemetry/NullTelemetryServiceTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-real-service">
+            <file>tests/Telemetry/RealTelemetryServiceTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-track-operation">
+            <file>tests/Telemetry/TrackOperationTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-config">
+            <directory>tests/Telemetry/Config</directory>
+        </testsuite>
+        <testsuite name="telemetry-factory">
+            <file>tests/Telemetry/TelemetryFactoryTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-di">
+            <file>tests/Telemetry/DependencyInjectionTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-integration">
+            <directory>tests/Telemetry/Integration</directory>
+        </testsuite>
+        <testsuite name="telemetry-profiles">
+            <directory>tests/Telemetry/Profiles</directory>
+        </testsuite>
+        <testsuite name="telemetry-attribute-groups">
+            <file>tests/Telemetry/AttributeGroupManagerTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-filtering">
+            <file>tests/Telemetry/FilteringTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-monolog">
+            <file>tests/Telemetry/MonologOTelHandlerTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-e2e">
+            <directory>tests/Telemetry/E2E</directory>
+        </testsuite>
+        <testsuite name="telemetry-app-events">
+            <directory>tests/Telemetry/Integration</directory>
+        </testsuite>
+        <testsuite name="telemetry-app-lifecycle">
+            <file>tests/Telemetry/Integration/LifecycleEventsTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-ui-events">
+            <file>tests/Telemetry/Integration/UIEventsTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-action-events">
+            <file>tests/Telemetry/Integration/ActionEventsTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-api-calls">
+            <file>tests/Telemetry/Integration/APICallsTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-error-tracking">
+            <file>tests/Telemetry/Integration/ErrorTrackingTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-session-context">
+            <file>tests/Telemetry/Integration/SessionContextTest.php</file>
+        </testsuite>
+        <!-- Sprint 8: Frontend telemetry endpoint -->
+        <testsuite name="telemetry-frontend-events">
+            <file>tests/Telemetry/Frontend/FrontendTelemetryEventTest.php</file>
+            <file>tests/Telemetry/Frontend/TelemetryControllerTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry-frontend-e2e">
+            <file>tests/Telemetry/E2E/FrontendTelemetryE2ETest.php</file>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+</phpunit>

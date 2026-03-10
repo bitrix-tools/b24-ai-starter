@@ -19,6 +19,7 @@ use Bitrix24\SDK\Application\Requests\Events\OnApplicationInstall\OnApplicationI
 use Bitrix24\SDK\Application\Requests\Events\OnApplicationUninstall\OnApplicationUninstall;
 use Bitrix24\SDK\Core\Exceptions\InvalidArgumentException;
 use Bitrix24\SDK\Services\RemoteEventsFactory;
+use App\Service\Telemetry\TelemetryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +32,7 @@ final readonly class AppLifecycleEventController
         private ApplicationInstallations\UseCase\OnAppInstall\Handler $onAppInstallHandler,
         private RemoteEventsFactory $remoteEventsFactory,
         private LoggerInterface $logger,
+        private TelemetryInterface $telemetry,
     ) {
     }
 
@@ -68,10 +70,22 @@ final readonly class AppLifecycleEventController
                         ),
                     );
 
+                    // Telemetry: installation finalized (application token received)
+                    $this->telemetry->trackEvent('app_install_finalized', [
+                        'portal.member_id' => $b24Event->getAuth()->member_id,
+                        'portal.domain'    => $b24Event->getAuth()->domain,
+                    ]);
+
                     break;
                 case OnApplicationUninstall::CODE:
                     $this->logger->debug('AppLifecycleEventController.process.uninstall', [
                         'status' => 'processed',
+                    ]);
+
+                    // Telemetry: app uninstalled
+                    $this->telemetry->trackEvent('app_uninstalled', [
+                        'portal.member_id' => $b24Event->getAuth()->member_id,
+                        'portal.domain'    => $b24Event->getAuth()->domain,
                     ]);
 
                     break;

@@ -7,18 +7,21 @@
         "php": "^8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "darsyn/ip": "^5",
-        "darsyn/ip-doctrine": "^5.0",
-        "doctrine/dbal": "^3.10.0",
-        "doctrine/doctrine-bundle": "^2.19.0",
-        "doctrine/doctrine-migrations-bundle": "^3.5.0",
-        "doctrine/orm": "^3.6.0",
+        "darsyn/ip": "^6",
+        "darsyn/ip-doctrine": "^6.0.1",
+        "doctrine/dbal": "^4.5",
+        "doctrine/doctrine-bundle": "^3.2.2",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "doctrine/orm": "^3.7.0",
         "firebase/php-jwt": "dev-main",
         "giggsey/libphonenumber-for-php": "^8.13.55",
         "mesilov/bitrix24-php-lib": "dev-dev",
         "nelmio/cors-bundle": "^2.0@dev",
         "nesbot/carbon": "^3",
+        "nyholm/psr7": ">=1.8",
         "odolbeau/phone-number-bundle": "^4.1",
+        "open-telemetry/exporter-otlp": "^1.4",
+        "open-telemetry/sdk": "^1.13",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",
         "symfony/flex": "^2",
@@ -31,14 +34,17 @@
         "roave/security-advisories": "dev-latest",
         "symfony/maker-bundle": "^1",
         "phpstan/phpstan": "^1.12",
-        "rector/rector": "^1.0",
-        "friendsofphp/php-cs-fixer": "^3.0"
+        "rector/rector": "^1.2.10",
+        "friendsofphp/php-cs-fixer": "^3.94.2",
+        "phpunit/phpunit": "^11.5",
+        "symfony/browser-kit": "7.3.*"
     },
     "config": {
         "allow-plugins": {
             "php-http/discovery": true,
             "symfony/flex": true,
-            "symfony/runtime": true
+            "symfony/runtime": true,
+            "tbachert/spi": true
         },
         "bump-after-update": true,
         "sort-packages": true

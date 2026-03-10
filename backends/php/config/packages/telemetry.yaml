@@ -1,0 +1,108 @@
+# OpenTelemetry Telemetry Configuration
+# Определяет профили атрибутов для различных типов приложений Bitrix24
+
+parameters:
+    # Активный профиль телеметрии
+    # Определяет какой набор профилей будет использоваться для фильтрации атрибутов
+    # Управляется через переменную окружения OTEL_TELEMETRY_PROFILE (задаётся в .env)
+    # Допустимые значения: simple-ui | integration-sync | integration-with-migration | migrator-light | migrator-advanced | development
+    telemetry.active_profile: '%env(string:OTEL_TELEMETRY_PROFILE)%'
+    
+    # Определение профилей - комбинации базовых профилей
+    # Каждый профиль состоит из списка классов профилей
+    telemetry.profiles:
+        # Simple UI Profile - для стандартных UI-centric приложений (b24-ai-starter-ru)
+        # Содержит только атрибуты lifecycle и UI взаимодействий
+        simple-ui:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+            exclude_patterns: []
+            description: 'Базовый профиль для UI-centric приложений с lifecycle событиями'
+        
+        # Integration Sync Profile - для интеграционных приложений с синхронизацией
+        # Добавляет атрибуты синхронизации к lifecycle и UI
+        integration-sync:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+                - App\Service\Telemetry\Profiles\IntegrationProfile
+            exclude_patterns:
+                - 'initial_sync.*'  # Исключаем initial_sync атрибуты для облегчённого профиля
+            description: 'Профиль для интеграционных приложений с синхронизацией (без initial_sync)'
+        
+        # Integration with Migration - интеграционный профиль с поддержкой миграции
+        # Полный IntegrationProfile включая initial_sync атрибуты
+        integration-with-migration:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+                - App\Service\Telemetry\Profiles\IntegrationProfile
+            exclude_patterns: []
+            description: 'Полный профиль для интеграций с initial_sync поддержкой'
+        
+        # Migrator Light - облегчённый профиль миграторов
+        # UI минимален, основной фокус на migration атрибутах
+        migrator-light:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+                - App\Service\Telemetry\Profiles\MigrationProfile
+            exclude_patterns:
+                - 'ui.screen.*'        # Минимизируем UI атрибуты
+                - 'ui.widget.*'
+                - 'ui.form.*'
+                - 'session.*'
+                - 'external.*'
+            description: 'Облегчённый профиль для миграторов с минимальным UI'
+        
+        # Migrator Advanced - полный профиль миграторов (RFC compliance)
+        # Включает все атрибуты для детальной телеметрии миграции
+        migrator-advanced:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+                - App\Service\Telemetry\Profiles\MigrationProfile
+            exclude_patterns: []
+            description: 'Полный профиль для миграторов с RFC-compliant телеметрией'
+        
+        # Development Profile - полный доступ ко всем атрибутам
+        # Используется только для отладки и разработки
+        development:
+            profiles:
+                - App\Service\Telemetry\Profiles\LifecycleProfile
+                - App\Service\Telemetry\Profiles\UIProfile
+                - App\Service\Telemetry\Profiles\IntegrationProfile
+                - App\Service\Telemetry\Profiles\MigrationProfile
+            exclude_patterns: []
+            description: 'Профиль для разработки - все атрибуты доступны'
+
+    # Whitelist допустимых имён событий от фронтенда
+    # Только события из этого списка принимаются через POST /api/telemetry/event
+    telemetry.frontend_event_whitelist:
+        - 'page_view'          # Смена маршрута (Nuxt router)
+        - 'ui_button_click'    # Явное действие пользователя
+        - 'ui_select_change'   # Изменение поля выбора / дропдауна
+        - 'ui_form_submit'     # Отправка формы
+        - 'ui_error'           # JS исключение / unhandledrejection
+        - 'app_frame_loaded'   # B24Frame инициализирован успешно
+        - 'b24_api_call'       # Вызов REST API / placement API Bitrix24 из фронтенда
+
+# Дополнительные параметры для различных окружений
+when@dev:
+    parameters:
+        # Профиль берётся из OTEL_TELEMETRY_PROFILE (из .env)
+        # Для жёсткой фиксации на development профиль — раскомментировать:
+        # telemetry.active_profile: 'development'
+
+when@test:
+    parameters:
+        # Профиль берётся из OTEL_TELEMETRY_PROFILE (из .env)
+        # Для жёсткой фиксации — раскомментировать:
+        # telemetry.active_profile: 'simple-ui'
+
+when@prod:
+    parameters:
+        # Профиль берётся из OTEL_TELEMETRY_PROFILE (из .env)
+        # Для жёсткой фиксации — раскомментировать:
+        # telemetry.active_profile: 'simple-ui'

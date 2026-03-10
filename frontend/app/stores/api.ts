@@ -107,6 +107,8 @@ export const useApiStore = defineStore(
     }
 
     return {
+      tokenJWT,
+      isInitTokenJWT,
       checkHealth,
       init,
       getEnum,

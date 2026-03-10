@@ -65,5 +65,36 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.request, priority: 10 }
 
+    # Telemetry services
+    App\Service\Telemetry\TelemetryFactory:
+        arguments:
+            $telemetryEnabled: '%env(bool:TELEMETRY_ENABLED)%'
+            $otlpEndpoint: '%env(OTEL_EXPORTER_OTLP_ENDPOINT)%'
+            $serviceName: '%env(OTEL_SERVICE_NAME)%'
+            $serviceVersion: '%env(OTEL_SERVICE_VERSION)%'
+            $environment: '%env(OTEL_ENVIRONMENT)%'
+            $logger: '@logger'
+            $activeProfile: '%telemetry.active_profile%'
+            $profilesConfig: '%telemetry.profiles%'
+
+    App\Service\Telemetry\TelemetryInterface:
+        factory: ['@App\Service\Telemetry\TelemetryFactory', 'create']
+        shared: true
+        lazy: true    # Разрывает циклическую зависимость: TelemetryFactory→@logger→MonologOTelHandler→TelemetryInterface
+        public: true  # Public для интеграционных тестов
+
+    App\Service\Telemetry\MonologOTelHandler:
+        arguments:
+            $telemetry: '@App\Service\Telemetry\TelemetryInterface'
+            $level: !php/const Monolog\Level::Info
+            $bubble: true
+        public: true  # Public для интеграционных тестов
+
+    # Frontend telemetry endpoint controller (Sprint 8)
+    App\Controller\TelemetryController:
+        arguments:
+            $frontendEventWhitelist: '%telemetry.frontend_event_whitelist%'
+        public: true  # Public для интеграционных тестов
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

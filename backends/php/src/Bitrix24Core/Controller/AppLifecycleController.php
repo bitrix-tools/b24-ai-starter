@@ -15,6 +15,7 @@ namespace App\Bitrix24Core\Controller;
 
 use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
 use App\Bitrix24Core\FrontendPayload;
+use App\Service\Telemetry\TelemetryInterface;
 use Bitrix24\Lib\ApplicationInstallations;
 use Bitrix24\Lib\Bitrix24Accounts\ValueObjects\Domain;
 use Bitrix24\SDK\Application\Requests\Events\OnApplicationInstall\OnApplicationInstall;
@@ -35,6 +36,7 @@ class AppLifecycleController extends AbstractController
         private readonly ApplicationInstallations\UseCase\Install\Handler $installStartHandler,
         private readonly Bitrix24ServiceBuilderFactory $bitrix24ServiceBuilderFactory,
         private readonly LoggerInterface $logger,
+        private readonly TelemetryInterface $telemetry,
     ) {
     }
 
@@ -82,6 +84,18 @@ class AppLifecycleController extends AbstractController
             $partnerId = null;
             $externalId = null;
             $comment = null;
+
+            // Telemetry: track successful app installation
+            $this->telemetry->trackEvent('app_installed', [
+                'app.version'            => (string) $b24ApplicationInfo->VERSION,
+                'app.status'             => $b24ApplicationStatus->getStatusCode(),
+                'portal.license_family'  => $b24PortalLicenseFamily,
+                'portal.users_count'     => (string) $b24PortalUsersCount,
+                'portal.member_id'       => $frontendPayload->memberId,
+                'portal.domain'          => $frontendPayload->domain,
+                'installer.user_id'      => (string) $b24CurrentUserProfile->ID,
+                'installer.is_admin'     => $b24CurrentUserProfile->ADMIN ? 'true' : 'false',
+            ]);
 
             // step 1
             // save auth tokens into database
@@ -135,6 +149,14 @@ class AppLifecycleController extends AbstractController
             );
             $this->logger->debug('InstallController.process.finishBindEventHandlers');
 
+            // Telemetry: track event handler registration
+            $this->telemetry->trackEvent('event_subscription_registered', [
+                'portal.member_id'             => $frontendPayload->memberId,
+                'portal.domain'                => $frontendPayload->domain,
+                'registration.handler_url'     => $eventHandlerUrl,
+                'registration.events_count'    => '2',
+            ]);
+
             $response = new Response('OK', 200);
             $this->logger->debug('AppLifecycleController.install.finish', [
                 'response' => $response->getContent(),
@@ -146,6 +168,13 @@ class AppLifecycleController extends AbstractController
             $this->logger->error('AppLifecycleController.install.error', [
                 'message' => $throwable->getMessage(),
                 'trace' => $throwable->getTraceAsString(),
+            ]);
+
+            // Telemetry: track installation failure
+            $this->telemetry->trackError($throwable, [
+                'error.category'  => 'app_install_failed',
+                'portal.member_id' => $frontendPayload->memberId ?? 'unknown',
+                'portal.domain'   => $frontendPayload->domain ?? 'unknown',
             ]);
 
             return new Response(sprintf('error on placement request processing: %s', $throwable->getMessage()), 500);

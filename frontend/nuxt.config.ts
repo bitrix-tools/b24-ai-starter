@@ -21,7 +21,8 @@ export default defineNuxtConfig({
      */
     public: {
       appUrl: '',
-      apiUrl: ''
+      apiUrl: '',
+      telemetryEnabled: ''
     }
   },
 
