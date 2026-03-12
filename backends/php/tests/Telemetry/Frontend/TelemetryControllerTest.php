@@ -59,7 +59,7 @@ class TelemetryControllerTest extends WebTestCase
         $mock = $this->createMock(TelemetryInterface::class);
         $mock->method('isEnabled')->willReturn(true);
 
-        if ($shouldTrackBeCalled && $expectedEventName !== null) {
+        if ($shouldTrackBeCalled && null !== $expectedEventName) {
             $mock->expects($this->once())
                 ->method('trackEvent')
                 ->with(
@@ -80,7 +80,7 @@ class TelemetryControllerTest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function returns204_validJwtAndKnownEvent(): void
+    public function returns204ValidJwtAndKnownEvent(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: true, expectedEventName: 'page_view');
@@ -89,7 +89,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode([
@@ -103,7 +103,7 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function returns204_noAttributesOrTimestamp(): void
+    public function returns204NoAttributesOrTimestamp(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: true, expectedEventName: 'app_frame_loaded');
@@ -112,7 +112,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode(['event_name' => 'app_frame_loaded']),
@@ -122,7 +122,7 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function enrichedAttributes_containEventSourceFrontend(): void
+    public function enrichedAttributesContainEventSourceFrontend(): void
     {
         $client = static::createClient();
 
@@ -143,7 +143,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client, 'portal.bitrix24.ru', 'mem-42'),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client, 'portal.bitrix24.ru', 'mem-42'),
                 'HTTP_X_SESSION_ID' => 'sess-abc123',
                 'CONTENT_TYPE' => 'application/json',
             ],
@@ -167,7 +167,7 @@ class TelemetryControllerTest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function returns401_noAuthorizationHeader(): void
+    public function returns401NoAuthorizationHeader(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: false);
@@ -183,7 +183,7 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function returns401_invalidJwt(): void
+    public function returns401InvalidJwt(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: false);
@@ -206,7 +206,7 @@ class TelemetryControllerTest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function returns400_unknownEventName(): void
+    public function returns400UnknownEventName(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: false);
@@ -215,7 +215,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode(['event_name' => 'custom_hack_event']),
@@ -228,11 +228,11 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function returns400_tooManyAttributes(): void
+    public function returns400TooManyAttributes(): void
     {
         $attributes = [];
         for ($i = 1; $i <= 31; ++$i) {
-            $attributes['attr.' . $i] = 'value';
+            $attributes['attr.'.$i] = 'value';
         }
 
         $client = static::createClient();
@@ -242,7 +242,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode([
@@ -255,7 +255,7 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function returns400_invalidJson(): void
+    public function returns400InvalidJson(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: false);
@@ -264,7 +264,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: '{not valid json',
@@ -274,7 +274,7 @@ class TelemetryControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function returns400_missingEventName(): void
+    public function returns400MissingEventName(): void
     {
         $client = static::createClient();
         $this->injectTelemetryMock($client, shouldTrackBeCalled: false);
@@ -283,7 +283,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode(['attributes' => ['ui.path' => '/test']]),
@@ -297,7 +297,7 @@ class TelemetryControllerTest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function returns204_evenIfTrackEventThrows(): void
+    public function returns204EvenIfTrackEventThrows(): void
     {
         $client = static::createClient();
 
@@ -312,7 +312,7 @@ class TelemetryControllerTest extends WebTestCase
             method: 'POST',
             uri: '/api/telemetry/event',
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->makeJwt($client),
+                'HTTP_AUTHORIZATION' => 'Bearer '.$this->makeJwt($client),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode(['event_name' => 'page_view']),

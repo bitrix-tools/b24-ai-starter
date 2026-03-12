@@ -6,11 +6,11 @@ namespace App\EventListener;
 
 use App\Service\Telemetry\TelemetryInterface;
 use Bitrix24\SDK\Core\Exceptions\BaseException;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
  * Listener для автоматического отслеживания необработанных исключений (Sprint 5, Step 5.6).
@@ -31,23 +31,23 @@ final class TelemetryExceptionListener
     ) {
     }
 
-    public function onKernelException(ExceptionEvent $event): void
+    public function onKernelException(ExceptionEvent $exceptionEvent): void
     {
         if (!$this->telemetry->isEnabled()) {
             return;
         }
 
-        $throwable = $event->getThrowable();
-        $request = $event->getRequest();
+        $throwable = $exceptionEvent->getThrowable();
+        $request = $exceptionEvent->getRequest();
 
         // Классифицируем ошибку по типу
         $category = $this->classifyException($throwable);
 
         $this->telemetry->trackError($throwable, [
-            'error.category'   => $category,
-            'request.path'     => $request->getPathInfo(),
-            'request.method'   => $request->getMethod(),
-            'error.class'      => get_class($throwable),
+            'error.category' => $category,
+            'request.path' => $request->getPathInfo(),
+            'request.method' => $request->getMethod(),
+            'error.class' => get_class($throwable),
             'error.http_status' => $throwable instanceof HttpExceptionInterface
                 ? (string) $throwable->getStatusCode()
                 : '500',
@@ -60,13 +60,13 @@ final class TelemetryExceptionListener
     private function classifyException(\Throwable $throwable): string
     {
         return match (true) {
-            $throwable instanceof NotFoundHttpException        => 'not_found',
-            $this->isAuthException($throwable)                 => 'auth_error',
-            $this->isValidationException($throwable)           => 'validation_error',
-            $throwable instanceof BaseException                => 'api_error',
-            $throwable instanceof \InvalidArgumentException    => 'validation_error',
-            $throwable instanceof \DomainException             => 'domain_error',
-            default                                            => 'internal_error',
+            $throwable instanceof NotFoundHttpException => 'not_found',
+            $this->isAuthException($throwable) => 'auth_error',
+            $this->isValidationException($throwable) => 'validation_error',
+            $throwable instanceof BaseException => 'api_error',
+            $throwable instanceof \InvalidArgumentException => 'validation_error',
+            $throwable instanceof \DomainException => 'domain_error',
+            default => 'internal_error',
         };
     }
 

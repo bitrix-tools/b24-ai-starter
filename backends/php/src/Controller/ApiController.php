@@ -86,18 +86,18 @@ class ApiController extends AbstractController
 
         // Telemetry: track API endpoint usage (Sprint 1 smoke test)
         $this->telemetry->trackEvent('api_list_called', [
-            'endpoint'        => '/api/list',
-            'method'          => 'GET',
-            'timestamp'       => time(),
+            'endpoint' => '/api/list',
+            'method' => 'GET',
+            'timestamp' => time(),
         ]);
 
         // Telemetry: UI event — app opened (Sprint 5)
         $this->telemetry->trackEvent('app_opened', [
-            'ui.endpoint'     => '/api/list',
-            'ui.method'       => 'GET',
-            'session.id'      => $this->getSessionId($request),
+            'ui.endpoint' => '/api/list',
+            'ui.method' => 'GET',
+            'session.id' => $this->getSessionId($request),
             'portal.member_id' => $this->getMemberIdFromRequest($request),
-            'portal.domain'   => $this->getDomainFromRequest($request),
+            'portal.domain' => $this->getDomainFromRequest($request),
         ]);
 
         // JWT payload is stored in request attributes by JwtAuthenticationListener

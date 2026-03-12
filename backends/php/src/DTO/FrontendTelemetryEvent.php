@@ -26,21 +26,22 @@ final class FrontendTelemetryEvent
     private const string KEY_PATTERN = '/^[a-z0-9][a-z0-9._]*$/';
 
     /**
-     * @param string               $eventName          Имя события из whitelist
-     * @param array<string, mixed> $attributes         Атрибуты события
-     * @param int|null             $clientTimestampMs  Unix timestamp в миллисекундах (с фронта)
+     * @param string               $eventName         Имя события из whitelist
+     * @param array<string, mixed> $attributes        Атрибуты события
+     * @param int|null             $clientTimestampMs Unix timestamp в миллисекундах (с фронта)
      */
     private function __construct(
         private readonly string $eventName,
         private readonly array $attributes,
         private readonly ?int $clientTimestampMs,
-    ) {}
+    ) {
+    }
 
     /**
      * Создать DTO из сырого массива данных запроса.
      *
-     * @param array<string, mixed> $data       Декодированное тело POST-запроса
-     * @param list<string>         $whitelist  Допустимые имена событий из конфигурации
+     * @param array<string, mixed> $data      Декодированное тело POST-запроса
+     * @param list<string>         $whitelist Допустимые имена событий из конфигурации
      *
      * @throws \InvalidArgumentException При ошибке валидации
      */
@@ -54,13 +55,7 @@ final class FrontendTelemetryEvent
         $eventName = $data['event_name'];
 
         if (!in_array($eventName, $whitelist, true)) {
-            throw new \InvalidArgumentException(
-                sprintf(
-                    'Unknown event name "%s". Allowed: %s',
-                    $eventName,
-                    implode(', ', $whitelist),
-                ),
-            );
+            throw new \InvalidArgumentException(sprintf('Unknown event name "%s". Allowed: %s', $eventName, implode(', ', $whitelist)));
         }
 
         // Проверка атрибутов
@@ -71,9 +66,7 @@ final class FrontendTelemetryEvent
             }
 
             if (count($data['attributes']) > self::MAX_ATTRIBUTES) {
-                throw new \InvalidArgumentException(
-                    sprintf('Too many attributes: %d (max %d)', count($data['attributes']), self::MAX_ATTRIBUTES),
-                );
+                throw new \InvalidArgumentException(sprintf('Too many attributes: %d (max %d)', count($data['attributes']), self::MAX_ATTRIBUTES));
             }
 
             foreach ($data['attributes'] as $key => $value) {
@@ -82,17 +75,13 @@ final class FrontendTelemetryEvent
                 }
 
                 if (!preg_match(self::KEY_PATTERN, $key)) {
-                    throw new \InvalidArgumentException(
-                        sprintf('Invalid attribute key "%s". Allowed: lowercase letters, digits, dots, underscores', $key),
-                    );
+                    throw new \InvalidArgumentException(sprintf('Invalid attribute key "%s". Allowed: lowercase letters, digits, dots, underscores', $key));
                 }
 
                 $stringValue = is_scalar($value) ? (string) $value : json_encode($value);
 
                 if (mb_strlen($stringValue) > self::MAX_VALUE_LENGTH) {
-                    throw new \InvalidArgumentException(
-                        sprintf('Value of attribute "%s" is too long (%d chars, max %d)', $key, mb_strlen($stringValue), self::MAX_VALUE_LENGTH),
-                    );
+                    throw new \InvalidArgumentException(sprintf('Value of attribute "%s" is too long (%d chars, max %d)', $key, mb_strlen($stringValue), self::MAX_VALUE_LENGTH));
                 }
 
                 $attributes[$key] = $stringValue;
@@ -105,6 +94,7 @@ final class FrontendTelemetryEvent
             if (!is_int($data['client_timestamp_ms']) && !is_float($data['client_timestamp_ms'])) {
                 throw new \InvalidArgumentException('"client_timestamp_ms" must be a number');
             }
+
             $clientTimestampMs = (int) $data['client_timestamp_ms'];
         }
 

@@ -29,18 +29,18 @@ final class TelemetryRequestSubscriber implements EventSubscriberInterface
         ];
     }
 
-    public function onKernelRequest(RequestEvent $event): void
+    public function onKernelRequest(RequestEvent $requestEvent): void
     {
         // Только главные запросы, не sub-request'ы
-        if (!$event->isMainRequest()) {
+        if (!$requestEvent->isMainRequest()) {
             return;
         }
 
-        $request = $event->getRequest();
+        $request = $requestEvent->getRequest();
 
         // 1. Пробуем взять session.id из заголовка (передан фронтендом)
         $headerSessionId = $request->headers->get('X-Session-ID');
-        if (is_string($headerSessionId) && $headerSessionId !== '') {
+        if (is_string($headerSessionId) && '' !== $headerSessionId) {
             $request->attributes->set('telemetry_session_id', $headerSessionId);
 
             return;
@@ -56,8 +56,8 @@ final class TelemetryRequestSubscriber implements EventSubscriberInterface
     private function generateUuid4(): string
     {
         $bytes = random_bytes(16);
-        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40); // version 4
-        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80); // variant 10xx
+        $bytes[6] = chr((ord($bytes[6]) & 0x0F) | 0x40); // version 4
+        $bytes[8] = chr((ord($bytes[8]) & 0x3F) | 0x80); // variant 10xx
 
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
     }

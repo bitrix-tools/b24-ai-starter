@@ -87,14 +87,14 @@ class AppLifecycleController extends AbstractController
 
             // Telemetry: track successful app installation
             $this->telemetry->trackEvent('app_installed', [
-                'app.version'            => (string) $b24ApplicationInfo->VERSION,
-                'app.status'             => $b24ApplicationStatus->getStatusCode(),
-                'portal.license_family'  => $b24PortalLicenseFamily,
-                'portal.users_count'     => (string) $b24PortalUsersCount,
-                'portal.member_id'       => $frontendPayload->memberId,
-                'portal.domain'          => $frontendPayload->domain,
-                'installer.user_id'      => (string) $b24CurrentUserProfile->ID,
-                'installer.is_admin'     => $b24CurrentUserProfile->ADMIN ? 'true' : 'false',
+                'app.version' => (string) $b24ApplicationInfo->VERSION,
+                'app.status' => $b24ApplicationStatus->getStatusCode(),
+                'portal.license_family' => $b24PortalLicenseFamily,
+                'portal.users_count' => (string) $b24PortalUsersCount,
+                'portal.member_id' => $frontendPayload->memberId,
+                'portal.domain' => $frontendPayload->domain,
+                'installer.user_id' => (string) $b24CurrentUserProfile->ID,
+                'installer.is_admin' => $b24CurrentUserProfile->ADMIN ? 'true' : 'false',
             ]);
 
             // step 1
@@ -151,10 +151,10 @@ class AppLifecycleController extends AbstractController
 
             // Telemetry: track event handler registration
             $this->telemetry->trackEvent('event_subscription_registered', [
-                'portal.member_id'             => $frontendPayload->memberId,
-                'portal.domain'                => $frontendPayload->domain,
-                'registration.handler_url'     => $eventHandlerUrl,
-                'registration.events_count'    => '2',
+                'portal.member_id' => $frontendPayload->memberId,
+                'portal.domain' => $frontendPayload->domain,
+                'registration.handler_url' => $eventHandlerUrl,
+                'registration.events_count' => '2',
             ]);
 
             $response = new Response('OK', 200);
@@ -172,9 +172,9 @@ class AppLifecycleController extends AbstractController
 
             // Telemetry: track installation failure
             $this->telemetry->trackError($throwable, [
-                'error.category'  => 'app_install_failed',
+                'error.category' => 'app_install_failed',
                 'portal.member_id' => $frontendPayload->memberId ?? 'unknown',
-                'portal.domain'   => $frontendPayload->domain ?? 'unknown',
+                'portal.domain' => $frontendPayload->domain ?? 'unknown',
             ]);
 
             return new Response(sprintf('error on placement request processing: %s', $throwable->getMessage()), 500);

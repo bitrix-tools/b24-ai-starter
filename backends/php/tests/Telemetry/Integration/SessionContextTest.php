@@ -113,7 +113,7 @@ class SessionContextTest extends TestCase
 
         // Act — тип SUB_REQUEST
         $subscriber->onKernelRequest(
-            $this->makeEvent($request, HttpKernelInterface::SUB_REQUEST)
+            $this->makeEvent($request, HttpKernelInterface::SUB_REQUEST),
         );
 
         // Assert — атрибут НЕ должен быть установлен subscriber'ом
@@ -155,7 +155,7 @@ class SessionContextWebTest extends WebTestCase
     public function sessionIdHeaderAcceptedByHealthEndpoint(): void
     {
         $client = static::createClient();
-        $sessionId = 'integration-session-' . uniqid();
+        $sessionId = 'integration-session-'.uniqid();
 
         $client->request('GET', '/api/health', [], [], [
             'HTTP_X_SESSION_ID' => $sessionId,

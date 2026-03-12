@@ -44,7 +44,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertIsInt($attributes['log.timestamp']);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -55,7 +55,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Info,
             message: 'Test message',
             context: [],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -85,7 +85,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertArrayNotHasKey('exception', $context);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -96,7 +96,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Error,
             message: 'Error occurred',
             context: ['exception' => $exception],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -123,7 +123,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertSame('login', $attributes['context.action']);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -137,7 +137,7 @@ class MonologOTelHandlerTest extends TestCase
                 'user_id' => 123,
                 'action' => 'login',
             ],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -162,7 +162,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertSame('req-123', $attributes['extra.request_id']);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -173,7 +173,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Info,
             message: 'Request processed',
             context: [],
-            extra: ['request_id' => 'req-123']
+            extra: ['request_id' => 'req-123'],
         );
 
         $handler->handle($record);
@@ -201,7 +201,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertSame(['key' => 'value'], $decoded);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -214,7 +214,7 @@ class MonologOTelHandlerTest extends TestCase
             context: [
                 'data' => ['key' => 'value'],
             ],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -243,7 +243,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Info,
             message: 'Test message',
             context: [],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -277,7 +277,7 @@ class MonologOTelHandlerTest extends TestCase
                         $this->assertSame($expectedSeverity, $attributes['log.severity']);
 
                         return true;
-                    })
+                    }),
                 );
 
             $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -288,7 +288,7 @@ class MonologOTelHandlerTest extends TestCase
                 level: $level,
                 message: 'Test',
                 context: [],
-                extra: []
+                extra: [],
             );
 
             $handler->handle($record);
@@ -322,7 +322,7 @@ class MonologOTelHandlerTest extends TestCase
                 level: $level,
                 message: 'Test',
                 context: [],
-                extra: []
+                extra: [],
             );
 
             $handler->handle($record);
@@ -346,7 +346,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertSame('', $attributes['context.nullable']);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -357,7 +357,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Info,
             message: 'Test',
             context: ['nullable' => null],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);
@@ -382,7 +382,7 @@ class MonologOTelHandlerTest extends TestCase
                     $this->assertSame('stdClass', $attributes['context.object']);
 
                     return true;
-                })
+                }),
             );
 
         $handler = new MonologOTelHandler($telemetry, Level::Debug);
@@ -393,7 +393,7 @@ class MonologOTelHandlerTest extends TestCase
             level: Level::Info,
             message: 'Test',
             context: ['object' => $object],
-            extra: []
+            extra: [],
         );
 
         $handler->handle($record);

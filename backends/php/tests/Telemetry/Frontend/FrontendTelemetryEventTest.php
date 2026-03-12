@@ -35,12 +35,12 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function happyPath_validEventWithAttributes(): void
+    public function happyPathValidEventWithAttributes(): void
     {
         $event = FrontendTelemetryEvent::fromArray([
             'event_name' => 'page_view',
             'attributes' => [
-                'ui.path'       => '/crm/leads',
+                'ui.path' => '/crm/leads',
                 'ui.route_name' => 'crm-leads',
             ],
             'client_timestamp_ms' => 1740000000000,
@@ -53,7 +53,7 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function happyPath_noAttributesOrTimestamp(): void
+    public function happyPathNoAttributesOrTimestamp(): void
     {
         $event = FrontendTelemetryEvent::fromArray([
             'event_name' => 'app_frame_loaded',
@@ -65,12 +65,12 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function happyPath_nonStringValuesAreCastToString(): void
+    public function happyPathNonStringValuesAreCastToString(): void
     {
         $event = FrontendTelemetryEvent::fromArray([
             'event_name' => 'ui_button_click',
             'attributes' => [
-                'ui.count'  => 42,
+                'ui.count' => 42,
                 'ui.active' => true,
             ],
         ], self::WHITELIST);
@@ -80,11 +80,11 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function happyPath_exactlyMaxAttributes(): void
+    public function happyPathExactlyMaxAttributes(): void
     {
         $attributes = [];
         for ($i = 1; $i <= 30; ++$i) {
-            $attributes['attr.' . $i] = 'value';
+            $attributes['attr.'.$i] = 'value';
         }
 
         $event = FrontendTelemetryEvent::fromArray([
@@ -100,7 +100,7 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function reject_unknownEventName(): void
+    public function rejectUnknownEventName(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/Unknown event name "custom_hack"/');
@@ -111,7 +111,7 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function reject_missingEventName(): void
+    public function rejectMissingEventName(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/Missing or invalid "event_name"/');
@@ -120,7 +120,7 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function reject_numericEventName(): void
+    public function rejectNumericEventName(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
@@ -132,11 +132,11 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function reject_tooManyAttributes(): void
+    public function rejectTooManyAttributes(): void
     {
         $attributes = [];
         for ($i = 1; $i <= 31; ++$i) {
-            $attributes['attr.' . $i] = 'value';
+            $attributes['attr.'.$i] = 'value';
         }
 
         $this->expectException(\InvalidArgumentException::class);
@@ -153,7 +153,7 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function reject_attributeValueTooLong(): void
+    public function rejectAttributeValueTooLong(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/too long/');
@@ -167,7 +167,7 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function accept_attributeValueExactlyMaxLength(): void
+    public function acceptAttributeValueExactlyMaxLength(): void
     {
         $event = FrontendTelemetryEvent::fromArray([
             'event_name' => 'page_view',
@@ -184,7 +184,7 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function reject_invalidKeyFormat(): void
+    public function rejectInvalidKeyFormat(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/Invalid attribute key/');
@@ -198,7 +198,7 @@ class FrontendTelemetryEventTest extends TestCase
     }
 
     #[Test]
-    public function reject_keyStartingWithDot(): void
+    public function rejectKeyStartingWithDot(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
@@ -215,13 +215,13 @@ class FrontendTelemetryEventTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function reject_invalidClientTimestampType(): void
+    public function rejectInvalidClientTimestampType(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/client_timestamp_ms.*must be a number/');
 
         FrontendTelemetryEvent::fromArray([
-            'event_name'          => 'page_view',
+            'event_name' => 'page_view',
             'client_timestamp_ms' => 'not-a-number',
         ], self::WHITELIST);
     }

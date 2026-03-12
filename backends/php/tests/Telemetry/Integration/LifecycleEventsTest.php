@@ -39,14 +39,14 @@ class LifecycleEventsTest extends TestCase
         $this->telemetry
             ->expects($this->once())
             ->method('trackEvent')
-            ->with('app_installed', $this->callback(fn(array $attrs) =>
-                isset($attrs['portal.member_id']) &&
-                isset($attrs['portal.domain'])
+            ->with('app_installed', $this->callback(
+                fn (array $attrs) => isset($attrs['portal.member_id'])
+                && isset($attrs['portal.domain']),
             ));
 
         $this->telemetry->trackEvent('app_installed', [
             'portal.member_id' => 'abc123',
-            'portal.domain'    => 'test.bitrix24.ru',
+            'portal.domain' => 'test.bitrix24.ru',
         ]);
     }
 
@@ -56,7 +56,7 @@ class LifecycleEventsTest extends TestCase
         // Arrange — задаём ожидаемые атрибуты события
         $expectedAttributes = [
             'portal.member_id' => 'member-xyz',
-            'portal.domain'    => 'example.bitrix24.ru',
+            'portal.domain' => 'example.bitrix24.ru',
         ];
 
         $this->telemetry
@@ -74,7 +74,7 @@ class LifecycleEventsTest extends TestCase
         // Arrange
         $expectedAttributes = [
             'portal.member_id' => 'member-xyz',
-            'portal.domain'    => 'example.bitrix24.ru',
+            'portal.domain' => 'example.bitrix24.ru',
         ];
 
         $this->telemetry
@@ -103,9 +103,9 @@ class LifecycleEventsTest extends TestCase
 
         // Act
         $this->telemetry->trackEvent('event_subscription_registered', [
-            'portal.member_id'          => 'member-abc',
-            'portal.domain'             => 'example.bitrix24.ru',
-            'registration.handler_url'  => $handlerUrl,
+            'portal.member_id' => 'member-abc',
+            'portal.domain' => 'example.bitrix24.ru',
+            'registration.handler_url' => $handlerUrl,
             'registration.events_count' => '2',
         ]);
     }
@@ -128,14 +128,14 @@ class LifecycleEventsTest extends TestCase
 
         // Act
         $this->telemetry->trackEvent('app_installed', [
-            'app.version'           => '25',
-            'app.status'            => 'free',
+            'app.version' => '25',
+            'app.status' => 'free',
             'portal.license_family' => 'ru_basic',
-            'portal.users_count'    => '15',
-            'portal.member_id'      => 'member-abc',
-            'portal.domain'         => 'example.bitrix24.ru',
-            'installer.user_id'     => '1',
-            'installer.is_admin'    => 'true',
+            'portal.users_count' => '15',
+            'portal.member_id' => 'member-abc',
+            'portal.domain' => 'example.bitrix24.ru',
+            'installer.user_id' => '1',
+            'installer.is_admin' => 'true',
         ]);
     }
 
@@ -150,17 +150,17 @@ class LifecycleEventsTest extends TestCase
             ->method('trackError')
             ->with(
                 $this->identicalTo($exception),
-                $this->callback(fn(array $context) =>
-                    isset($context['error.category']) &&
-                    $context['error.category'] === 'app_install_failed'
-                )
+                $this->callback(
+                    fn (array $context) => isset($context['error.category'])
+                    && 'app_install_failed' === $context['error.category'],
+                ),
             );
 
         // Act
         $this->telemetry->trackError($exception, [
-            'error.category'  => 'app_install_failed',
+            'error.category' => 'app_install_failed',
             'portal.member_id' => 'member-abc',
-            'portal.domain'   => 'example.bitrix24.ru',
+            'portal.domain' => 'example.bitrix24.ru',
         ]);
     }
 

@@ -40,7 +40,8 @@ final class TelemetryController extends AbstractController
         private readonly TelemetryInterface $telemetry,
         private readonly LoggerInterface $logger,
         private readonly array $frontendEventWhitelist,
-    ) {}
+    ) {
+    }
 
     /**
      * Принять событие от фронтенда и транслировать в телеметрию.
@@ -68,8 +69,8 @@ final class TelemetryController extends AbstractController
         // Разбираем JSON-тело запроса
         try {
             $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            return new JsonResponse(['error' => 'Invalid JSON: ' . $e->getMessage()], 400);
+        } catch (\JsonException $jsonException) {
+            return new JsonResponse(['error' => 'Invalid JSON: '.$jsonException->getMessage()], 400);
         }
 
         if (!is_array($data)) {
@@ -79,13 +80,13 @@ final class TelemetryController extends AbstractController
         // Валидируем DTO (whitelist + ограничения)
         try {
             $event = FrontendTelemetryEvent::fromArray($data, $this->frontendEventWhitelist);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $invalidArgumentException) {
             $this->logger->debug('TelemetryController: invalid frontend event', [
-                'error' => $e->getMessage(),
+                'error' => $invalidArgumentException->getMessage(),
                 'data' => $data,
             ]);
 
-            return new JsonResponse(['error' => $e->getMessage()], 400);
+            return new JsonResponse(['error' => $invalidArgumentException->getMessage()], 400);
         }
 
         // Обогащаем атрибутами из JWT и session context
@@ -93,26 +94,26 @@ final class TelemetryController extends AbstractController
         $enrichedAttributes = array_merge(
             $event->getAttributes(),
             [
-                'event.source'     => 'frontend',
-                'session.id'       => $this->getSessionId($request),
+                'event.source' => 'frontend',
+                'session.id' => $this->getSessionId($request),
                 'portal.member_id' => (string) ($request->attributes->get('jwt_member_id') ?? ''),
-                'portal.domain'    => (string) ($request->attributes->get('jwt_domain') ?? ''),
+                'portal.domain' => (string) ($request->attributes->get('jwt_domain') ?? ''),
             ],
         );
 
         // Если фронт передал client_timestamp_ms — добавляем как диагностический атрибут
-        if ($event->getClientTimestampMs() !== null) {
+        if (null !== $event->getClientTimestampMs()) {
             $enrichedAttributes['client.timestamp_ms'] = (string) $event->getClientTimestampMs();
         }
 
         // Отправляем в телеметрию; сбои не должны влиять на ответ
         try {
             $this->telemetry->trackEvent($event->getEventName(), $enrichedAttributes);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $throwable) {
             // Логируем, но возвращаем 204 — телеметрия не должна ломать UI
             $this->logger->error('TelemetryController: trackEvent failed', [
                 'event_name' => $event->getEventName(),
-                'error' => $e->getMessage(),
+                'error' => $throwable->getMessage(),
             ]);
         }
 

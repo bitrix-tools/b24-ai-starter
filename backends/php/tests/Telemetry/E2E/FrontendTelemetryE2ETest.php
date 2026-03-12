@@ -29,12 +29,12 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 class FrontendTelemetryE2ETest extends WebTestCase
 {
     private const string CLICKHOUSE_HOSTS = 'host.docker.internal:8123';
-    private const int POLL_INTERVAL_MS    = 500;
-    private const int POLL_MAX_ATTEMPTS   = 24;  // 24 × 500 ms = 12 s
+    private const int POLL_INTERVAL_MS = 500;
+    private const int POLL_MAX_ATTEMPTS = 24;  // 24 × 500 ms = 12 s
 
     private static ?string $clickhouseHost = null;
-    private static string $clickhouseUser  = 'telemetry_user';
-    private static string $clickhousePass  = '';
+    private static string $clickhouseUser = 'telemetry_user';
+    private static string $clickhousePass = '';
 
     // ------------------------------------------------------------------
     // Bootstrap
@@ -55,8 +55,9 @@ class FrontendTelemetryE2ETest extends WebTestCase
             $ctx = stream_context_create(['http' => ['timeout' => 2]]);
             $body = @file_get_contents($url, false, $ctx);
 
-            if ($body !== false && str_contains($body, 'Ok')) {
+            if (false !== $body && str_contains($body, 'Ok')) {
                 self::$clickhouseHost = $host;
+
                 break;
             }
         }
@@ -69,7 +70,7 @@ class FrontendTelemetryE2ETest extends WebTestCase
     {
         parent::setUp();
 
-        if (self::$clickhouseHost === null) {
+        if (null === self::$clickhouseHost) {
             self::markTestSkipped('ClickHouse is not reachable — E2E test skipped.');
         }
     }
@@ -79,12 +80,12 @@ class FrontendTelemetryE2ETest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function happyPath_eventAppearsInClickHouse(): void
+    public function happyPathEventAppearsInClickHouse(): void
     {
         // Уникальный session ID для изоляции этого запуска от других тестов.
         // session.id — разрешённый атрибут в UIProfile, гарантированно попадает в ClickHouse.
         // e2e.test.run_id был бы отфильтрован AttributeGroupManager, т.к. не входит ни в один профиль.
-        $uniqueSessionId = 'e2e-session-' . uniqid('', true);
+        $uniqueSessionId = 'e2e-session-'.uniqid('', true);
 
         $client = static::createClient();
         $jwt = $this->generateJwt($client, 'e2e-portal.bitrix24.ru', 'e2e-member-001');
@@ -94,8 +95,8 @@ class FrontendTelemetryE2ETest extends WebTestCase
             uri: '/api/telemetry/event',
             server: [
                 'HTTP_AUTHORIZATION' => "Bearer {$jwt}",
-                'HTTP_X_SESSION_ID'  => $uniqueSessionId,
-                'CONTENT_TYPE'       => 'application/json',
+                'HTTP_X_SESSION_ID' => $uniqueSessionId,
+                'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode([
                 'event_name' => 'page_view',
@@ -112,7 +113,7 @@ class FrontendTelemetryE2ETest extends WebTestCase
         // контроллером из HTTP_X_SESSION_ID заголовка
         $sql = sprintf(
             "SELECT COUNT(*) FROM telemetry.otel_traces WHERE SpanName = 'page_view' AND SpanAttributes['session.id'] = '%s'",
-            $uniqueSessionId
+            $uniqueSessionId,
         );
 
         $found = $this->pollClickHouse($sql, expectedCount: 1);
@@ -122,8 +123,8 @@ class FrontendTelemetryE2ETest extends WebTestCase
             sprintf(
                 'Expected page_view event with session.id=%s to appear in ClickHouse within %d seconds',
                 $uniqueSessionId,
-                (self::POLL_MAX_ATTEMPTS * self::POLL_INTERVAL_MS) / 1000
-            )
+                (self::POLL_MAX_ATTEMPTS * self::POLL_INTERVAL_MS) / 1000,
+            ),
         );
     }
 
@@ -132,9 +133,9 @@ class FrontendTelemetryE2ETest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function whitelistBlocker_nothingAppearsInClickHouse(): void
+    public function whitelistBlockerNothingAppearsInClickHouse(): void
     {
-        $blockedEvent = 'custom_hack_event_' . uniqid();
+        $blockedEvent = 'custom_hack_event_'.uniqid();
 
         $client = static::createClient();
         $jwt = $this->generateJwt($client, 'e2e-portal.bitrix24.ru');
@@ -144,7 +145,7 @@ class FrontendTelemetryE2ETest extends WebTestCase
             uri: '/api/telemetry/event',
             server: [
                 'HTTP_AUTHORIZATION' => "Bearer {$jwt}",
-                'CONTENT_TYPE'       => 'application/json',
+                'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode([
                 'event_name' => $blockedEvent,
@@ -157,7 +158,7 @@ class FrontendTelemetryE2ETest extends WebTestCase
         // Проверяем, что в ClickHouse нет этого события
         $sql = sprintf(
             "SELECT COUNT(*) FROM telemetry.otel_traces WHERE SpanName = '%s'",
-            $blockedEvent
+            $blockedEvent,
         );
 
         $count = $this->queryClickHouseCount($sql);
@@ -169,9 +170,9 @@ class FrontendTelemetryE2ETest extends WebTestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function noJwt_nothingAppearsInClickHouse(): void
+    public function noJwtNothingAppearsInClickHouse(): void
     {
-        $uniqueAttr = 'e2e.no_auth.' . uniqid();
+        $uniqueAttr = 'e2e.no_auth.'.uniqid();
 
         $client = static::createClient();
 
@@ -189,7 +190,7 @@ class FrontendTelemetryE2ETest extends WebTestCase
 
         $sql = sprintf(
             "SELECT COUNT(*) FROM telemetry.otel_traces WHERE mapContains(SpanAttributes, '%s')",
-            $uniqueAttr
+            $uniqueAttr,
         );
 
         $count = $this->queryClickHouseCount($sql);
@@ -239,19 +240,19 @@ class FrontendTelemetryE2ETest extends WebTestCase
         $url = sprintf(
             'http://%s/?query=%s&output_format_json_quote_64bit_integers=0',
             self::$clickhouseHost,
-            urlencode($sql)
+            urlencode($sql),
         );
 
-        $credentials = base64_encode(self::$clickhouseUser . ':' . self::$clickhousePass);
+        $credentials = base64_encode(self::$clickhouseUser.':'.self::$clickhousePass);
         $ctx = stream_context_create([
             'http' => [
                 'timeout' => 5,
-                'header'  => 'Authorization: Basic ' . $credentials . "\r\n",
+                'header' => 'Authorization: Basic '.$credentials."\r\n",
             ],
         ]);
         $result = @file_get_contents($url, false, $ctx);
 
-        if ($result === false) {
+        if (false === $result) {
             return 0;
         }
 

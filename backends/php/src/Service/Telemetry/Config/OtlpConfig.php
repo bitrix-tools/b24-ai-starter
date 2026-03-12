@@ -12,10 +12,12 @@ namespace App\Service\Telemetry\Config;
 final class OtlpConfig
 {
     private const DEFAULT_TIMEOUT_MS = 10000;
+
     // 10 секунд
     private const DEFAULT_RETRY_ATTEMPTS = 3;
 
     private const DEFAULT_RETRY_DELAY_MS = 1000;
+
     // 1 секунда
     private const DEFAULT_BATCH_SIZE = 100;
 

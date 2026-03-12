@@ -51,7 +51,7 @@ class MonologOTelHandler extends AbstractProcessingHandler
     public function __construct(
         private readonly TelemetryInterface $telemetry,
         int|string|Level $level = Level::Debug,
-        bool $bubble = true
+        bool $bubble = true,
     ) {
         parent::__construct($level, $bubble);
     }
@@ -59,9 +59,9 @@ class MonologOTelHandler extends AbstractProcessingHandler
     /**
      * Обработка записи лога и отправка в телеметрию.
      *
-     * @param LogRecord $record Запись лога от Monolog
+     * @param LogRecord $logRecord Запись лога от Monolog
      */
-    protected function write(LogRecord $record): void
+    protected function write(LogRecord $logRecord): void
     {
         // Защита от рекурсии: если мы уже обрабатываем запись (например, TelemetryFactory
         // логирует в процессе инициализации), пропускаем повторный вызов.
@@ -70,6 +70,7 @@ class MonologOTelHandler extends AbstractProcessingHandler
         }
 
         self::$handling = true;
+
         try {
             // Если телеметрия отключена - ничего не делаем (graceful degradation)
             if (!$this->telemetry->isEnabled()) {
@@ -77,19 +78,19 @@ class MonologOTelHandler extends AbstractProcessingHandler
             }
 
             // Определяем тип события по уровню лога
-            $isError = $record->level->value >= Level::Error->value;
+            $isError = $logRecord->level->value >= Level::Error->value;
 
-            if ($isError && isset($record->context['exception']) && $record->context['exception'] instanceof \Throwable) {
+            if ($isError && isset($logRecord->context['exception']) && $logRecord->context['exception'] instanceof \Throwable) {
                 // Если это ERROR+ уровень с исключением - используем trackError
-                $exception = $record->context['exception'];
-                $context = $this->prepareContext($record);
+                $exception = $logRecord->context['exception'];
+                $context = $this->prepareContext($logRecord);
                 unset($context['exception']); // Исключение передается отдельно
 
                 $this->telemetry->trackError($exception, $context);
             } else {
                 // Для остальных случаев - используем trackEvent
-                $eventName = $this->buildEventName($record);
-                $attributes = $this->prepareAttributes($record);
+                $eventName = $this->buildEventName($logRecord);
+                $attributes = $this->prepareAttributes($logRecord);
 
                 $this->telemetry->trackEvent($eventName, $attributes);
             }
@@ -101,50 +102,50 @@ class MonologOTelHandler extends AbstractProcessingHandler
     /**
      * Генерирует имя события на основе уровня и канала лога.
      *
-     * @param LogRecord $record Запись лога
+     * @param LogRecord $logRecord Запись лога
      *
      * @return string Имя события в формате "log.{level}.{channel}"
      */
-    private function buildEventName(LogRecord $record): string
+    private function buildEventName(LogRecord $logRecord): string
     {
-        $level = strtolower($record->level->getName());
-        $channel = strtolower($record->channel);
+        $level = strtolower($logRecord->level->getName());
+        $channel = strtolower($logRecord->channel);
 
-        return "log.{$level}.{$channel}";
+        return sprintf('log.%s.%s', $level, $channel);
     }
 
     /**
      * Подготавливает атрибуты для trackEvent из записи лога.
      *
-     * @param LogRecord $record Запись лога
+     * @param LogRecord $logRecord Запись лога
      *
      * @return array<string, mixed> Атрибуты события
      */
-    private function prepareAttributes(LogRecord $record): array
+    private function prepareAttributes(LogRecord $logRecord): array
     {
         $attributes = [
             'telemetry.channel' => 'system',
-            'log.level' => $record->level->getName(),
-            'log.severity' => self::SEVERITY_MAP[$record->level->getName()] ?? 'INFO',
-            'log.channel' => $record->channel,
-            'log.message' => $record->message,
-            'log.timestamp' => $record->datetime->getTimestamp(),
+            'log.level' => $logRecord->level->getName(),
+            'log.severity' => self::SEVERITY_MAP[$logRecord->level->getName()] ?? 'INFO',
+            'log.channel' => $logRecord->channel,
+            'log.message' => $logRecord->message,
+            'log.timestamp' => $logRecord->datetime->getTimestamp(),
         ];
 
         // Добавляем контекст
-        foreach ($record->context as $key => $value) {
+        foreach ($logRecord->context as $key => $value) {
             // Пропускаем exception - он обрабатывается отдельно
-            if ($key === 'exception') {
+            if ('exception' === $key) {
                 continue;
             }
 
             // Преобразуем сложные типы в строки
-            $attributes["context.{$key}"] = $this->normalizeValue($value);
+            $attributes['context.'.$key] = $this->normalizeValue($value);
         }
 
         // Добавляем extra данные
-        foreach ($record->extra as $key => $value) {
-            $attributes["extra.{$key}"] = $this->normalizeValue($value);
+        foreach ($logRecord->extra as $key => $value) {
+            $attributes['extra.'.$key] = $this->normalizeValue($value);
         }
 
         return $attributes;
@@ -153,32 +154,33 @@ class MonologOTelHandler extends AbstractProcessingHandler
     /**
      * Подготавливает контекст для trackError из записи лога.
      *
-     * @param LogRecord $record Запись лога
+     * @param LogRecord $logRecord Запись лога
      *
      * @return array<string, mixed> Контекст ошибки
      */
-    private function prepareContext(LogRecord $record): array
+    private function prepareContext(LogRecord $logRecord): array
     {
         $context = [
             'telemetry.channel' => 'system',
-            'log.level' => $record->level->getName(),
-            'log.severity' => self::SEVERITY_MAP[$record->level->getName()] ?? 'ERROR',
-            'log.channel' => $record->channel,
-            'log.message' => $record->message,
-            'log.timestamp' => $record->datetime->getTimestamp(),
+            'log.level' => $logRecord->level->getName(),
+            'log.severity' => self::SEVERITY_MAP[$logRecord->level->getName()] ?? 'ERROR',
+            'log.channel' => $logRecord->channel,
+            'log.message' => $logRecord->message,
+            'log.timestamp' => $logRecord->datetime->getTimestamp(),
         ];
 
         // Добавляем весь контекст (кроме exception)
-        foreach ($record->context as $key => $value) {
-            if ($key === 'exception') {
+        foreach ($logRecord->context as $key => $value) {
+            if ('exception' === $key) {
                 continue;
             }
-            $context["context.{$key}"] = $this->normalizeValue($value);
+
+            $context['context.'.$key] = $this->normalizeValue($value);
         }
 
         // Добавляем extra данные
-        foreach ($record->extra as $key => $value) {
-            $context["extra.{$key}"] = $this->normalizeValue($value);
+        foreach ($logRecord->extra as $key => $value) {
+            $context['extra.'.$key] = $this->normalizeValue($value);
         }
 
         return $context;
@@ -195,7 +197,7 @@ class MonologOTelHandler extends AbstractProcessingHandler
      */
     private function normalizeValue(mixed $value): string|int|float|bool
     {
-        if (is_scalar($value) || $value === null) {
+        if (is_scalar($value) || null === $value) {
             return $value ?? '';
         }
 

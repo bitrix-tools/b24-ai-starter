@@ -121,6 +121,7 @@ class TrackOperationTest extends TestCase
         $original = new \RuntimeException('upstream error', 503);
 
         $thrown = null;
+
         try {
             $service->trackOperation('op.fail', function () use ($original): never {
                 throw $original;
@@ -192,6 +193,7 @@ class TrackOperationTest extends TestCase
         $original = new \InvalidArgumentException('bad input', 400);
 
         $thrown = null;
+
         try {
             $service->trackOperation('op.fail', function () use ($original): never {
                 throw $original;
@@ -294,12 +296,12 @@ class TrackOperationTest extends TestCase
     public static function scalarResultProvider(): array
     {
         return [
-            'integer'      => ['test.int',    42],
-            'string'       => ['test.string', 'result'],
-            'float'        => ['test.float',  3.14],
-            'bool_true'    => ['test.true',   true],
-            'bool_false'   => ['test.false',  false],
-            'null'         => ['test.null',   null],
+            'integer' => ['test.int',    42],
+            'string' => ['test.string', 'result'],
+            'float' => ['test.float',  3.14],
+            'bool_true' => ['test.true',   true],
+            'bool_false' => ['test.false',  false],
+            'null' => ['test.null',   null],
         ];
     }
 
@@ -353,6 +355,7 @@ class TrackOperationTest extends TestCase
 
         foreach ([$null, $real] as $service) {
             $caught = null;
+
             try {
                 $service->trackOperation('op.fail', function () use ($exception): never {
                     throw $exception;

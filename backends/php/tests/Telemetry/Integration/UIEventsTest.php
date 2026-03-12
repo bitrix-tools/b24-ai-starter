@@ -119,7 +119,7 @@ class UIEventsTest extends TestCase
         $request = Request::create('/api/list');
         $request->attributes->set('jwt_payload', [
             'member_id' => 'abc123-member',
-            'domain'    => 'test.bitrix24.ru',
+            'domain' => 'test.bitrix24.ru',
         ]);
 
         // Act
@@ -136,7 +136,7 @@ class UIEventsTest extends TestCase
         $request = Request::create('/api/list');
         $request->attributes->set('jwt_payload', [
             'member_id' => 'abc123',
-            'domain'    => 'example.bitrix24.ru',
+            'domain' => 'example.bitrix24.ru',
         ]);
 
         // Act
@@ -210,7 +210,7 @@ class UIEventsWebTest extends WebTestCase
     public function sessionIdHeaderPassedThroughRequest(): void
     {
         $client = static::createClient();
-        $sessionId = 'test-session-' . uniqid();
+        $sessionId = 'test-session-'.uniqid();
 
         $client->request('GET', '/api/health', [], [], [
             'HTTP_X_SESSION_ID' => $sessionId,

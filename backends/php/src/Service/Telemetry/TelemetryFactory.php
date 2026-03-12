@@ -165,18 +165,18 @@ final class TelemetryFactory
 
         // Создаем и возвращаем AttributeGroupManager
         try {
-            $manager = new AttributeGroupManager($profiles, $excludePatterns);
+            $attributeGroupManager = new AttributeGroupManager($profiles, $excludePatterns);
 
             if ($this->logger instanceof LoggerInterface) {
                 $this->logger->info('AttributeGroupManager created', [
                     'active_profile' => $this->activeProfile,
                     'profiles_count' => count($profiles),
                     'exclude_patterns' => $excludePatterns,
-                    'allowed_attributes_count' => count($manager->getAllowedAttributes()),
+                    'allowed_attributes_count' => count($attributeGroupManager->getAllowedAttributes()),
                 ]);
             }
 
-            return $manager;
+            return $attributeGroupManager;
         } catch (\Throwable $throwable) {
             if ($this->logger instanceof LoggerInterface) {
                 $this->logger->error('Failed to create AttributeGroupManager', [

@@ -11,14 +11,16 @@ use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Contrib\Otlp\LogsExporter;
 use OpenTelemetry\Contrib\Otlp\SpanExporter;
-use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
-use OpenTelemetry\SDK\Trace\TracerProvider;
 use OpenTelemetry\SDK\Common\Attribute\Attributes;
 use OpenTelemetry\SDK\Common\Export\Http\PsrTransportFactory;
 use OpenTelemetry\SDK\Logs\LoggerProvider;
+use OpenTelemetry\SDK\Logs\LoggerProviderInterface;
 use OpenTelemetry\SDK\Logs\Processor\SimpleLogRecordProcessor;
 use OpenTelemetry\SDK\Resource\ResourceInfo;
 use OpenTelemetry\SDK\Resource\ResourceInfoFactory;
+use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
+use OpenTelemetry\SDK\Trace\TracerProvider;
+use OpenTelemetry\SDK\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\NativeHttpClient;
 use Symfony\Component\HttpClient\Psr18Client;
@@ -38,9 +40,9 @@ use Symfony\Component\HttpClient\Psr18Client;
  */
 final class RealTelemetryService implements TelemetryInterface
 {
-    private LoggerProvider $loggerProvider;
+    private LoggerProviderInterface $loggerProvider;
 
-    private TracerProvider $tracerProvider;
+    private TracerProviderInterface $tracerProvider;
 
     private bool $initialized = false;
 
@@ -61,8 +63,8 @@ final class RealTelemetryService implements TelemetryInterface
             // Resource: service.name → становится ServiceName в ClickHouse otel_logs
             $resource = ResourceInfoFactory::emptyResource()->merge(
                 ResourceInfo::create(Attributes::create([
-                    'service.name'           => $this->config->getServiceName(),
-                    'service.version'        => $this->config->getServiceVersion(),
+                    'service.name' => $this->config->getServiceName(),
+                    'service.version' => $this->config->getServiceVersion(),
                     'deployment.environment' => $this->config->getEnvironment(),
                 ])),
             );
@@ -72,8 +74,8 @@ final class RealTelemetryService implements TelemetryInterface
             // OtlpHttpTransportFactory → php-http/discovery → Symfony CurlMultiHandle
             // блокирует на emit() внутри Docker при host.docker.internal.
             // NativeHttpClient использует обычные PHP streams — надёжно и синхронно.
-            $httpClient = new Psr18Client(new NativeHttpClient(['timeout' => 5]));
-            $transport = (new PsrTransportFactory($httpClient))->create(
+            $psr18Client = new Psr18Client(new NativeHttpClient(['timeout' => 5]));
+            $transport = (new PsrTransportFactory($psr18Client))->create(
                 $this->config->getEndpoint().'/v1/logs',
                 'application/json',
             );
@@ -86,7 +88,7 @@ final class RealTelemetryService implements TelemetryInterface
                 ->build();
 
             // OTLP Traces transport → /v1/traces → ClickHouse otel_traces
-            $tracesTransport = (new PsrTransportFactory($httpClient))->create(
+            $tracesTransport = (new PsrTransportFactory($psr18Client))->create(
                 $this->config->getEndpoint().'/v1/traces',
                 'application/json',
             );
@@ -101,14 +103,14 @@ final class RealTelemetryService implements TelemetryInterface
             if ($this->logger instanceof LoggerInterface) {
                 $this->logger->info('OpenTelemetry Logs initialized successfully', [
                     'endpoint' => $this->config->getEndpoint().'/v1/logs',
-                    'service'  => $this->config->getServiceName(),
+                    'service' => $this->config->getServiceName(),
                 ]);
             }
         } catch (\Throwable $throwable) {
             $this->initialized = false;
             if ($this->logger instanceof LoggerInterface) {
                 $this->logger->error('Failed to initialize OpenTelemetry Logs', [
-                    'error'  => $throwable->getMessage(),
+                    'error' => $throwable->getMessage(),
                     'config' => $this->config->toArray(),
                 ]);
             }
@@ -129,7 +131,7 @@ final class RealTelemetryService implements TelemetryInterface
             $logAttributes = array_merge(
                 [
                     'telemetry.channel' => 'analytics',
-                    'event.name'        => $name,
+                    'event.name' => $name,
                 ],
                 $this->flattenAttributes($filteredAttributes),
             );
@@ -140,7 +142,7 @@ final class RealTelemetryService implements TelemetryInterface
                 ->setObservedTimestamp($nowNs)
                 ->setSeverityText('INFO')
                 ->setSeverityNumber(Severity::INFO)
-                ->setBody('Analytics event: ' . $name)
+                ->setBody('Analytics event: '.$name)
                 ->setAttributes($logAttributes);
 
             $otelLogger = $this->loggerProvider->getLogger(
@@ -172,9 +174,9 @@ final class RealTelemetryService implements TelemetryInterface
             $logAttributes = array_merge(
                 [
                     'telemetry.channel' => 'support',
-                    'error.class'       => get_class($exception),
-                    'error.message'     => $exception->getMessage(),
-                    'error.source'      => $exception->getFile().':'.$exception->getLine(),
+                    'error.class' => get_class($exception),
+                    'error.message' => $exception->getMessage(),
+                    'error.source' => $exception->getFile().':'.$exception->getLine(),
                 ],
                 $this->flattenAttributes($filteredContext),
             );
@@ -197,7 +199,7 @@ final class RealTelemetryService implements TelemetryInterface
             if ($this->logger instanceof LoggerInterface) {
                 $this->logger->error('Failed to track error', [
                     'original_exception' => $exception->getMessage(),
-                    'tracking_error'     => $throwable->getMessage(),
+                    'tracking_error' => $throwable->getMessage(),
                 ]);
             }
         }
@@ -233,6 +235,7 @@ final class RealTelemetryService implements TelemetryInterface
         } catch (\Throwable $throwable) {
             $span->recordException($throwable);
             $span->setStatus(StatusCode::STATUS_ERROR, $throwable->getMessage());
+
             throw $throwable;
         } finally {
             $span->end();
@@ -286,7 +289,7 @@ final class RealTelemetryService implements TelemetryInterface
             $filteredOut = $this->attributeGroupManager->getFilteredOutAttributes($attributes);
             if ([] !== $filteredOut) {
                 $this->logger->debug('Telemetry attributes filtered by profile', [
-                    'filtered_out'       => array_keys($filteredOut),
+                    'filtered_out' => array_keys($filteredOut),
                     'filtered_out_count' => count($filteredOut),
                 ]);
             }

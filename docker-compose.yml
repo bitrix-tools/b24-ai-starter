@@ -58,8 +58,8 @@ services:
       HTTP: frontend:3000
     expose:
       - '3000'
-    ports:
-      - "127.0.0.1:3000:3000"
+    # ports:
+    #  - "127.0.0.1:3000:3000"
     volumes:
       - ./frontend:/app
     networks:

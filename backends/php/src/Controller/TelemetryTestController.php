@@ -36,15 +36,15 @@ class TelemetryTestController extends AbstractController
     {
         $this->logger->info('TelemetryTestController.runTest.start');
 
-        $sessionId  = $this->getSessionId($request);
-        $memberId   = $this->getMemberIdFromRequest($request);
-        $domain     = $this->getDomainFromRequest($request);
-        $baseAttrs  = [
-            'test'             => 'true',
-            'test.source'      => 'telemetry_test_page',
-            'session.id'       => $sessionId,
+        $sessionId = $this->getSessionId($request);
+        $memberId = $this->getMemberIdFromRequest($request);
+        $domain = $this->getDomainFromRequest($request);
+        $baseAttrs = [
+            'test' => 'true',
+            'test.source' => 'telemetry_test_page',
+            'session.id' => $sessionId,
             'portal.member_id' => $memberId,
-            'portal.domain'    => $domain,
+            'portal.domain' => $domain,
         ];
 
         $firedEvents = [];
@@ -52,40 +52,40 @@ class TelemetryTestController extends AbstractController
         // 1. app_opened — открытие приложения
         $this->telemetry->trackEvent('app_opened', array_merge($baseAttrs, [
             'ui.endpoint' => '/api/telemetry/test',
-            'ui.method'   => 'GET',
+            'ui.method' => 'GET',
         ]));
         $firedEvents[] = 'app_opened';
 
         // 2. api_list_called — вызов API-эндпоинта
         $this->telemetry->trackEvent('api_list_called', array_merge($baseAttrs, [
             'endpoint' => '/api/telemetry/test',
-            'method'   => 'GET',
+            'method' => 'GET',
         ]));
         $firedEvents[] = 'api_list_called';
 
         // 3. bitrix_api_call — имитация серверного вызова B24 REST API
         $this->telemetry->trackEvent('bitrix_api_call', array_merge($baseAttrs, [
-            'api.provider'    => 'bitrix24',
-            'api.method'      => 'crm.deal.list',
+            'api.provider' => 'bitrix24',
+            'api.method' => 'crm.deal.list',
             'api.duration_ms' => '12',
-            'api.status'      => 'success',
+            'api.status' => 'success',
         ]));
         $firedEvents[] = 'bitrix_api_call';
 
         // 4. b24_event_action_initiated — начало обработки входящего события B24
         $this->telemetry->trackEvent('b24_event_action_initiated', array_merge($baseAttrs, [
-            'b24.event'  => 'ONCRMDEALUPDATE',
+            'b24.event' => 'ONCRMDEALUPDATE',
             'b24.entity' => 'deal',
         ]));
         $firedEvents[] = 'b24_event_action_initiated';
 
         // 5. b24_event_processed — успешное завершение обработки события
         $this->telemetry->trackEvent('b24_event_processed', array_merge($baseAttrs, [
-            'b24.event'           => 'ONCRMDEALUPDATE',
-            'action.name'         => 'process_crm_deal_update',
-            'action.type'         => 'b24_event_handler',
-            'action.status'       => 'completed',
-            'action.duration_ms'  => '55',
+            'b24.event' => 'ONCRMDEALUPDATE',
+            'action.name' => 'process_crm_deal_update',
+            'action.type' => 'b24_event_handler',
+            'action.status' => 'completed',
+            'action.duration_ms' => '55',
         ]));
         $firedEvents[] = 'b24_event_processed';
 
@@ -96,10 +96,10 @@ class TelemetryTestController extends AbstractController
         $firedEvents[] = 'screen_view';
 
         // 7. trackError — мягкая тестовая ошибка (не прерывает работу)
-        $testException = new \RuntimeException('[TelemetryTest] Soft test error — ignore in production');
-        $this->telemetry->trackError($testException, array_merge($baseAttrs, [
+        $runtimeException = new \RuntimeException('[TelemetryTest] Soft test error — ignore in production');
+        $this->telemetry->trackError($runtimeException, array_merge($baseAttrs, [
             'error.category' => 'telemetry_test',
-            'error.soft'     => 'true',
+            'error.soft' => 'true',
         ]));
         $firedEvents[] = 'trackError(RuntimeException)';
 
@@ -111,7 +111,7 @@ class TelemetryTestController extends AbstractController
                 usleep(5_000); // 5 ms
                 $firedEvents[] = 'trackOperation(test.simple_operation)';
             },
-            array_merge($baseAttrs, ['operation.type' => 'test'])
+            array_merge($baseAttrs, ['operation.type' => 'test']),
         );
 
         // 9. trackOperation — вложенный span: внешняя операция содержит внутреннюю (→ otel_traces)
@@ -125,20 +125,20 @@ class TelemetryTestController extends AbstractController
                         usleep(2_000); // 2 ms
                         $firedEvents[] = 'trackOperation(test.inner_operation)';
                     },
-                    ['operation.type' => 'test', 'operation.nested' => 'true']
+                    ['operation.type' => 'test', 'operation.nested' => 'true'],
                 );
                 $firedEvents[] = 'trackOperation(test.outer_operation)';
             },
-            array_merge($baseAttrs, ['operation.type' => 'test', 'operation.has_children' => 'true'])
+            array_merge($baseAttrs, ['operation.type' => 'test', 'operation.has_children' => 'true']),
         );
 
         $this->logger->info('TelemetryTestController.runTest.finish', ['fired_events' => $firedEvents]);
 
         return new JsonResponse([
-            'status'        => 'ok',
-            'fired_events'  => $firedEvents,
-            'fired_count'   => count($firedEvents),
-            'session_id'    => $sessionId,
+            'status' => 'ok',
+            'fired_events' => $firedEvents,
+            'fired_count' => count($firedEvents),
+            'session_id' => $sessionId,
             'portal_domain' => $domain,
         ]);
     }

@@ -37,7 +37,7 @@ class APICallsTest extends TestCase
             ->method('trackEvent')
             ->with('bitrix_api_call', $this->callback(function (array $attrs) {
                 return isset($attrs['api.provider'])
-                    && $attrs['api.provider'] === 'bitrix24'
+                    && 'bitrix24' === $attrs['api.provider']
                     && isset($attrs['api.method'])
                     && isset($attrs['api.duration_ms'])
                     && isset($attrs['api.status'])
@@ -46,11 +46,11 @@ class APICallsTest extends TestCase
 
         // Act
         $this->telemetry->trackEvent('bitrix_api_call', [
-            'api.provider'    => 'bitrix24',
-            'api.method'      => 'crm.contact.get',
+            'api.provider' => 'bitrix24',
+            'api.method' => 'crm.contact.get',
             'api.duration_ms' => '45',
-            'api.status'      => 'success',
-            'portal.domain'   => 'example.bitrix24.ru',
+            'api.status' => 'success',
+            'portal.domain' => 'example.bitrix24.ru',
         ]);
     }
 
@@ -72,11 +72,11 @@ class APICallsTest extends TestCase
 
         // Act
         $this->telemetry->trackEvent('bitrix_api_call', [
-            'api.provider'    => 'bitrix24',
-            'api.method'      => 'crm.contact.get',
+            'api.provider' => 'bitrix24',
+            'api.method' => 'crm.contact.get',
             'api.duration_ms' => (string) $durationMs,
-            'api.status'      => 'success',
-            'portal.domain'   => 'example.bitrix24.ru',
+            'api.status' => 'success',
+            'portal.domain' => 'example.bitrix24.ru',
         ]);
 
         // Assert — duration всегда строка
@@ -97,19 +97,19 @@ class APICallsTest extends TestCase
                 $this->identicalTo($exception),
                 $this->callback(function (array $context) {
                     return isset($context['error.category'])
-                        && $context['error.category'] === 'api_error'
+                        && 'api_error' === $context['error.category']
                         && isset($context['api.provider'])
-                        && $context['api.provider'] === 'bitrix24'
+                        && 'bitrix24' === $context['api.provider']
                         && isset($context['api.method']);
-                })
+                }),
             );
 
         // Act
         $this->telemetry->trackError($exception, [
             'error.category' => 'api_error',
-            'api.provider'   => 'bitrix24',
-            'api.method'     => 'crm.contact.get',
-            'api.status'     => 'error',
+            'api.provider' => 'bitrix24',
+            'api.method' => 'crm.contact.get',
+            'api.status' => 'error',
         ]);
     }
 
@@ -126,11 +126,11 @@ class APICallsTest extends TestCase
 
         // Act — событие без токена
         $this->telemetry->trackEvent('bitrix_api_call', [
-            'api.provider'    => 'bitrix24',
-            'api.method'      => 'crm.contact.get',
+            'api.provider' => 'bitrix24',
+            'api.method' => 'crm.contact.get',
             'api.duration_ms' => '30',
-            'api.status'      => 'success',
-            'portal.domain'   => 'example.bitrix24.ru',
+            'api.status' => 'success',
+            'portal.domain' => 'example.bitrix24.ru',
             // НЕТ: 'api.token', 'access_token', 'client_secret'
         ]);
 
@@ -153,11 +153,11 @@ class APICallsTest extends TestCase
             });
 
         $this->telemetry->trackEvent('bitrix_api_call', [
-            'api.provider'    => 'bitrix24',  // нижний регистр
-            'api.method'      => 'crm.contact.get',
+            'api.provider' => 'bitrix24',  // нижний регистр
+            'api.method' => 'crm.contact.get',
             'api.duration_ms' => '25',
-            'api.status'      => 'success',
-            'portal.domain'   => 'example.bitrix24.ru',
+            'api.status' => 'success',
+            'portal.domain' => 'example.bitrix24.ru',
         ]);
 
         $this->assertSame('bitrix24', $captured['api.provider']);

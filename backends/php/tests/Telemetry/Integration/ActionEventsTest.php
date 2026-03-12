@@ -39,17 +39,17 @@ class ActionEventsTest extends TestCase
                 return isset($attrs['action.name'])
                     && isset($attrs['action.type'])
                     && isset($attrs['action.status'])
-                    && $attrs['action.status'] === 'initiated'
+                    && 'initiated' === $attrs['action.status']
                     && isset($attrs['b24.event_code'])
                     && isset($attrs['portal.member_id']);
             }));
 
         // Act
         $this->telemetry->trackEvent('b24_event_action_initiated', [
-            'action.name'      => 'process_crm_contact_add',
-            'action.type'      => 'b24_event_handler',
-            'action.status'    => 'initiated',
-            'b24.event_code'   => 'ONCRMCONTACTADD',
+            'action.name' => 'process_crm_contact_add',
+            'action.type' => 'b24_event_handler',
+            'action.status' => 'initiated',
+            'b24.event_code' => 'ONCRMCONTACTADD',
             'portal.member_id' => 'member-abc',
         ]);
     }
@@ -65,7 +65,7 @@ class ActionEventsTest extends TestCase
                 return isset($attrs['action.duration_ms'])
                     && is_string($attrs['action.duration_ms'])
                     && is_numeric($attrs['action.duration_ms'])
-                    && $attrs['action.status'] === 'completed';
+                    && 'completed' === $attrs['action.status'];
             }));
 
         // Simulate action timing
@@ -75,13 +75,13 @@ class ActionEventsTest extends TestCase
 
         // Act
         $this->telemetry->trackEvent('b24_event_processed', [
-            'action.name'        => 'process_crm_contact_add',
-            'action.type'        => 'b24_event_handler',
-            'action.status'      => 'completed',
+            'action.name' => 'process_crm_contact_add',
+            'action.type' => 'b24_event_handler',
+            'action.status' => 'completed',
             'action.duration_ms' => (string) $durationMs,
-            'b24.event_code'     => 'ONCRMCONTACTADD',
-            'b24.contact_id'     => '42',
-            'portal.member_id'   => 'member-abc',
+            'b24.event_code' => 'ONCRMCONTACTADD',
+            'b24.contact_id' => '42',
+            'portal.member_id' => 'member-abc',
         ]);
     }
 
@@ -98,17 +98,17 @@ class ActionEventsTest extends TestCase
                 $this->identicalTo($exception),
                 $this->callback(function (array $context) {
                     return isset($context['error.category'])
-                        && $context['error.category'] === 'b24_event_processing_failed'
+                        && 'b24_event_processing_failed' === $context['error.category']
                         && isset($context['action.name'])
-                        && $context['action.status'] === 'failed';
-                })
+                        && 'failed' === $context['action.status'];
+                }),
             );
 
         // Act
         $this->telemetry->trackError($exception, [
             'error.category' => 'b24_event_processing_failed',
-            'action.name'    => 'process_crm_event',
-            'action.status'  => 'failed',
+            'action.name' => 'process_crm_event',
+            'action.status' => 'failed',
         ]);
     }
 
@@ -126,7 +126,7 @@ class ActionEventsTest extends TestCase
         // Act
         $this->telemetry->trackEvent('b24_event_processed', [
             'action.duration_ms' => (string) 42,
-            'action.status'      => 'completed',
+            'action.status' => 'completed',
         ]);
 
         // Assert
@@ -147,11 +147,11 @@ class ActionEventsTest extends TestCase
 
         // Act — симулируем последовательность initiated → completed
         $this->telemetry->trackEvent('b24_event_action_initiated', [
-            'action.name'   => 'process_crm_contact_add',
+            'action.name' => 'process_crm_contact_add',
             'action.status' => 'initiated',
         ]);
         $this->telemetry->trackEvent('b24_event_processed', [
-            'action.name'   => 'process_crm_contact_add',
+            'action.name' => 'process_crm_contact_add',
             'action.status' => 'completed',
         ]);
 

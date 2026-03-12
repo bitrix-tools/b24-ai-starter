@@ -40,7 +40,7 @@ readonly class Bitrix24ServiceBuilderFactory
 
     public function createFromFrontendPayload(FrontendPayload $frontendPayload): ServiceBuilder
     {
-        return new ServiceBuilderFactory($this->eventDispatcher, $this->logger)->init(
+        return (new ServiceBuilderFactory($this->eventDispatcher, $this->logger))->init(
             $this->getApplicationProfile(),
             $frontendPayload->authToken,
             $frontendPayload->domain,
@@ -54,7 +54,7 @@ readonly class Bitrix24ServiceBuilderFactory
      */
     public function createFromIncomingEvent(EventInterface $b24Event): ServiceBuilder
     {
-        return new ServiceBuilderFactory($this->eventDispatcher, $this->logger)->init(
+        return (new ServiceBuilderFactory($this->eventDispatcher, $this->logger))->init(
             $this->getApplicationProfile(),
             $b24Event->getAuth()->authToken,
             $b24Event->getAuth()->domain,
@@ -85,10 +85,10 @@ readonly class Bitrix24ServiceBuilderFactory
 
         $b24Account = $b24Accounts[0];
 
-        return new ServiceBuilderFactory(
+        return (new ServiceBuilderFactory(
             $this->eventDispatcher,
             $this->logger,
-        )->init(
+        ))->init(
             $this->getApplicationProfile(),
             // load auth tokens from a database
             $b24Account->getAuthToken(),

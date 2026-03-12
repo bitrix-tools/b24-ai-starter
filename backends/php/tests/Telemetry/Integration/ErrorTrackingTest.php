@@ -6,7 +6,6 @@ namespace App\Tests\Telemetry\Integration;
 
 use App\EventListener\TelemetryExceptionListener;
 use App\Service\Telemetry\TelemetryInterface;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -59,11 +58,11 @@ class ErrorTrackingTest extends TestCase
             ->method('trackError')
             ->with(
                 $this->identicalTo($exception),
-                $this->callback(fn(array $ctx) =>
-                    isset($ctx['error.category'])
+                $this->callback(
+                    fn (array $ctx) => isset($ctx['error.category'])
                     && isset($ctx['request.path'])
-                    && isset($ctx['request.method'])
-                )
+                    && isset($ctx['request.method']),
+                ),
             );
 
         $listener = new TelemetryExceptionListener($this->telemetry);

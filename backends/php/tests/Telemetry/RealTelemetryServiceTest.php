@@ -268,8 +268,8 @@ class RealTelemetryServiceTest extends TestCase
             fn () => ['id' => 1, 'name' => 'Test'],
             [
                 'portal.member_id' => 'member_123',
-                'b24.contact_id'   => '42',
-                'ai.model'         => 'claude-3',
+                'b24.contact_id' => '42',
+                'ai.model' => 'claude-3',
             ],
         );
     }

@@ -43,10 +43,13 @@ interface TelemetryInterface
      * StartTime, EndTime и Duration, видимые в Grafana.
      *
      * @template T
+     *
      * @param string               $name       Имя span'а в формате «сервис.действие» (e.g. 'ai.claude.request')
      * @param callable(): T        $operation  Операция для выполнения и замера
      * @param array<string, mixed> $attributes SpanAttributes (модель, portal_id и т.п.)
+     *
      * @return T Возвращает результат $operation без изменений
+     *
      * @throws \Throwable Пробрасывает исключения из $operation после записи в span
      */
     public function trackOperation(string $name, callable $operation, array $attributes = []): mixed;
