@@ -11,6 +11,7 @@ class FileLogger(StreamLogger):
     """
 
     _DEFAULT_HANDLER_TYPE = logging.FileHandler
+    _DEFAULT_LEVEL = logging.DEBUG
 
     __slots__ = ("_log_path",)
 

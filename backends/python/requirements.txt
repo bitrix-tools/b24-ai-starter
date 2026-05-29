@@ -5,4 +5,4 @@ django-cors-headers
 PyJWT
 gunicorn
 environs
-b24pysdk==0.3.0a1
+b24pysdk==1.1.2

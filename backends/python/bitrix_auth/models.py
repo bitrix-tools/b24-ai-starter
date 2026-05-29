@@ -3,10 +3,9 @@ from datetime import timedelta
 import jwt
 import uuid
 
-from b24pysdk import AbstractBitrixToken, BitrixToken
-from b24pysdk.bitrix_api.credentials import OAuthPlacementData
-from b24pysdk.bitrix_api.events import PortalDomainChangedEvent, OAuthTokenRenewedEvent
-from b24pysdk.error import BitrixAPIError, BitrixValidationError
+from b24pysdk import AbstractBitrixToken
+from b24pysdk.errors import BitrixValidationError
+from b24pysdk.events import OAuthTokenRenewedEvent, PortalDomainChangedEvent
 
 from django.db import models
 from django.utils import timezone

@@ -4,7 +4,7 @@ from typing import Text
 from django.conf import settings
 
 from b24pysdk import AbstractBitrixToken
-from b24pysdk.error import BitrixAPIError
+from b24pysdk.errors import BitrixAPIError
 
 _logger = getattr(settings, "logger", logging.getLogger(__name__))
 

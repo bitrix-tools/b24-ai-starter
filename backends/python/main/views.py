@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -6,11 +5,11 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.clickjacking import xframe_options_exempt
 from http import HTTPStatus
 
-from b24pysdk.error import BitrixAPIError
+from b24pysdk.integrations.django.decorators import event_required
+from b24pysdk.integrations.django.types import EventRequest
 
-from bitrix_auth.utils.decorators import auth_required, event_required
+from bitrix_auth.utils.decorators import auth_required
 from bitrix_auth.utils.functions import ensure_onappuninstall_subscription
-from bitrix_auth.utils.types import EventRequest
 from .utils import AuthorizedRequest
 from bitrix_auth.models import ApplicationInstallation, Bitrix24Account
 from config import config
@@ -94,10 +93,16 @@ def get_token(request: AuthorizedRequest):
 @xframe_options_exempt
 @csrf_exempt
 @require_POST
-@event_required(validate=True)
+@event_required
 def on_app_uninstall(request: EventRequest):
     try:
         installation = ApplicationInstallation.objects.get(bitrix_24_account__member_id=request.oauth_event_data.auth.member_id)
+
+        if not (
+            request.oauth_event_data.auth.application_token
+            and installation.application_token == request.oauth_event_data.auth.application_token
+        ):
+            return JsonResponse({"error": "Invalid event auth data"}, status=HTTPStatus.UNAUTHORIZED)
 
         installation.status = ApplicationInstallation.STATUS_DELETED
         installation.save(update_fields=["status"])
