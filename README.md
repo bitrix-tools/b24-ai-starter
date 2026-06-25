@@ -282,7 +282,7 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 ### JWT токены
 
-Все API endpoints (кроме `/api/install` и `/api/getToken`) требуют JWT токен в заголовке:
+Все API endpoints (кроме `/api/install`, `/api/getToken` и `/api/app-events/`) требуют JWT токен в заголовке:
 
 ```javascript
 Authorization: `Bearer ${tokenJWT}`
@@ -301,7 +301,12 @@ Authorization: `Bearer ${tokenJWT}`
    - Сохраняет связь с Bitrix24 аккаунтом
    - **НЕ требует JWT**
 
-3. **Защищенные endpoints**:
+3. **События Bitrix24** (`/api/app-events/`):
+   - Принимает lifecycle-события приложения от Bitrix24
+   - Передает обработку в Celery worker
+   - **НЕ требует JWT**
+
+4. **Защищенные endpoints**:
    - Проверяют JWT токен через middleware/decorators
    - Извлекают `bitrix24_account` из токена
    - Предоставляют доступ к Bitrix24 API через SDK
@@ -310,7 +315,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 ### Общие принципы
 
-Все запросы (кроме `/api/install`, `/api/getToken`) передают JWT в заголовках.
+Все запросы (кроме `/api/install`, `/api/getToken`, `/api/app-events/`) передают JWT в заголовках.
 
 Пример:
 
@@ -323,7 +328,7 @@ const {data, error} = await $fetch('/api/protected-route', {
 });
 ```
 
-Сервер проверяет каждый запрос (кроме `/api/install`, `/api/getToken`) на наличие действительного JWT токена.
+Сервер проверяет каждый запрос (кроме `/api/install`, `/api/getToken`, `/api/app-events/`) на наличие действительного JWT токена.
 
 Сервер возвращает ответ в формате `JSON`.
 
@@ -511,19 +516,15 @@ public function myEndpoint(Request $request): JsonResponse
 ```python
 @xframe_options_exempt
 @require_GET
-@log_errors("my_endpoint")
 @auth_required
 def my_endpoint(request: AuthorizedRequest):
     # Bitrix24 клиент доступен через:
-    client = request.bitrix24_account.client
+    client = request.bitrix24_account.get_client()
     
     # Вызов Bitrix24 API:
-    response = client._bitrix_token.call_method(
-        api_method='method.name',
-        params={'param': 'value'}
-    )
+    profile = client.profile().value
     
-    return JsonResponse({'data': 'value'})
+    return JsonResponse({'user_id': profile.bitrix_id, 'name': profile.name})
 ```
 
 **Node.js (Express):**
@@ -669,7 +670,7 @@ const myMethod = async (): Promise<MyType> => {
 
 - **Онлайн:** [API Reference: Events](https://github.com/bitrix-tools/b24-rest-docs/tree/main/api-reference/events)
 - Регистрация через `event.bind` в процессе установки
-- Обработка через публичный endpoint `/api/app-events` (без JWT)
+- Обработка через публичный endpoint `/api/app-events/` (без JWT)
 - Поддержка `application/x-www-form-urlencoded` и JSON
 
 **Роботы (Robots):**

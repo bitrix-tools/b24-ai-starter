@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "bitrix_auth",
+    "bitrix_events",
     "main",
 ]
 

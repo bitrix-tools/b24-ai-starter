@@ -26,7 +26,7 @@ CMD ["sh", "-c", "python manage.py makemigrations \
 
 # ---------- Production stage ----------
 FROM base AS prod
-COPY api/ .
+COPY . .
 ENV DJANGO_ENV=production \
     PYTHONUNBUFFERED=1
 EXPOSE 8000

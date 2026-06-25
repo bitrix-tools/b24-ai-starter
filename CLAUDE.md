@@ -30,7 +30,7 @@ This project is a starter kit for building Bitrix24 applications with a Nuxt 3 f
 2.  **Backend**:
     - Implement API endpoints in the chosen backend.
     - Use the provided SDKs for Bitrix24 interaction.
-    - Ensure endpoints are secured with JWT (except `/install` and `/getToken`).
+    - Ensure API endpoints are secured with JWT (except `/api/install`, `/api/getToken`, and `/api/app-events/`).
 3.  **Bitrix24**:
     - Use `placement.bind` for Widgets.
     - Use `bizproc.robot.add` for Robots.
