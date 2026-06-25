@@ -350,7 +350,7 @@ dev-python:
 	ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
 	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
 	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
-	  PROFILES="frontend,python,cloudpub,queue,$$DB_PROFILE"; \
+	  PROFILES="frontend,python,python-worker,cloudpub,queue,$$DB_PROFILE"; \
 	else \
 	  PROFILES="frontend,python,cloudpub,$$DB_PROFILE"; \
 	fi; \

@@ -24,8 +24,7 @@ b24-ai-starter/
 │   │   ├── src/              # Source code
 │   │   └── docker/           # PHP-specific Docker config
 │   ├── python/               # Django + b24pysdk
-│   │   ├── api/              # Django project
-│   │   └── Dockerfile        # Python Docker config
+│   │   └── django/           # Django project and Dockerfile
 │   └── node/                 # Express + Node.js SDK
 │       ├── api/              # Express app
 │       └── Dockerfile        # Node Docker config
@@ -53,8 +52,9 @@ b24-ai-starter/
 | **Frontend API Logic** | `frontend/app/stores/` or `frontend/app/composables/` |
 | **PHP Endpoints** | `backends/php/src/Controller/` |
 | **PHP Logic** | `backends/php/src/Service/` |
-| **Python Endpoints** | `backends/python/api/main/views.py` |
-| **Python Models** | `backends/python/api/main/models.py` |
+| **Python Endpoints** | `backends/python/django/main/views.py` |
+| **Python Auth/Models** | `backends/python/django/bitrix_auth/models.py` |
+| **Python Events** | `backends/python/django/bitrix_events/` |
 | **Node.js Endpoints** | `backends/node/api/server.js` |
 | **Database Schema** | `infrastructure/database/init-mysql.sql` (or PostgreSQL) |
 | **Env Variables** | `.env` (copied from `.env.example`) |
