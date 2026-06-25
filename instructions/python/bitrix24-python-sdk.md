@@ -366,7 +366,7 @@ make prod-node
 
 ### JWT токены
 
-Все API endpoints (кроме `/api/install` и `/api/getToken`) требуют JWT токен в заголовке:
+Все API endpoints (кроме `/api/install`, `/api/getToken` и `/api/app-events/`) требуют JWT токен в заголовке:
 
 ```javascript
 Authorization: `Bearer ${tokenJWT}`
@@ -385,7 +385,12 @@ Authorization: `Bearer ${tokenJWT}`
    - Сохраняет связь с Bitrix24 аккаунтом
    - **НЕ требует JWT**
 
-3. **Защищенные endpoints**:
+3. **События Bitrix24** (`/api/app-events/`):
+   - Принимает lifecycle-события приложения от Bitrix24
+   - Передает обработку в Celery worker
+   - **НЕ требует JWT**
+
+4. **Защищенные endpoints**:
    - Проверяют JWT токен через middleware/decorators
    - Извлекают `bitrix24_account` из токена
    - Предоставляют доступ к Bitrix24 API через SDK
@@ -495,19 +500,15 @@ public function myEndpoint(Request $request): JsonResponse
 ```python
 @xframe_options_exempt
 @require_GET
-@log_errors("my_endpoint")
 @auth_required
 def my_endpoint(request: AuthorizedRequest):
     # Bitrix24 клиент доступен через:
-    client = request.bitrix24_account.client
+    client = request.bitrix24_account.get_client()
     
     # Вызов Bitrix24 API:
-    response = client._bitrix_token.call_method(
-        api_method='method.name',
-        params={'param': 'value'}
-    )
+    profile = client.profile().value
     
-    return JsonResponse({'data': 'value'})
+    return JsonResponse({'user_id': profile.bitrix_id, 'name': profile.name})
 ```
 
 **Node.js (Express):**
@@ -802,42 +803,16 @@ DJANGO_SUPERUSER_PASSWORD=admin123
 
 Если в описании приложения пользователя упоминаются **события** или **регистрация событий**, следуй следующей инструкции:
 
-**1. Регистрация событий на фронтенде (во время установки):**
+**1. Регистрация событий во время установки:**
 
-События регистрируются в процессе установки приложения через метод `event.bind` в Bitrix24 JS SDK. Пример (из `frontend/app/pages/install.client.vue`):
+В Python backend события регистрируются в `/api/install` через `b24pysdk` client:
 
-```typescript
-// В функции установки (install.client.vue)
-await $b24.callBatch([
-  {
-    method: 'event.unbind',  // Сначала отвязываем, если уже зарегистрировано
-    params: {
-      event: 'ONAPPINSTALL',
-      handler: `${appUrl}/api/app-events`
-    }
-  },
-  {
-    method: 'event.unbind',
-    params: {
-      event: 'ONAPPUNINSTALL',
-      handler: `${appUrl}/api/app-events`
-    }
-  },
-  {
-    method: 'event.bind',  // Регистрируем событие
-    params: {
-      event: 'ONAPPINSTALL',
-      handler: `${appUrl}/api/app-events`
-    }
-  },
-  {
-    method: 'event.bind',
-    params: {
-      event: 'ONAPPUNINSTALL',
-      handler: `${appUrl}/api/app-events`
-    }
-  }
-])
+```python
+handler_url = f"{config.app_base_url.rstrip('/')}/api/app-events/"
+client = bitrix24_account.get_client()
+
+for event in ("ONAPPINSTALL", "ONAPPUNINSTALL"):
+    client.event.bind(event=event, handler=handler_url).call()
 ```
 
 **2. Обработка событий на бэкенде:**
@@ -869,64 +844,23 @@ public function process(Request $incomingRequest): Response
 ```
 
 **Python бэкенд:**
-Создай endpoint для обработки событий. Пример с правильной структурой OAuth данных:
+В стартере уже есть endpoint и processor событий:
 
 ```python
 @xframe_options_exempt
 @csrf_exempt
 @require_POST
-@log_errors("app_events")
-def app_events(request):
-    """
-    Обработчик событий от Bitrix24
-    Endpoint: /api/app-events
-    
-    Bitrix24 отправляет события как application/x-www-form-urlencoded
-    с вложенными ключами: auth[access_token], data[FIELDS][ID] и т.д.
-    """
-    from b24pysdk.bitrix_api.credentials import OAuthPlacementData
-    from .models import Bitrix24Account
-    
-    # Извлекаем данные из request.POST (Django автоматически парсит form-data)
-    event_name = request.POST.get('event', '')
-    auth_data = {}  # Нужно обработать auth[access_token], auth[domain] и т.д.
-    
-    # Формируем структуру для OAuthPlacementData
-    # ⚠️ ВАЖНО: Проверь структуру в существующих файлах стартера!
-    oauth_dict = {
-        'DOMAIN': auth_data.get('domain', ''),
-        'PROTOCOL': 1,  # HTTPS
-        'LANG': 'ru',
-        'APP_SID': auth_data.get('application_token', ''),
-        'AUTH_ID': auth_data.get('access_token', ''),
-        'REFRESH_ID': auth_data.get('refresh_token', ''),
-        'AUTH_EXPIRES': int(expires_timestamp),
-        'member_id': auth_data.get('member_id', ''),
-        'status': auth_data.get('status', 'free')
-    }
-    
-    # Создаем OAuthPlacementData и получаем Bitrix24Account
-    oauth_placement_data = OAuthPlacementData.from_dict(oauth_dict)
-    bitrix24_account, _ = Bitrix24Account.update_or_create_from_oauth_placement_data(oauth_placement_data)
-    
-    # Обработка конкретного события
-    if event_name == 'ONCRMDEALADD':
-        # Извлекаем ID сделки из data[FIELDS][ID]
-        deal_id = ...
-        # Создаем задачу с правильным форматом UF_CRM_TASK (массив!)
-        task_fields = {
-            'UF_CRM_TASK': [f'D_{deal_id}'],  # ⚠️ МАССИВ, а не строка!
-            ...
-        }
-    
-    return JsonResponse({'status': 'OK'}, status=200)
+@event_required
+def app_events(request: EventRequest):
+    process_bitrix24_event.delay(request.oauth_event_data)
+    return JsonResponse({"status": "queued"})
 ```
 
-⚠️ **Обязательно изучи существующий код:** Смотри примеры в `backends/python/api/main/views.py` (функция `app_events`) - там уже есть рабочая реализация с правильной структурой данных.
+Актуальная реализация находится в `backends/python/django/bitrix_events/views.py` и `backends/python/django/bitrix_events/event_processor.py`.
 
 **Node.js бэкенд:**
 ```javascript
-app.post('/api/app-events', async (req, res) => {
+app.post('/api/app-events/', async (req, res) => {
   // Обработка события от Bitrix24
   // Проверка валидности запроса
   // Обработка OnApplicationInstall / OnApplicationUninstall
@@ -936,7 +870,7 @@ app.post('/api/app-events', async (req, res) => {
 
 **3. Важные моменты:**
 
-- **Публичный endpoint:** Endpoint для обработки событий (`/api/app-events`) должен быть публичным (без JWT), так как Bitrix24 отправляет события напрямую
+- **Публичный endpoint:** Endpoint для обработки событий (`/api/app-events/`) должен быть публичным (без JWT), так как Bitrix24 отправляет события напрямую
 - **URL handler:** Handler URL должен быть доступен извне (через Cloudpub или публичный домен)
 - **Проверка валидности:** Всегда проверяй валидность входящего события (используй `RemoteEventsFactory::isCanProcess` в PHP SDK)
 - **Идемпотентность:** События могут прийти несколько раз, обработка должна быть идемпотентной

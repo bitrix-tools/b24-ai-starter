@@ -178,8 +178,8 @@ services:
   api-python:
     profiles: ["python"]
     build:
-      context: ./backends/python
-      dockerfile: api/Dockerfile
+      context: ./backends/python/django
+      dockerfile: ./Dockerfile
       target: ${BUILD_TARGET:-dev}
     container_name: api
     env_file: .env
@@ -192,9 +192,37 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backends/python/api:/var/www/api
+      - ./backends/python/django:/var/www/api
       - ./logs/python:/var/log/python
     depends_on:
+      database-postgres:
+        condition: service_healthy
+        required: false
+      database-mysql:
+        condition: service_healthy
+        required: false
+    networks:
+      - internal-net
+
+  python-worker:
+    profiles: ["python-worker"]
+    build:
+      context: ./backends/python/django
+      dockerfile: ./Dockerfile
+      target: ${BUILD_TARGET:-dev}
+    container_name: python-worker
+    env_file: .env
+    environment:
+      DB_HOST: database
+      CELERY_BROKER_URL: ${RABBITMQ_DSN:-amqp://queue_user:queue_password@rabbitmq:5672//}
+    command: celery -A celery_app:celery_app worker --loglevel=info
+    volumes:
+      - ./backends/python/django:/var/www/api
+      - ./logs/python:/var/log/python
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        required: true
       database-postgres:
         condition: service_healthy
         required: false

@@ -1,7 +1,11 @@
+import logging
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from b24pysdk import Config as B24Config
 from config import config
+from log import FileLogger
 
 if config.db_type == "mysql":
     import pymysql
@@ -36,14 +40,18 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "bitrix_auth",
+    "bitrix_events",
     "main",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "middleware.LogErrorsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -93,3 +101,12 @@ STATIC_URL = "api/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+LOG_LEVEL = logging.INFO
+LOG_FILE_PATH = BASE_DIR.parent.parent / "logs" / "python" / "application.log"
+
+logger = FileLogger(log_path=LOG_FILE_PATH)
+logger.set_level(LOG_LEVEL)
+
+# Configure Bitrix24 SDK logging with application logger and level.
+B24Config().configure(logger=logger, log_level=LOG_LEVEL)

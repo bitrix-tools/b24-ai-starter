@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+
 from environs import Env
+from b24pysdk import BitrixApp
 
 env = Env()
 
@@ -27,6 +29,7 @@ class Config:
     # B24 Application
     client_id: str
     client_secret: str
+    bitrix_app: BitrixApp
 
     # VIRTUAL_HOST
     app_base_url: str
@@ -34,6 +37,10 @@ class Config:
 
 def load_config() -> Config:
     build_target = env.str("BUILD_TARGET", "dev")  # dev or production
+
+    client_id = env.str("CLIENT_ID", "client_id")
+    client_secret = env.str("CLIENT_SECRET", "client_secret")
+
     db_type = env.str("DB_TYPE", "postgresql").lower()
     default_db_port = 3306 if db_type == "mysql" else 5432
 
@@ -48,9 +55,10 @@ def load_config() -> Config:
         cloudpub_token=env.str("CLOUDPUB_TOKEN", ""),
         jwt_secret=env.str("JWT_SECRET", "default_jwt_secret"),
         jwt_algorithm=env.str("JWT_ALGORITHM", "HS256"),
-        client_id=env.str("CLIENT_ID", "client_id"),
-        client_secret=env.str("CLIENT_SECRET", "client_secret"),
-        app_base_url=env.str("VIRTUAL_HOST", "app_base_url")
+        client_id=client_id,
+        client_secret=client_secret,
+        bitrix_app=BitrixApp(client_id=client_id, client_secret=client_secret),
+        app_base_url=env.str("VIRTUAL_HOST", "app_base_url"),
     )
 
 

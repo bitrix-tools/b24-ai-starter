@@ -308,6 +308,7 @@ case $BACKEND_CHOICE in
     2)
         BACKEND="python"
         SERVER_HOST="http://api-python:8000"
+        B24_INSTALL_API_ONLY="false"
         ;;
     3)
         BACKEND="node"
@@ -356,6 +357,9 @@ fi
 
 # Обновляем переменные окружения в .env
 set_env_var "SERVER_HOST" "'$SERVER_HOST'"
+if [ "$BACKEND" = "python" ]; then
+    set_env_var "B24_INSTALL_API_ONLY" "$B24_INSTALL_API_ONLY"
+fi
 set_env_var "DB_TYPE" "$DB_TYPE"
 set_env_var "DB_PORT" "$DB_PORT"
 set_env_var "DATABASE_URL" "$DATABASE_URL"
@@ -363,6 +367,9 @@ set_env_var "CLOUDPUB_IMAGE" "$CLOUDPUB_IMAGE"
 set_env_var "CLOUDPUB_PLATFORM" "$CLOUDPUB_PLATFORM"
 
 print_success "SERVER_HOST обновлен в .env: $SERVER_HOST"
+if [ "$BACKEND" = "python" ]; then
+    print_success "B24_INSTALL_API_ONLY обновлен в .env: $B24_INSTALL_API_ONLY"
+fi
 print_success "Выбрана СУБД: $DB_TYPE"
 print_success "DATABASE_URL обновлен в .env"
 print_success "CloudPub image/platform: $CLOUDPUB_IMAGE / $CLOUDPUB_PLATFORM"

@@ -1,5 +1,5 @@
 # ---------- Base stage ----------
-FROM python:3.11-slim AS base
+FROM python:3.13-slim AS base
 
 WORKDIR /var/www/api
 
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-COPY api/requirements.txt ./
+COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---------- Development stage ----------
@@ -26,7 +26,7 @@ CMD ["sh", "-c", "python manage.py makemigrations \
 
 # ---------- Production stage ----------
 FROM base AS prod
-COPY api/ .
+COPY . .
 ENV DJANGO_ENV=production \
     PYTHONUNBUFFERED=1
 EXPOSE 8000
