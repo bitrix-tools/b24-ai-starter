@@ -22,9 +22,15 @@ export const useApiStore = defineStore(
     })
 
     /**
-     * Authorization header with the current JWT for protected backend routes
+     * Authorization header with the current JWT for protected backend routes.
+     *
+     * Note: the public lifecycle endpoints `/api/install` and `/api/getToken`
+     * intentionally do NOT send this header — the JWT does not exist yet at
+     * that point (it is issued by `/api/getToken`).
+     *
+     * @returns headers object with the `Authorization: Bearer <jwt>` entry
      */
-    const authHeaders = (): Record<string, string> => ({
+    const authHeaders = (): HeadersInit => ({
       Authorization: `Bearer ${tokenJWT.value}`
     })
 

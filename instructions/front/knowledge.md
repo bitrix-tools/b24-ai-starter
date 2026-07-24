@@ -864,7 +864,7 @@ const showChart = ref(false);
         />
         <B24Input
           v-model="filters.search"
-          :leading-icon="SearchIcon"
+          :icon="SearchIcon"
           placeholder="Поиск по названию"
         />
         <B24Button
@@ -903,8 +903,10 @@ const showChart = ref(false);
 </template>
 ```
 
-> ℹ️ `B24Select` использует проп `:items` (не `:options`), `B24Input` — проп `:leading-icon` с иконкой-компонентом,
-> `B24Table` — проп `:data` и слоты вида `#<column>-cell`. Точные пропы всегда сверяйте с исходником компонента и его theme-файлом.
+> ℹ️ `B24Select` использует проп `:items` (не `:options`), `B24Input` — проп `:icon` с иконкой-компонентом,
+> `B24Table` — проп `:data` (не `:rows`); кастомизация ячейки колонки — через `cell`-рендер в описании колонки
+> либо слот с именем колонки (в TanStack-версии — `#<columnId>-cell`). Точные пропы и имена слотов всегда
+> сверяйте с исходником компонента и его theme-файлом.
 
 ---
 

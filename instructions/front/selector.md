@@ -64,7 +64,7 @@ const selected = ref([])
           <B24FormField label="Категория">
             <B24Select
               v-model="filters.category"
-              :options="categoryOptions"
+              :items="categoryOptions"
               @update:model-value="applyFilters"
             />
           </B24FormField>
@@ -116,7 +116,7 @@ const selected = ref([])
             <div class="flex gap-2">
               <B24Select
                 v-model="bulkAction"
-                :options="actionOptions"
+                :items="actionOptions"
                 placeholder="Выберите действие"
                 class="flex-1"
               />

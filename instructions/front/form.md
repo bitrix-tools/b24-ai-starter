@@ -104,7 +104,7 @@ const onSubmit = async (data) => {
                 <B24FormField label="Статус" required>
                   <B24Select
                     v-model="form.status"
-                    :options="statusOptions"
+                    :items="statusOptions"
                     placeholder="Выберите статус"
                   />
                 </B24FormField>
@@ -119,7 +119,7 @@ const onSubmit = async (data) => {
                     />
                     <B24Select
                       v-model="form.currency"
-                      :options="currencyOptions"
+                      :items="currencyOptions"
                       class="w-32"
                     />
                   </div>
