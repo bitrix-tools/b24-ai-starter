@@ -544,7 +544,9 @@ confetti.fire()
   "dependencies": {
     "@bitrix24/b24ui-nuxt": "^2.0.0",
     "@bitrix24/b24icons-vue": "^2.0.0",
-    "nuxt": "^4.0.0",
+    "@bitrix24/b24jssdk": "^2.0.0",
+    "@bitrix24/b24jssdk-nuxt": "^2.0.0",
+    "nuxt": "^4.2.2",
     "vue": "^3.0.0"
   }
 }

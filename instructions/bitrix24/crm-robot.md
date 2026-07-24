@@ -80,9 +80,7 @@
 const $b24 = await B24Js.initializeB24Frame();
 
 try {
-    const response = await $b24.callMethod(
-        'bizproc.robot.add',
-        {
+    const response = await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
             'CODE': 'send_notification',
             'HANDLER': 'https://your-app.com/robot-handler.php',
             'AUTH_USER_ID': 1,
@@ -95,8 +93,7 @@ try {
                 'ru': 'Отправляет уведомление во внешнюю систему',
                 'en': 'Sends notification to external system'
             }
-        }
-    );
+        } });
     
     console.log('Робот зарегистрирован:', response.getData().result);
 } catch (error) {
@@ -111,9 +108,7 @@ try {
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.add',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
         'CODE': 'send_custom_message',
         'HANDLER': 'https://your-app.com/send-message.php',
         'AUTH_USER_ID': 1,
@@ -155,8 +150,7 @@ await $b24.callMethod(
                 ['crm', 'CCrmDocumentLead']
             ]
         }
-    }
-);
+    } });
 ```
 
 ### 2.5. Типы параметров (PROPERTIES)
@@ -180,9 +174,7 @@ await $b24.callMethod(
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.add',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
         'CODE': 'create_document',
         'HANDLER': 'https://your-app.com/create-doc.php',
         'AUTH_USER_ID': 1,
@@ -239,8 +231,7 @@ await $b24.callMethod(
                 'Type': 'string'
             }
         }
-    }
-);
+    } });
 ```
 
 ## Шаг 3: Обработчик робота
@@ -437,9 +428,7 @@ $result = $b24->call('bizproc.event.send', [
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.add',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
         'CODE': 'advanced_robot',
         'HANDLER': 'https://your-app.com/robot.php',
         'USE_SUBSCRIPTION': 'Y',
@@ -455,8 +444,7 @@ await $b24.callMethod(
                 'Type': 'string'
             }
         }
-    }
-);
+    } });
 ```
 
 При клике на "Настроить" откроется слайдер с вашим интерфейсом настройки.
@@ -478,7 +466,7 @@ await $b24.callMethod(
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-const response = await $b24.callMethod('bizproc.robot.list');
+const response = await $b24.actions.v2.call.make({ method: 'bizproc.robot.list' });
 console.log('Список роботов:', response.getData().result);
 ```
 
@@ -489,16 +477,13 @@ console.log('Список роботов:', response.getData().result);
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.update',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.update', params: {
         'CODE': 'send_notification',
         'NAME': {
             'ru': 'Новое название',
             'en': 'New name'
         }
-    }
-);
+    } });
 console.log('Робот обновлен');
 ```
 
@@ -509,12 +494,9 @@ console.log('Робот обновлен');
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.delete',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.delete', params: {
         'CODE': 'send_notification'
-    }
-);
+    } });
 console.log('Робот удален');
 ```
 
@@ -530,9 +512,7 @@ console.log('Робот удален');
 const $b24 = await B24Js.initializeB24Frame();
 
 // Регистрация робота
-await $b24.callMethod(
-    'bizproc.robot.add',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
         'CODE': 'get_currency_rate',
         'HANDLER': 'https://your-app.com/currency.php',
         'USE_SUBSCRIPTION': 'Y',
@@ -572,8 +552,7 @@ await $b24.callMethod(
                 'Type': 'date'
             }
         }
-    }
-);
+    } });
 ```
 
 Обработчик `currency.php`:
@@ -607,9 +586,7 @@ $b24->call('bizproc.event.send', [
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'bizproc.robot.add',
-    {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
         'CODE': 'export_to_external_crm',
         'HANDLER': 'https://your-app.com/export-contact.php',
         'USE_SUBSCRIPTION': 'Y',
@@ -649,8 +626,7 @@ await $b24.callMethod(
                 ['crm', 'CCrmDocumentLead']
             ]
         }
-    }
-);
+    } });
 ```
 
 ## Полезные ссылки

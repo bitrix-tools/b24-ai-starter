@@ -65,7 +65,7 @@ let $b24: B24Frame
 $b24 = await initializeB24Frame() // Всегда await перед использованием!
 
 // Вызов REST API
-const result = await $b24.callMethod('crm.deal.list', { select: ['ID', 'TITLE'] })
+const result = await $b24.actions.v2.call.make({ method: 'crm.deal.list', params: { select: ['ID', 'TITLE'] } })
 
 // Очистка при размонтировании
 $b24.destroy()
@@ -130,21 +130,32 @@ await $b24.auth.handleOAuthCallback(callbackParams)
 
 #### Базовые методы (AbstractB24)
 
+> ⚠️ **Актуальный API — `$b24.actions.v{2,3}.*.make()`.** Старые хелперы
+> `callMethod`, `callBatch`, `callListMethod`, `fetchListMethod` — **устаревшие**, не используйте их.
+> Соответствие: `callMethod → actions.v2.call.make`, `callBatch → actions.v2.batch.make`,
+> `callListMethod → actions.v2.callList.make`, `fetchListMethod → actions.v2.fetchList.make`.
+
 ```typescript
 // Одиночный вызов
-const result = await $b24.callMethod('crm.deal.get', { id: 123 })
+const result = await $b24.actions.v2.call.make({ method: 'crm.deal.get', params: { id: 123 } })
 
-// Batch вызов (объект с ключами)
-const batch = await $b24.callBatch({
-  deals: { method: 'crm.deal.list', params: { select: ['ID'] } },
-  contacts: { method: 'crm.contact.list', params: { select: ['ID'] } }
-}, true) // true = halt on error
+// Batch (объект с ключами)
+const batch = await $b24.actions.v2.batch.make({
+  calls: {
+    deals: { method: 'crm.deal.list', params: { select: ['ID'] } },
+    contacts: { method: 'crm.contact.list', params: { select: ['ID'] } }
+  },
+  options: { isHaltOnError: true }
+})
 
 // Batch массивом
-const batch = await $b24.callBatch([
-  ['crm.deal.list', { select: ['ID'] }],
-  ['crm.contact.list', { select: ['ID'] }]
-], true)
+const batchArr = await $b24.actions.v2.batch.make({
+  calls: [
+    ['crm.deal.list', { select: ['ID'] }],
+    ['crm.contact.list', { select: ['ID'] }]
+  ],
+  options: { isHaltOnError: true }
+})
 ```
 
 📚 **Ссылки:**
@@ -154,22 +165,30 @@ const batch = await $b24.callBatch([
 #### Работа с большими списками
 
 **Стратегии:**
-- `callListMethod` — загружает весь список в память (< 1000 записей)
-- `fetchListMethod` — stream по чанкам (рекомендуется для больших данных)
-- `callMethod` с ручной пагинацией — полный контроль
+- `actions.v2.callList.make` — загружает весь список в память (< 1000 записей)
+- `actions.v2.fetchList.make` — stream по чанкам (рекомендуется для больших данных)
+- `actions.v2.call.make` с ручной пагинацией — полный контроль
 
 ```typescript
-// callListMethod (всё в память)
-const list = await $b24.callListMethod('crm.deal.list', 
-  { select: ['ID', 'TITLE'] },
-  (progress) => console.log(`Прогресс: ${progress}%`)
-)
+// callList (всё в память)
+const list = await $b24.actions.v2.callList.make({
+  method: 'crm.deal.list',
+  params: { select: ['ID', 'TITLE'] },
+  idKey: 'ID',
+  customKeyForResult: 'items'
+})
+const items = list.getData()
 
-// fetchListMethod (потоковая загрузка)
-for await (const chunk of $b24.fetchListMethod('crm.item.list', {
-  entityTypeId: 4, // company
-  select: ['id', 'title']
-}, 'id')) {
+// fetchList (потоковая загрузка)
+for await (const chunk of $b24.actions.v2.fetchList.make({
+  method: 'crm.item.list',
+  params: {
+    entityTypeId: 4, // company
+    select: ['id', 'title']
+  },
+  idKey: 'id',
+  customKeyForResult: 'items'
+})) {
   console.log(`Получено ${chunk.length} записей`)
 }
 ```
@@ -185,7 +204,7 @@ for await (const chunk of $b24.fetchListMethod('crm.item.list', {
 import { AjaxError, AjaxResult, Result } from '@bitrix24/b24jssdk'
 
 try {
-  const response: AjaxResult = await $b24.callMethod('crm.deal.get', { id: 999 })
+  const response: AjaxResult = await $b24.actions.v2.call.make({ method: 'crm.deal.get', params: { id: 999 } })
   
   if (response.isSuccess) {
     const data = response.getData()
@@ -477,7 +496,7 @@ const params = http.getRestrictionManagerParams()
 | `B24Frame is not initialized` | Не вызван `await initializeB24Frame()` | Всегда вызывать `await initializeB24Frame()` перед использованием |
 | `invalid_token` / `expired_token` | Токен истек | SDK автоматически обновляет токены. Проверить `$b24.auth.refreshAuth()` |
 | `B24Hook warning on client` | Используется B24Hook на фронтенде | Переместить на сервер или использовать `B24Frame` |
-| `Batch limit exceeded` | Слишком большой batch | Использовать `callBatchByChunk()` или уменьшить размер |
+| `Batch limit exceeded` | Слишком большой batch | Использовать `actions.v2.batchByChunk.make()` или уменьшить размер |
 | `isMore() returns false` | Нет следующей страницы | Проверить условие `while (result.isMore())` |
 
 📚 **Ссылки:**
@@ -546,7 +565,7 @@ $b24.offClientSideWarning()
 // Использование
 async function getData() {
   try {
-    const result = await $b24.callMethod('crm.deal.list', { select: ['ID'] })
+    const result = await $b24.actions.v2.call.make({ method: 'crm.deal.list', params: { select: ['ID'] } })
     return result.getData()
   } catch (error) {
     logger.error('API error:', error)
@@ -561,7 +580,7 @@ async function getData() {
 - Использовать `await initializeB24Frame()` перед работой с B24Frame
 - Вызывать `$b24.destroy()` при размонтировании компонента
 - Использовать `try-catch` для обработки `AjaxError`
-- Для больших списков (>1000) использовать `fetchListMethod()` вместо `callListMethod()`
+- Для больших списков (>1000) использовать `actions.v2.fetchList.make()` вместо `actions.v2.callList.make()`
 - Проверять `response.isSuccess` перед обработкой данных
 - Использовать TypeScript типы для безопасности
 - Логировать ошибки через `LoggerBrowser`
@@ -584,7 +603,7 @@ async function getData() {
 ### Оптимизация производительности
 
 1. **Batch запросы** — группировать связанные запросы
-2. **fetchListMethod** — для больших данных использовать потоковую загрузку
+2. **actions.v2.fetchList.make** — для больших данных использовать потоковую загрузку
 3. **RestrictionManager** — автоматически управляет throttling
 4. **Кэширование** — сохранять результаты через `options.appSet/userSet`
 

@@ -70,7 +70,7 @@ $refreshToken = $data['REFRESH_ID'];
                 console.log('Приложение инициализировано');
                 
                 // Получаем информацию о текущем пользователе
-                const response = await $b24.callMethod('user.current');
+                const response = await $b24.actions.v2.call.make({ method: 'user.current' });
                 console.log('Текущий пользователь:', response.getData().result);
             } catch (error) {
                 console.error('Ошибка инициализации:', error);
@@ -106,9 +106,7 @@ $refreshToken = $data['REFRESH_ID'];
 const $b24 = await B24Js.initializeB24Frame();
 
 try {
-    const response = await $b24.callMethod(
-        'placement.bind',
-        {
+    const response = await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
             'PLACEMENT': 'CRM_DEAL_DETAIL_TAB',
             'HANDLER': 'https://your-domain.com/widget-handler.php',
             'TITLE': 'Моя вкладка',
@@ -123,8 +121,7 @@ try {
                     'DESCRIPTION': 'Additional information'
                 }
             }
-        }
-    );
+        } });
     
     console.log('Виджет зарегистрирован успешно:', response.getData().result);
 } catch (error) {
@@ -157,9 +154,7 @@ try {
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'placement.bind',
-    {
+await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
         'PLACEMENT': 'CRM_DEAL_DETAIL_TAB',
         'HANDLER': 'https://your-app.com/deal-tab.php',
         'TITLE': 'Аналитика',
@@ -167,8 +162,7 @@ await $b24.callMethod(
             'ru': { 'TITLE': 'Аналитика' },
             'en': { 'TITLE': 'Analytics' }
         }
-    }
-);
+    } });
 ```
 
 При открытии этой вкладки ваш обработчик получит POST-запрос с параметрами:
@@ -186,14 +180,11 @@ Array (
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'placement.bind',
-    {
+await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
         'PLACEMENT': 'CRM_DEAL_LIST_MENU',
         'HANDLER': 'https://your-app.com/deal-action.php',
         'TITLE': 'Экспорт в Excel'
-    }
-);
+    } });
 ```
 
 ### 3.2. Виджеты в задачах
@@ -211,14 +202,11 @@ await $b24.callMethod(
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'placement.bind',
-    {
+await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
         'PLACEMENT': 'TASK_VIEW_TAB',
         'HANDLER': 'https://your-app.com/task-widget.php',
         'TITLE': 'Трекер времени'
-    }
-);
+    } });
 ```
 
 ### 3.3. Виджеты в других разделах
@@ -275,10 +263,7 @@ $entityId = $options['ID'] ?? null; // ID объекта (сделки, зада
                 const entityId = <?= json_encode($entityId) ?>;
                 
                 // Получаем данные объекта через REST API
-                const response = await $b24.callMethod(
-                    'crm.deal.get',
-                    { id: entityId }
-                );
+                const response = await $b24.actions.v2.call.make({ method: 'crm.deal.get', params: { id: entityId } });
                 
                 const deal = response.getData().result;
                 document.getElementById('content').innerHTML = 
@@ -315,23 +300,20 @@ const $b24 = await B24Js.initializeB24Frame();
 
 try {
     // Регистрируем обработчик события установки
-    await $b24.callMethod(
-        'event.bind',
-        {
+    await $b24.actions.v2.call.make({ method: 'event.bind', params: {
             'event': 'ONAPPINSTALL',
             'handler': 'https://your-app.com/install.php'
-        }
-    );
+        } });
     
     // Регистрируем виджеты
-    await $b24.callMethod('placement.bind', {
+    await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
         'PLACEMENT': 'CRM_DEAL_DETAIL_TAB',
         'HANDLER': 'https://your-app.com/widget.php',
         'TITLE': 'Мой виджет'
-    });
+    } });
     
     // Завершаем установку
-    await $b24.callMethod('app.info');
+    await $b24.actions.v2.call.make({ method: 'app.info' });
     console.log('Установка завершена');
 } catch (error) {
     console.error('Ошибка установки:', error);
@@ -347,7 +329,7 @@ try {
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-const response = await $b24.callMethod('placement.get');
+const response = await $b24.actions.v2.call.make({ method: 'placement.get' });
 console.log('Зарегистрированные виджеты:', response.getData().result);
 ```
 
@@ -358,13 +340,10 @@ console.log('Зарегистрированные виджеты:', response.get
 ```javascript
 const $b24 = await B24Js.initializeB24Frame();
 
-await $b24.callMethod(
-    'placement.unbind',
-    {
+await $b24.actions.v2.call.make({ method: 'placement.unbind', params: {
         'PLACEMENT': 'CRM_DEAL_DETAIL_TAB',
         'HANDLER': 'https://your-app.com/handler.php'
-    }
-);
+    } });
 console.log('Виджет удален');
 ```
 
@@ -386,10 +365,10 @@ $b24.slider.openPath(
 );
 
 // Показать уведомление
-await $b24.callMethod('im.notify', {
+await $b24.actions.v2.call.make({ method: 'im.notify', params: {
     to: await $b24.getAuth().userId,
     message: 'Данные сохранены!'
-});
+} });
 
 // Закрыть текущий слайдер
 $b24.slider.close();

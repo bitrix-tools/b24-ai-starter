@@ -69,14 +69,20 @@ const $b24 = await $initializeB24Frame()
 
 ### API Calls
 
+> The canonical API is `$b24.actions.v{2,3}.*.make()`. The legacy helpers
+> `callMethod` / `callBatch` / `callListMethod` / `fetchListMethod` are deprecated.
+
 ```typescript
 // Single method
-const result = await $b24.callMethod('crm.deal.get', { id: 123 })
+const result = await $b24.actions.v2.call.make({ method: 'crm.deal.get', params: { id: 123 } })
 
 // Batch method
-const batch = await $b24.callBatch({
-  deals: { method: 'crm.deal.list', params: { select: ['ID', 'TITLE'] } },
-  users: { method: 'user.get', params: { ID: 1 } }
+const batch = await $b24.actions.v2.batch.make({
+  calls: {
+    deals: { method: 'crm.deal.list', params: { select: ['ID', 'TITLE'] } },
+    users: { method: 'user.get', params: { ID: 1 } }
+  },
+  options: { isHaltOnError: true }
 })
 const data = batch.getData()
 ```
