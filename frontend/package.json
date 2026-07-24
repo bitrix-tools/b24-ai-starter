@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "translate-ui": "tsx tools/translate.ui.ts"
   },
   "dependencies": {
@@ -32,6 +34,7 @@
     "@types/luxon": "^3.7.1",
     "eslint": "^9.38.0",
     "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.8"
   }
 }

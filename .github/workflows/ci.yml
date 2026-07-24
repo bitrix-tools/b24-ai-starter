@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# Cancel superseded runs on the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint · typecheck · test · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile — same as Docker)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  backend-node:
+    name: Node backend (install · syntax)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backends/node/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: backends/node/api/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Syntax check
+        run: node --check server.js && node --check utils/verifyToken.js
+
+  backend-php:
+    name: PHP backend (composer validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backends/php
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      # `composer validate` verifies composer.json is well-formed AND that
+      # composer.lock is in sync with it — this is exactly the drift that
+      # broke `make composer-install` (issue #19). Full `composer install` is
+      # skipped because several dependencies are dev-branch git sources that
+      # require GitHub authentication not available to a generic CI runner.
+      - name: Validate composer.json / composer.lock
+        run: composer validate --no-check-publish --strict
