@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ab6959110b71a8f1c38dc39096b0283c",
+    "content-hash": "45f9fda4ce385082a937bf96cccfced9",
     "packages": [
         {
             "name": "bitrix24/b24phpsdk",
@@ -2216,23 +2216,23 @@
         },
         {
             "name": "mesilov/bitrix24-php-lib",
-            "version": "dev-dev",
+            "version": "0.5.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mesilov/bitrix24-php-lib.git",
-                "reference": "af9b8b7e10bc9d5b57a4e5d6fe18059f7e0827cc"
+                "reference": "4148f0774279174e233ffbcdc7cfaccebed2de65"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mesilov/bitrix24-php-lib/zipball/af9b8b7e10bc9d5b57a4e5d6fe18059f7e0827cc",
-                "reference": "af9b8b7e10bc9d5b57a4e5d6fe18059f7e0827cc",
+                "url": "https://api.github.com/repos/mesilov/bitrix24-php-lib/zipball/4148f0774279174e233ffbcdc7cfaccebed2de65",
+                "reference": "4148f0774279174e233ffbcdc7cfaccebed2de65",
                 "shasum": ""
             },
             "require": {
                 "bitrix24/b24phpsdk": "dev-v3-dev",
                 "darsyn/ip": "^6",
                 "darsyn/ip-doctrine": "^6",
-                "doctrine/doctrine-bundle": "3.2.2",
+                "doctrine/doctrine-bundle": "^3.2.2 || ^3.3@dev",
                 "doctrine/doctrine-migrations-bundle": "4.0.0",
                 "doctrine/orm": "^3",
                 "ext-bcmath": "*",
@@ -2240,12 +2240,12 @@
                 "ext-intl": "*",
                 "ext-json": "*",
                 "fig/http-message-util": "^1",
-                "giggsey/libphonenumber-for-php": "^8",
+                "giggsey/libphonenumber-for-php": "^8 || ^9",
                 "knplabs/knp-paginator-bundle": "^6",
                 "moneyphp/money": "^4",
                 "nesbot/carbon": "^3",
                 "odolbeau/phone-number-bundle": "^4",
-                "php": "8.3.* || 8.4.*",
+                "php": "8.4.* || 8.5.*",
                 "psr/log": "^3",
                 "symfony/cache": "^7||^8",
                 "symfony/console": "^7||^8",
@@ -2261,15 +2261,15 @@
                 "friendsofphp/php-cs-fixer": "^3.64",
                 "lendable/composer-license-checker": "^1.2",
                 "monolog/monolog": "^3",
-                "phpstan/phpstan": "^1",
-                "phpunit/phpunit": "^11",
-                "psalm/phar": "^5",
-                "rector/rector": "^1",
+                "phpstan/phpstan": "^2",
+                "phpunit/phpunit": "^13",
+                "psalm/phar": "^6",
+                "rector/rector": "^2",
                 "roave/security-advisories": "dev-master",
-                "symfony/debug-bundle": "^7",
-                "symfony/property-access": "^7",
-                "symfony/stopwatch": "^7",
-                "symfony/var-exporter": "^7"
+                "symfony/debug-bundle": "^7 || ^8",
+                "symfony/property-access": "^7 || ^8",
+                "symfony/stopwatch": "^7 || ^8",
+                "symfony/var-exporter": "^7 || ^8"
             },
             "type": "library",
             "autoload": {
@@ -2301,7 +2301,7 @@
                 "issues": "https://github.com/mesilov/bitrix24-php-lib/issues?state=open",
                 "source": "https://github.com/mesilov/bitrix24-php-lib"
             },
-            "time": "2026-03-04T20:49:31+00:00"
+            "time": "2026-04-14T19:35:53+00:00"
         },
         {
             "name": "mesilov/moneyphp-percentage",
@@ -12268,7 +12268,6 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "firebase/php-jwt": 20,
-        "mesilov/bitrix24-php-lib": 20,
         "nelmio/cors-bundle": 20,
         "roave/security-advisories": 20
     },

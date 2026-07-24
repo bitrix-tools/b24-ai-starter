@@ -1,0 +1,23 @@
+# Normalize line endings across platforms; store LF in the repository.
+* text=auto
+
+# Files that MUST stay LF even on Windows checkouts — CRLF breaks them:
+# - Dockerfiles: CRLF inside RUN/heredoc appends \r to tokens (e.g. `www-data\r`)
+# - shell scripts and entrypoints executed inside Linux containers
+# - Makefile: recipe lines are tab/newline sensitive
+*.sh            text eol=lf
+*Dockerfile*    text eol=lf
+Dockerfile      text eol=lf
+*.mjs           text eol=lf
+makefile        text eol=lf
+Makefile        text eol=lf
+*.bash          text eol=lf
+
+# Binary assets — never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
