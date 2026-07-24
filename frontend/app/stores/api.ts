@@ -30,9 +30,7 @@ export const useApiStore = defineStore(
      *
      * @returns headers object with the `Authorization: Bearer <jwt>` entry
      */
-    const authHeaders = (): HeadersInit => ({
-      Authorization: `Bearer ${tokenJWT.value}`
-    })
+    const authHeaders = (): HeadersInit => buildAuthHeaders(tokenJWT.value)
 
     // Health check
     const checkHealth = async (): Promise<{
