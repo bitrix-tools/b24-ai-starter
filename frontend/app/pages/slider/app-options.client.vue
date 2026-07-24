@@ -111,14 +111,14 @@ async function makeSendPullCommand(command: string, params: Record<string, any> 
       MODULE_ID: moduleId
     })
 
-    await $b24?.callMethod(
-      'pull.application.event.add',
-      {
+    await $b24?.actions.v2.call.make({
+      method: 'pull.application.event.add',
+      params: {
         COMMAND: command,
         PARAMS: params,
         MODULE_ID: moduleId
       }
-    )
+    })
   } catch (error) {
     processErrorGlobal(error)
   }

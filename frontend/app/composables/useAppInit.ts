@@ -77,7 +77,7 @@ export const useAppInit = (loggerTitle?: string) => {
     //   profileData: { method: 'profile' }
     // }
     //
-    // const response = await $b24.callBatch(commands)
+    // const response = await $b24.actions.v2.batch.make({ calls: commands })
     //
     // const data = response.getData()
     // $logger.log('Init data >>', data)

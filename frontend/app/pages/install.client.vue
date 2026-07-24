@@ -58,7 +58,7 @@ const steps = ref<Record<string, IStep>>({
   //     /**
   //      * Registering onAppInstall | onAppUninstall
   //      */
-  //     await $b24.callBatch([
+  //     await $b24.actions.v2.batch.make({ calls: [
   //       {
   //         method: 'event.unbind',
   //         params: {
@@ -87,7 +87,7 @@ const steps = ref<Record<string, IStep>>({
   //           handler: `${appUrl}/api/event/onAppUninstall`
   //         }
   //       }
-  //     ])
+  //     ] })
   //   }
   // },
   placement: {
@@ -110,7 +110,7 @@ const steps = ref<Record<string, IStep>>({
 
       // Всегда делаем unbind если placement существует, затем bind с новым handler
       if (exists) {
-        await $b24.callBatch([
+        await $b24.actions.v2.batch.make({ calls: [
           {
             method: 'placement.unbind',
             params: {
@@ -128,12 +128,12 @@ const steps = ref<Record<string, IStep>>({
               }
             }
           }
-        ])
+        ] })
 
         return
       }
 
-      await $b24.callBatch([
+      await $b24.actions.v2.batch.make({ calls: [
         {
           method: 'placement.bind',
           params: {
@@ -145,7 +145,7 @@ const steps = ref<Record<string, IStep>>({
             }
           }
         }
-      ])
+      ] })
     }
   },
   userFields: {
@@ -165,7 +165,7 @@ const steps = ref<Record<string, IStep>>({
       })
 
       if (exists) {
-        await $b24.callBatch([
+        await $b24.actions.v2.batch.make({ calls: [
           {
             method: 'userfieldtype.update',
             params: {
@@ -178,12 +178,12 @@ const steps = ref<Record<string, IStep>>({
               }
             }
           }
-        ], false)
+        ], options: { isHaltOnError: false } })
 
         return
       }
 
-      await $b24.callBatch([
+      await $b24.actions.v2.batch.make({ calls: [
         {
           method: 'userfieldtype.add',
           params: {
@@ -196,7 +196,7 @@ const steps = ref<Record<string, IStep>>({
             }
           }
         }
-      ], false)
+      ], options: { isHaltOnError: false } })
     }
   },
   // crm: {
@@ -256,12 +256,12 @@ const stepCode = ref<string>('init' as const)
 // region Actions ////
 async function makeInit(): Promise<void> {
   if (steps.value.init) {
-    const response = await $b24.callBatch({
+    const response = await $b24.actions.v2.batch.make({ calls: {
       appInfo: { method: 'app.info' },
       profile: { method: 'profile' },
       userFieldTypeList: { method: 'userfieldtype.list' },
       placementList: { method: 'placement.get' }
-    })
+    } })
 
     steps.value.init.data = response.getData() as {
       appInfo: {

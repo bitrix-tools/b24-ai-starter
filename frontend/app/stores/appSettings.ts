@@ -66,12 +66,12 @@ export const useAppSettingsStore = defineStore(
         return
       }
 
-      return $b24.callMethod(
-        'app.option.set',
-        {
+      return $b24.actions.v2.call.make({
+        method: 'app.option.set',
+        params: {
           configSettings: { ...configSettings }
         }
-      )
+      })
     }
     // endregion ////
 

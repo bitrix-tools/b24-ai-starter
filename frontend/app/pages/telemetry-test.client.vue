@@ -122,7 +122,7 @@ async function doB24UserCurrent() {
   state.b24User.result = ''
   try {
     track('b24_api_call', { 'b24.method': 'user.current', 'ui.path': route.path })
-    const res = await $b24?.callMethod('user.current', {})
+    const res = await $b24?.actions.v2.call.make({ method: 'user.current', params: {} })
     const data = res?.getData?.() ?? res
     const user = Array.isArray(data?.result) ? data.result[0] : data?.result
     setOk(state.b24User, `user.current → ID: ${user?.ID}, name: ${user?.NAME} ${user?.LAST_NAME}`)
@@ -136,7 +136,7 @@ async function doB24StatusList() {
   state.b24Status.result = ''
   try {
     track('b24_api_call', { 'b24.method': 'crm.status.list', 'ui.path': route.path })
-    const res = await $b24?.callMethod('crm.status.list', {})
+    const res = await $b24?.actions.v2.call.make({ method: 'crm.status.list', params: {} })
     const data = res?.getData?.() ?? res
     const count = Array.isArray(data?.result) ? data.result.length : '?'
     setOk(state.b24Status, `crm.status.list → ${count} статусов`)

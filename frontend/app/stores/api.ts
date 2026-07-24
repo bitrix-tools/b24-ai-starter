@@ -62,7 +62,7 @@ export const useApiStore = defineStore(
       })
     }
 
-    const postInstall = async (data: Record<string, any>): Promise<Record<string, any>> => {
+    const postInstall = async (data: Record<string, unknown>): Promise<Record<string, unknown>> => {
       return await $api('/api/install', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -81,7 +81,7 @@ export const useApiStore = defineStore(
       })
     }
 
-    const getToken = async (data: Record<string, any>): Promise<{ token: string }> => {
+    const getToken = async (data: Record<string, unknown>): Promise<{ token: string }> => {
       return await $api('/api/getToken', {
         method: 'POST',
         body: JSON.stringify(data),
