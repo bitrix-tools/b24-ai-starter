@@ -702,7 +702,7 @@ export class CacheService {
 // Кэшированный сервис сделок
 export class CachedDealService extends DealService {
   constructor(
-    b24: Bitrix24,
+    b24: TypeB24,
     private cache: CacheService
   ) {
     super(b24);

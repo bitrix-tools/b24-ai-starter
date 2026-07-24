@@ -21,7 +21,7 @@
 <template>
   <B24SelectMenu
     v-model="selected"
-    :options="options"
+    :items="options"
     multiple
     searchable
     placeholder="Выберите объекты..."
@@ -92,7 +92,7 @@ const selected = ref([])
           <div class="p-4">
             <B24SelectMenu
               v-model="selected"
-              :options="options"
+              :items="options"
               :loading="loading"
               multiple
               searchable

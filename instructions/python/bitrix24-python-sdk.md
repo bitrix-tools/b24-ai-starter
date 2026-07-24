@@ -559,14 +559,16 @@ const { $initializeB24Frame } = useNuxtApp()
 const $b24: B24Frame = await $initializeB24Frame()
 
 // Batch запросы
-const response = await $b24.callBatch({
-  appInfo: { method: 'app.info' },
-  profile: { method: 'profile' }
+const response = await $b24.actions.v2.batch.make({
+  calls: {
+    appInfo: { method: 'app.info' },
+    profile: { method: 'profile' }
+  }
 })
 const data = response.getData()
 
 // Одиночные вызовы
-const result = await $b24.callMethod('method.name', { param: 'value' })
+const result = await $b24.actions.v2.call.make({ method: 'method.name', params: { param: 'value' } })
 
 // Работа с аутентификацией
 const authData = $b24.auth.getAuthData()
