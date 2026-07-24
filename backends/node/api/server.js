@@ -8,6 +8,9 @@ import verifyToken from './utils/verifyToken.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Bitrix24 sends install/event callbacks as application/x-www-form-urlencoded,
+// so this parser is required for req.body to be populated on those requests.
+app.use(express.urlencoded({ extended: true }));
 
 const dbType = (process.env.DB_TYPE || 'postgresql').toLowerCase();
 const defaultDbPort = dbType === 'mysql' ? 3306 : 5432;
@@ -29,6 +32,12 @@ const pool = dbType === 'mysql'
     user: process.env.DB_USER || 'appuser',
     password: process.env.DB_PASSWORD || 'apppass'
   });
+
+// Without an 'error' listener an idle-client failure (e.g. a dropped DB
+// connection) is emitted as an unhandled error and terminates the process.
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+});
 
 app.get('/', (req, res) => {
   res.json([
