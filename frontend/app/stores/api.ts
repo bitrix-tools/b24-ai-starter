@@ -21,6 +21,19 @@ export const useApiStore = defineStore(
       }
     })
 
+    /**
+     * Authorization header with the current JWT for protected backend routes.
+     *
+     * Note: the public lifecycle endpoints `/api/install` and `/api/getToken`
+     * intentionally do NOT send this header — the JWT does not exist yet at
+     * that point (it is issued by `/api/getToken`).
+     *
+     * @returns headers object with the `Authorization: Bearer <jwt>` entry
+     */
+    const authHeaders = (): HeadersInit => ({
+      Authorization: `Bearer ${tokenJWT.value}`
+    })
+
     // Health check
     const checkHealth = async (): Promise<{
       status: string
@@ -29,9 +42,7 @@ export const useApiStore = defineStore(
     }> => {
       try {
         return await $api('/api/health', {
-          headers: {
-            Authorization: `Bearer ${tokenJWT.value}`
-          }
+          headers: authHeaders()
         })
       } catch {
         throw new Error('Backend health check failed')
@@ -41,21 +52,17 @@ export const useApiStore = defineStore(
     // API
     const getEnum = async (): Promise<string[]> => {
       return await $api('/api/enum', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 
     const getList = async (): Promise<string[]> => {
       return await $api('/api/list', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 
-    const postInstall = async (data: Record<string, any>): Promise<Record<string, any>> => {
+    const postInstall = async (data: Record<string, unknown>): Promise<Record<string, unknown>> => {
       return await $api('/api/install', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -70,13 +77,11 @@ export const useApiStore = defineStore(
       portal_domain: string
     }> => {
       return await $api('/api/telemetry/test', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 
-    const getToken = async (data: Record<string, any>): Promise<{ token: string }> => {
+    const getToken = async (data: Record<string, unknown>): Promise<{ token: string }> => {
       return await $api('/api/getToken', {
         method: 'POST',
         body: JSON.stringify(data),

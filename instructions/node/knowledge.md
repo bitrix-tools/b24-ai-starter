@@ -59,7 +59,7 @@ project/
 │   │   ├── dealController.ts
 │   │   └── contactController.ts
 │   ├── services/              # Бизнес-логика
-│   │   ├── bitrix24Service.ts
+│   │   ├── bitrix24.ts
 │   │   └── dealService.ts
 │   ├── models/                # TypeScript типы
 │   │   ├── Deal.ts
@@ -89,40 +89,27 @@ project/
 
 ### 1. Инициализация SDK
 
+> ⚠️ **Канонический API:** вызовы REST выполняются через `$b24.actions.v{2,3}.*.make()`
+> (`call`, `batch`, `callList`, `fetchList`). Хелперы `callMethod` / `callBatch` — **устаревшие**, не используйте их.
+> Для бэкенда точкой входа служит `B24Hook` (входящий вебхук), а не вымышленный класс `Bitrix24`.
+
 #### Простая инициализация (TypeScript)
 ```typescript
 // config/bitrix24.ts
-import { Bitrix24 } from '@bitrix24/b24jssdk';
+import { B24Hook, LoggerBrowser, type TypeB24 } from '@bitrix24/b24jssdk';
 
-interface Bitrix24Config {
-  webhookUrl?: string;
-  domain?: string;
-  clientId?: string;
-  clientSecret?: string;
-}
+/**
+ * Бэкенд работает через входящий вебхук (B24Hook).
+ * Формат URL: https://<portal>.bitrix24.<tld>/rest/<userId>/<secret>
+ */
+export function createB24(webhookUrl: string): TypeB24 {
+  const $b24 = B24Hook.fromWebhookUrl(webhookUrl);
+  // либо: new B24Hook({ b24Url, userId, secret })
 
-export class Bitrix24Service {
-  private b24: Bitrix24;
+  $b24.setLogger?.(LoggerBrowser.build('Backend', process.env.NODE_ENV !== 'production'));
+  $b24.offClientSideWarning(); // только сервер: секрет вебхука не должен попадать на клиент
 
-  constructor(config: Bitrix24Config) {
-    if (config.webhookUrl) {
-      // Инициализация через webhook
-      this.b24 = new Bitrix24({
-        webhookUrl: config.webhookUrl
-      });
-    } else {
-      // Инициализация для OAuth приложения
-      this.b24 = new Bitrix24({
-        domain: config.domain!,
-        clientId: config.clientId!,
-        clientSecret: config.clientSecret!
-      });
-    }
-  }
-
-  public getB24Instance(): Bitrix24 {
-    return this.b24;
-  }
+  return $b24;
 }
 ```
 
@@ -137,21 +124,18 @@ export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   bitrix24: {
-    webhookUrl: process.env.BITRIX24_WEBHOOK_URL,
-    domain: process.env.BITRIX24_DOMAIN,
-    clientId: process.env.BITRIX24_CLIENT_ID,
-    clientSecret: process.env.BITRIX24_CLIENT_SECRET,
+    webhookUrl: process.env.B24_WEBHOOK_URL ?? ''
   },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379'
   }
 };
 
-// services/bitrix24Service.ts
+// services/bitrix24.ts
 import { config } from '../config';
-import { Bitrix24Service } from '../config/bitrix24';
+import { createB24 } from '../config/bitrix24';
 
-export const bitrix24Service = new Bitrix24Service(config.bitrix24);
+export const $b24 = createB24(config.bitrix24.webhookUrl);
 ```
 
 ### 2. Работа с данными CRM (с типизацией)
@@ -186,54 +170,64 @@ export interface DealUpdateData {
 }
 
 // services/dealService.ts
-import { Bitrix24 } from '@bitrix24/b24jssdk';
+import type { TypeB24 } from '@bitrix24/b24jssdk';
 import { Deal, DealCreateData, DealUpdateData } from '../models/Deal';
 
 export class DealService {
-  constructor(private b24: Bitrix24) {}
+  constructor(private b24: TypeB24) {}
 
   async getDeals(filter?: Record<string, any>, select?: string[]): Promise<Deal[]> {
-    try {
-      const response = await this.b24.crm.deals.list({
+    const response = await this.b24.actions.v2.callList.make<Deal>({
+      method: 'crm.deal.list',
+      params: {
         filter: filter || {},
         select: select || ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'DATE_CREATE']
-      });
-      
-      return response.data || [];
-    } catch (error) {
-      throw new Error(`Failed to fetch deals: ${error.message}`);
+      },
+      idKey: 'ID',
+      customKeyForResult: 'items'
+    });
+
+    if (!response.isSuccess) {
+      throw new Error(`Failed to fetch deals: ${response.getErrorMessages().join('; ')}`);
     }
+    return response.getData();
   }
 
   async getDealById(id: string): Promise<Deal | null> {
-    try {
-      const response = await this.b24.crm.deals.get({ id });
-      return response.data || null;
-    } catch (error) {
-      console.error(`Deal ${id} not found:`, error);
+    const response = await this.b24.actions.v2.call.make<{ result: Deal }>({
+      method: 'crm.deal.get',
+      params: { id }
+    });
+
+    if (!response.isSuccess) {
+      console.error(`Deal ${id} not found:`, response.getErrorMessages().join('; '));
       return null;
     }
+    return response.getData()?.result ?? null;
   }
 
-  async createDeal(dealData: DealCreateData): Promise<string> {
-    try {
-      const response = await this.b24.crm.deals.add({ fields: dealData });
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to create deal: ${error.message}`);
+  async createDeal(dealData: DealCreateData): Promise<number> {
+    const response = await this.b24.actions.v2.call.make<{ result: number }>({
+      method: 'crm.deal.add',
+      params: { fields: dealData }
+    });
+
+    if (!response.isSuccess) {
+      throw new Error(`Failed to create deal: ${response.getErrorMessages().join('; ')}`);
     }
+    return response.getData()!.result;
   }
 
   async updateDeal(id: string, updateData: DealUpdateData): Promise<boolean> {
-    try {
-      const response = await this.b24.crm.deals.update({
-        id,
-        fields: updateData
-      });
-      return !!response.data;
-    } catch (error) {
-      throw new Error(`Failed to update deal ${id}: ${error.message}`);
+    const response = await this.b24.actions.v2.call.make<{ result: boolean }>({
+      method: 'crm.deal.update',
+      params: { id, fields: updateData }
+    });
+
+    if (!response.isSuccess) {
+      throw new Error(`Failed to update deal ${id}: ${response.getErrorMessages().join('; ')}`);
     }
+    return Boolean(response.getData()?.result);
   }
 
   async getActiveDealsByStage(): Promise<Record<string, Deal[]>> {
@@ -435,10 +429,10 @@ export class ServiceContainer {
 export const container = new ServiceContainer();
 
 // Регистрация сервисов
-import { bitrix24Service } from './bitrix24Service';
+import { $b24 } from './bitrix24';
 import { DealService } from './dealService';
 
-const dealService = new DealService(bitrix24Service.getB24Instance());
+const dealService = new DealService($b24);
 container.register('dealService', dealService);
 
 // Использование в контроллерах
@@ -466,60 +460,72 @@ export interface IDealRepository {
 }
 
 // repositories/Bitrix24DealRepository.ts
-import { Bitrix24 } from '@bitrix24/b24jssdk';
+import type { TypeB24 } from '@bitrix24/b24jssdk';
 import { Deal, DealCreateData, DealUpdateData } from '../models/Deal';
 import { IDealRepository } from './IDealRepository';
 
 export class Bitrix24DealRepository implements IDealRepository {
-  constructor(private b24: Bitrix24) {}
+  constructor(private b24: TypeB24) {}
 
   async findById(id: string): Promise<Deal | null> {
-    try {
-      const response = await this.b24.crm.deals.get({ id });
-      return response.data || null;
-    } catch (error) {
-      console.error(`Deal ${id} not found:`, error);
+    const response = await this.b24.actions.v2.call.make<{ result: Deal }>({
+      method: 'crm.deal.get',
+      params: { id }
+    });
+    if (!response.isSuccess) {
+      console.error(`Deal ${id} not found:`, response.getErrorMessages().join('; '));
       return null;
     }
+    return response.getData()?.result ?? null;
   }
 
   async findByStage(stage: string): Promise<Deal[]> {
-    try {
-      const response = await this.b24.crm.deals.list({
+    const response = await this.b24.actions.v2.callList.make<Deal>({
+      method: 'crm.deal.list',
+      params: {
         filter: { STAGE_ID: stage },
         select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'DATE_CREATE']
-      });
-      return response.data || [];
-    } catch (error) {
-      throw new Error(`Failed to fetch deals by stage ${stage}: ${error.message}`);
+      },
+      idKey: 'ID',
+      customKeyForResult: 'items'
+    });
+    if (!response.isSuccess) {
+      throw new Error(`Failed to fetch deals by stage ${stage}: ${response.getErrorMessages().join('; ')}`);
     }
+    return response.getData();
   }
 
   async create(data: DealCreateData): Promise<string> {
-    try {
-      const response = await this.b24.crm.deals.add({ fields: data });
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to create deal: ${error.message}`);
+    const response = await this.b24.actions.v2.call.make<{ result: number }>({
+      method: 'crm.deal.add',
+      params: { fields: data }
+    });
+    if (!response.isSuccess) {
+      throw new Error(`Failed to create deal: ${response.getErrorMessages().join('; ')}`);
     }
+    return String(response.getData()!.result);
   }
 
   async update(id: string, data: DealUpdateData): Promise<boolean> {
-    try {
-      const response = await this.b24.crm.deals.update({ id, fields: data });
-      return !!response.data;
-    } catch (error) {
-      throw new Error(`Failed to update deal ${id}: ${error.message}`);
+    const response = await this.b24.actions.v2.call.make<{ result: boolean }>({
+      method: 'crm.deal.update',
+      params: { id, fields: data }
+    });
+    if (!response.isSuccess) {
+      throw new Error(`Failed to update deal ${id}: ${response.getErrorMessages().join('; ')}`);
     }
+    return Boolean(response.getData()?.result);
   }
 
   async delete(id: string): Promise<boolean> {
-    try {
-      const response = await this.b24.crm.deals.delete({ id });
-      return !!response.data;
-    } catch (error) {
-      throw new Error(`Failed to delete deal ${id}: ${error.message}`);
+    const response = await this.b24.actions.v2.call.make<{ result: boolean }>({
+      method: 'crm.deal.delete',
+      params: { id }
+    });
+    if (!response.isSuccess) {
+      throw new Error(`Failed to delete deal ${id}: ${response.getErrorMessages().join('; ')}`);
     }
+    return Boolean(response.getData()?.result);
   }
 }
 ```
@@ -696,7 +702,7 @@ export class CacheService {
 // Кэшированный сервис сделок
 export class CachedDealService extends DealService {
   constructor(
-    b24: Bitrix24,
+    b24: TypeB24,
     private cache: CacheService
   ) {
     super(b24);
@@ -774,26 +780,32 @@ export class DataSanitizer {
 ```typescript
 // tests/services/dealService.test.ts
 import { DealService } from '../../src/services/dealService';
-import { Bitrix24 } from '@bitrix24/b24jssdk';
 
-// Mock Bitrix24 SDK
-jest.mock('@bitrix24/b24jssdk');
+// Хелпер: имитация AjaxResult, который возвращает actions.v2.*.make()
+const okResult = <T>(data: T) => ({
+  isSuccess: true,
+  getData: () => data,
+  getErrorMessages: () => [] as string[]
+});
+const failResult = (messages: string[]) => ({
+  isSuccess: false,
+  getData: () => undefined,
+  getErrorMessages: () => messages
+});
 
 describe('DealService', () => {
   let dealService: DealService;
-  let mockB24: jest.Mocked<Bitrix24>;
+  let mockB24: any;
 
   beforeEach(() => {
     mockB24 = {
-      crm: {
-        deals: {
-          list: jest.fn(),
-          get: jest.fn(),
-          add: jest.fn(),
-          update: jest.fn()
+      actions: {
+        v2: {
+          call: { make: jest.fn() },
+          callList: { make: jest.fn() }
         }
       }
-    } as any;
+    };
 
     dealService = new DealService(mockB24);
   });
@@ -809,19 +821,24 @@ describe('DealService', () => {
         { ID: '2', TITLE: 'Deal 2', OPPORTUNITY: '2000' }
       ];
 
-      mockB24.crm.deals.list.mockResolvedValue({ data: mockDeals });
+      mockB24.actions.v2.callList.make.mockResolvedValue(okResult(mockDeals));
 
       const result = await dealService.getDeals();
 
       expect(result).toEqual(mockDeals);
-      expect(mockB24.crm.deals.list).toHaveBeenCalledWith({
-        filter: {},
-        select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'DATE_CREATE']
+      expect(mockB24.actions.v2.callList.make).toHaveBeenCalledWith({
+        method: 'crm.deal.list',
+        params: {
+          filter: {},
+          select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'DATE_CREATE']
+        },
+        idKey: 'ID',
+        customKeyForResult: 'items'
       });
     });
 
     it('should handle API errors gracefully', async () => {
-      mockB24.crm.deals.list.mockRejectedValue(new Error('API Error'));
+      mockB24.actions.v2.callList.make.mockResolvedValue(failResult(['API Error']));
 
       await expect(dealService.getDeals()).rejects.toThrow('Failed to fetch deals: API Error');
     });
@@ -835,12 +852,15 @@ describe('DealService', () => {
         CURRENCY_ID: 'RUB'
       };
 
-      mockB24.crm.deals.add.mockResolvedValue({ data: '123' });
+      mockB24.actions.v2.call.make.mockResolvedValue(okResult({ result: 123 }));
 
       const result = await dealService.createDeal(dealData);
 
-      expect(result).toBe('123');
-      expect(mockB24.crm.deals.add).toHaveBeenCalledWith({ fields: dealData });
+      expect(result).toBe(123);
+      expect(mockB24.actions.v2.call.make).toHaveBeenCalledWith({
+        method: 'crm.deal.add',
+        params: { fields: dealData }
+      });
     });
   });
 });
@@ -1075,7 +1095,7 @@ export const getMetricsHandler = (req: Request, res: Response): void => {
 ```typescript
 // routes/health.ts
 import { Router, Request, Response } from 'express';
-import { bitrix24Service } from '../services/bitrix24Service';
+import { $b24 } from '../services/bitrix24';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -1093,10 +1113,11 @@ router.get('/', (req: Request, res: Response) => {
 // Проверка подключения к Bitrix24
 router.get('/bitrix24', async (req: Request, res: Response) => {
   try {
-    const b24 = bitrix24Service.getB24Instance();
-    
-    // Выполняем простой запрос для проверки соединения
-    await b24.crm.deals.list({ limit: 1 });
+    // Лёгкий запрос для проверки соединения с порталом
+    const response = await $b24.actions.v2.call.make({ method: 'server.time' });
+    if (!response.isSuccess) {
+      throw new Error(response.getErrorMessages().join('; '));
+    }
 
     res.json({
       status: 'healthy',

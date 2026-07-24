@@ -14,12 +14,12 @@ Widgets allow embedding your application into Bitrix24 UI (e.g., CRM tabs, menus
 Use `placement.bind` method (usually during app installation).
 
 ```javascript
-await $b24.callMethod('placement.bind', {
+await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
     PLACEMENT: 'CRM_DEAL_DETAIL_TAB',
     HANDLER: 'https://your-domain.com/widget-handler', // Must be public URL
     TITLE: 'My Widget',
     DESCRIPTION: 'Widget description'
-});
+} });
 ```
 
 ### Handling
@@ -37,14 +37,14 @@ Robots are custom automation actions in Bitrix24.
 Use `bizproc.robot.add` method.
 
 ```javascript
-await $b24.callMethod('bizproc.robot.add', {
+await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
     CODE: 'my_robot',
     HANDLER: 'https://your-domain.com/api/robot-handler', // Backend endpoint
     NAME: 'My Robot',
     PROPERTIES: {
         my_param: { Name: 'Parameter', Type: 'string' }
     }
-});
+} });
 ```
 
 ### Handling
@@ -62,10 +62,10 @@ Handle Bitrix24 events (e.g., `ONCRMDEALADD`).
 Use `event.bind` method.
 
 ```javascript
-await $b24.callMethod('event.bind', {
+await $b24.actions.v2.call.make({ method: 'event.bind', params: {
     event: 'ONCRMDEALADD',
     handler: 'https://your-domain.com/api/events' // Backend endpoint
-});
+} });
 ```
 
 ### Handling

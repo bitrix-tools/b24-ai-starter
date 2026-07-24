@@ -50,12 +50,12 @@ export const useUserSettingsStore = defineStore(
         return
       }
 
-      return $b24.callMethod(
-        'user.option.set',
-        {
+      return $b24.actions.v2.call.make({
+        method: 'user.option.set',
+        params: {
           configSettings: { ...configSettings }
         }
-      )
+      })
     }
 
     // endregion ////

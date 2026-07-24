@@ -21,7 +21,7 @@
 <template>
   <B24SelectMenu
     v-model="selected"
-    :options="options"
+    :items="options"
     multiple
     searchable
     placeholder="Выберите объекты..."
@@ -64,7 +64,7 @@ const selected = ref([])
           <B24FormField label="Категория">
             <B24Select
               v-model="filters.category"
-              :options="categoryOptions"
+              :items="categoryOptions"
               @update:model-value="applyFilters"
             />
           </B24FormField>
@@ -92,7 +92,7 @@ const selected = ref([])
           <div class="p-4">
             <B24SelectMenu
               v-model="selected"
-              :options="options"
+              :items="options"
               :loading="loading"
               multiple
               searchable
@@ -116,7 +116,7 @@ const selected = ref([])
             <div class="flex gap-2">
               <B24Select
                 v-model="bulkAction"
-                :options="actionOptions"
+                :items="actionOptions"
                 placeholder="Выберите действие"
                 class="flex-1"
               />

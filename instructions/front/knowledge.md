@@ -10,20 +10,34 @@
 ```
 frontend/
 ├── app/
-│   ├── app.config.ts          # Конфигурация B24UI
-│   ├── app.vue                # Корневой компонент
-│   ├── assets/css/main.css    # Главный CSS файл
+│   ├── app.config.ts          # Конфигурация B24UI (colorMode и т.д.)
+│   ├── app.vue                # Корневой компонент (B24App + B24DashboardGroup)
+│   ├── error.vue              # Страница ошибки
+│   ├── assets/css/main.css    # Единственный CSS-вход (Tailwind + b24ui)
 │   ├── components/            # Компоненты приложения
 │   │   ├── BackendStatus.vue
 │   │   └── Logo.vue
 │   ├── composables/           # Переиспользуемая логика
-│   ├── pages/                 # Страницы Nuxt
+│   │   ├── useAppInit.ts      # Инициализация приложения (B24Frame + helper)
+│   │   ├── useBackend.ts      # Проверка состояния бэкенда
+│   │   └── useTelemetry.ts    # Телеметрия
+│   ├── layouts/              # Шаблоны страниц
+│   │   ├── default.vue        # B24SidebarLayout (базовый)
+│   │   ├── placement.vue      # Для виджетов (placement)
+│   │   ├── slider.vue         # Для слайдеров
+│   │   └── uf-placement.vue   # Для пользовательских типов полей
+│   ├── middleware/           # Route middleware
+│   ├── pages/                 # Страницы Nuxt (только *.client.vue)
 │   │   ├── index.client.vue
 │   │   ├── install.client.vue
 │   │   ├── handler/
 │   │   └── slider/
-│   └── stores/                # Pinia stores
-├── nuxt.config.ts            # Конфигурация Nuxt
+│   ├── plugins/              # Nuxt-плагины (telemetry.client.ts)
+│   ├── stores/                # Pinia stores (api, appSettings, userSettings, user, page)
+│   └── utils/                # Утилиты (авто-импорт)
+├── server/                   # Nitro server routes (install.post.ts)
+├── shared/                   # Общие типы (shared/types)
+├── nuxt.config.ts            # Конфигурация Nuxt (ssr: false)
 ├── package.json              # Зависимости
 └── i18n/                     # Интернационализация
     ├── locales/
@@ -319,7 +333,7 @@ import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
 📖 [Исходный код](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/SidebarLayout.vue)  
 📖 [Theme](https://github.com/bitrix24/b24ui/blob/main/src/theme/sidebar-layout.ts)
 
-Этот компонент УЖЕ используется в качестве основы базовой страницы в шаблоне layouts/defeult.vue проекта. Если страница приложения создается на базе этого шаблона, НЕЛЬЗЯ использовать B24SidebarLayout внутри страницы повторно.
+Этот компонент УЖЕ используется в качестве основы базовой страницы в шаблоне layouts/default.vue проекта. Если страница приложения создается на базе этого шаблона, НЕЛЬЗЯ использовать B24SidebarLayout внутри страницы повторно.
 
 **Правила размещения контента в B24SidebarLayout**
 - Компоненты страницы рендерятся внутри `<slot>` компонента `B24SidebarLayout` через активный `layout`.
@@ -530,7 +544,9 @@ confetti.fire()
   "dependencies": {
     "@bitrix24/b24ui-nuxt": "^2.0.0",
     "@bitrix24/b24icons-vue": "^2.0.0",
-    "nuxt": "^4.0.0",
+    "@bitrix24/b24jssdk": "^2.0.0",
+    "@bitrix24/b24jssdk-nuxt": "^2.0.0",
+    "nuxt": "^4.2.2",
     "vue": "^3.0.0"
   }
 }
@@ -756,33 +772,41 @@ export default defineNuxtConfig({
 
 ### Мобильная навигация с B24UI
 
+> ⚠️ Иконки в B24UI — это импортируемые компоненты (`:icon="Icon"`), а НЕ строковый проп `name`.
+> Цвета задаются через систему `air-*`, а не через `variant="ghost"` / `color="red"`.
+
 ```vue
 <!-- components/MobileNavigation.vue -->
+<script setup lang="ts">
+import BurgerMenuIcon from '@bitrix24/b24icons-vue/main/BurgerMenuIcon'
+
+const isOpen = ref(false)
+</script>
+
 <template>
   <div class="lg:hidden">
     <!-- Мобильное меню -->
     <B24Button
-      variant="ghost"
+      :icon="BurgerMenuIcon"
+      color="air-tertiary"
       @click="isOpen = !isOpen"
-    >
-      <B24Icon name="bars-3" />
-    </B24Button>
+    />
 
     <!-- Выдвижная панель -->
-    <B24Slideover v-model="isOpen" side="left">
-      <B24Card class="p-4">
-        <nav class="space-y-2">
+    <B24Slideover v-model:open="isOpen" side="left">
+      <template #body>
+        <nav class="flex flex-col gap-2">
           <NuxtLink
             v-for="item in navigation"
             :key="item.to"
             :to="item.to"
-            class="block px-4 py-2 rounded-lg hover:bg-gray-100"
+            class="block px-4 py-2"
             @click="isOpen = false"
           >
             {{ item.label }}
           </NuxtLink>
         </nav>
-      </B24Card>
+      </template>
     </B24Slideover>
   </div>
 </template>
@@ -837,19 +861,16 @@ const showChart = ref(false);
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <B24Select
           v-model="filters.stage"
-          :options="stageOptions"
+          :items="stageItems"
           placeholder="Выберите стадию"
         />
         <B24Input
           v-model="filters.search"
+          :icon="SearchIcon"
           placeholder="Поиск по названию"
-        >
-          <template #leading>
-            <B24Icon name="magnifying-glass" />
-          </template>
-        </B24Input>
+        />
         <B24Button
-          variant="outline"
+          color="air-tertiary"
           @click="clearFilters"
         >
           Очистить фильтры
@@ -860,20 +881,19 @@ const showChart = ref(false);
     <!-- Таблица -->
     <B24Card>
       <B24Table
+        :data="filteredDeals"
         :columns="columns"
-        :rows="filteredDeals"
         :loading="isLoading"
       >
-        <template #actions="{ row }">
+        <template #actions-cell="{ row }">
           <div class="flex gap-2">
-            <B24Button size="sm" @click="editDeal(row.id)">
+            <B24Button size="sm" color="air-secondary" @click="editDeal(row.original.id)">
               Редактировать
             </B24Button>
             <B24Button
               size="sm"
-              color="red"
-              variant="outline"
-              @click="deleteDeal(row.id)"
+              color="air-primary-alert"
+              @click="deleteDeal(row.original.id)"
             >
               Удалить
             </B24Button>
@@ -884,6 +904,11 @@ const showChart = ref(false);
   </B24Container>
 </template>
 ```
+
+> ℹ️ `B24Select` использует проп `:items` (не `:options`), `B24Input` — проп `:icon` с иконкой-компонентом,
+> `B24Table` — проп `:data` (не `:rows`); кастомизация ячейки колонки — через `cell`-рендер в описании колонки
+> либо слот с именем колонки (в TanStack-версии — `#<columnId>-cell`). Точные пропы и имена слотов всегда
+> сверяйте с исходником компонента и его theme-файлом.
 
 ---
 

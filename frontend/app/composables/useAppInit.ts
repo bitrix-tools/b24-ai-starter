@@ -1,4 +1,4 @@
-import {computed, type ComputedRef, ref} from "vue";
+import { computed, type ComputedRef, ref } from 'vue'
 import { LoggerBrowser, AjaxError, LoadDataType, useB24Helper } from '@bitrix24/b24jssdk'
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import type { Locale } from 'vue-i18n'
@@ -77,7 +77,7 @@ export const useAppInit = (loggerTitle?: string) => {
     //   profileData: { method: 'profile' }
     // }
     //
-    // const response = await $b24.callBatch(commands)
+    // const response = await $b24.actions.v2.batch.make({ calls: commands })
     //
     // const data = response.getData()
     // $logger.log('Init data >>', data)
@@ -114,7 +114,7 @@ export const useAppInit = (loggerTitle?: string) => {
   ) {
     const b24CurrentLang = $b24.getLang()
     if (localesI18n.value.filter(i => i.code === b24CurrentLang).length > 0) {
-      await setLocale(b24CurrentLang)
+      await setLocale(b24CurrentLang as Locale)
       $logger.log('setLocale >>>', b24CurrentLang)
     } else {
       $logger.warn('not support locale >>>', b24CurrentLang)

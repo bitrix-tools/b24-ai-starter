@@ -38,7 +38,7 @@ This project is a starter kit for building Bitrix24 applications with a Nuxt 3 f
 
 ## Skills
 
-Refer to `.cursor/skills/` for detailed guides:
+Refer to `.claude/skills/` for detailed guides:
 - `manage-b24-environment`: DevOps & Docker
 - `develop-b24-frontend`: Frontend Development
 - `develop-b24-php`: PHP Backend

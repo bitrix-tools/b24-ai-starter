@@ -487,7 +487,7 @@ const resetSettings = () => {
           <B24FormField label="Часовой пояс">
             <B24Select
               v-model="form.timezone"
-              :options="timezoneOptions"
+              :items="timezoneOptions"
             />
           </B24FormField>
 

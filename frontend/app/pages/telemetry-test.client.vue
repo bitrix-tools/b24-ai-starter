@@ -122,9 +122,12 @@ async function doB24UserCurrent() {
   state.b24User.result = ''
   try {
     track('b24_api_call', { 'b24.method': 'user.current', 'ui.path': route.path })
-    const res = await $b24?.callMethod('user.current', {})
-    const data = res?.getData?.() ?? res
-    const user = Array.isArray(data?.result) ? data.result[0] : data?.result
+    const res = await $b24?.actions.v2.call.make({ method: 'user.current', params: {} })
+    if (!res?.isSuccess) {
+      throw new Error(res?.getErrorMessages().join('; ') ?? 'user.current failed')
+    }
+    const result = res.getData()?.result
+    const user = (Array.isArray(result) ? result[0] : result) as { ID?: string, NAME?: string, LAST_NAME?: string } | undefined
     setOk(state.b24User, `user.current → ID: ${user?.ID}, name: ${user?.NAME} ${user?.LAST_NAME}`)
   } catch (err) {
     setErr(state.b24User, err)
@@ -136,9 +139,12 @@ async function doB24StatusList() {
   state.b24Status.result = ''
   try {
     track('b24_api_call', { 'b24.method': 'crm.status.list', 'ui.path': route.path })
-    const res = await $b24?.callMethod('crm.status.list', {})
-    const data = res?.getData?.() ?? res
-    const count = Array.isArray(data?.result) ? data.result.length : '?'
+    const res = await $b24?.actions.v2.call.make({ method: 'crm.status.list', params: {} })
+    if (!res?.isSuccess) {
+      throw new Error(res?.getErrorMessages().join('; ') ?? 'crm.status.list failed')
+    }
+    const result = res.getData()?.result
+    const count = Array.isArray(result) ? result.length : '?'
     setOk(state.b24Status, `crm.status.list → ${count} статусов`)
   } catch (err) {
     setErr(state.b24Status, err)
@@ -185,7 +191,7 @@ onMounted(async () => {
         size="sm"
         color="air-secondary"
         :label="$t('page.telemetry-test.action.back')"
-        @click="$router.push('/')"
+        @click="() => { $router.push('/') }"
       />
       <div>
         <ProseH2 class="mb-0">{{ $t('page.telemetry-test.title') }}</ProseH2>
@@ -241,14 +247,14 @@ onMounted(async () => {
           </div>
 
           <!-- ui_form_submit -->
-          <form @submit.prevent="doFormSubmit" class="flex flex-col gap-2">
+          <form class="flex flex-col gap-2" @submit.prevent="doFormSubmit">
             <ProseP class="text-sm font-medium mb-0">{{ $t('page.telemetry-test.label.form_field') }}</ProseP>
             <div class="flex flex-row items-center gap-3 flex-wrap">
               <input
                 v-model="formText"
                 class="w-[240px] rounded border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
                 placeholder="test value"
-              />
+              >
               <B24Button type="submit" :label="$t('page.telemetry-test.action.form_submit')" color="air-secondary" />
               <span :class="statusClass(state.formSubmit.status)">{{ statusLabel(state.formSubmit.status) }}</span>
             </div>

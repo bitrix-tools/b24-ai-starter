@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, getCurrentInstance } from 'vue'
+import { onMounted } from 'vue'
 import SuccessIcon from '@bitrix24/b24icons-vue/button/SuccessIcon'
 import UnavailableIcon from '@bitrix24/b24icons-vue/main/UnavailableIcon'
 import LoaderClockIcon from '@bitrix24/b24icons-vue/animated/LoaderClockIcon'
