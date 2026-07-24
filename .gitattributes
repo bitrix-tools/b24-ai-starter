@@ -6,12 +6,10 @@
 # - shell scripts and entrypoints executed inside Linux containers
 # - Makefile: recipe lines are tab/newline sensitive
 *.sh            text eol=lf
+*.bash          text eol=lf
 *Dockerfile*    text eol=lf
-Dockerfile      text eol=lf
-*.mjs           text eol=lf
 makefile        text eol=lf
 Makefile        text eol=lf
-*.bash          text eol=lf
 
 # Binary assets — never touch
 *.png binary

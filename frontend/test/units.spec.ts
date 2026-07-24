@@ -28,6 +28,11 @@ describe('chunkArray', () => {
   it('returns an empty array for empty input', () => {
     expect(chunkArray([])).toEqual([])
   })
+
+  it('throws on a non-positive chunk size (guards against an infinite loop)', () => {
+    expect(() => chunkArray([1, 2, 3], 0)).toThrow(RangeError)
+    expect(() => chunkArray([1, 2, 3], -1)).toThrow(RangeError)
+  })
 })
 
 describe('chunkProductsList', () => {
@@ -40,6 +45,24 @@ describe('chunkProductsList', () => {
     const pages = chunkProductsList(items) // first 9(+2), second 15, fix 2
     expect(pages.map(p => p.length)).toEqual([11, 15, 4])
     expect(pages.flat()).toEqual(items)
+  })
+
+  it('does not enlarge the first page at the exact first+fix boundary', () => {
+    const items = Array.from({ length: 11 }, (_, i) => i) // 11 === first(9) + fix(2)
+    expect(chunkProductsList(items).map(p => p.length)).toEqual([9, 2])
+  })
+
+  it('does not mutate the caller\'s perPageMap across calls', () => {
+    const cfg = { first: 9, second: 15 }
+    const items = Array.from({ length: 30 }, (_, i) => i)
+    const first = chunkProductsList(items, cfg, 2)
+    const second = chunkProductsList(items, cfg, 2)
+    expect(cfg).toEqual({ first: 9, second: 15 }) // input untouched
+    expect(first.map(p => p.length)).toEqual(second.map(p => p.length)) // stable result
+  })
+
+  it('returns an empty array for empty input', () => {
+    expect(chunkProductsList([])).toEqual([])
   })
 })
 

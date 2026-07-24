@@ -10,10 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege token: CI only needs to read the repository.
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend (lint · typecheck · test · build)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -48,6 +53,7 @@ jobs:
   backend-node:
     name: Node backend (install · syntax)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backends/node/api
@@ -73,6 +79,7 @@ jobs:
   backend-php:
     name: PHP backend (composer validate)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backends/php

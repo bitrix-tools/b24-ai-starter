@@ -3,13 +3,26 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
   {
+    // `Logo` is a legitimate single-word brand component.
+    files: ['**/components/Logo.vue'],
     rules: {
-      // This starter uses `any` deliberately in several places (flexible config
-      // maps, loosely-typed REST payloads). Keep it visible as a warning instead
-      // of failing CI; tighten to 'error' once the codebase is fully typed.
-      '@typescript-eslint/no-explicit-any': 'warn',
-      // `Logo` is a legitimate single-word brand component.
-      'vue/multi-word-component-names': 'warn'
+      'vue/multi-word-component-names': 'off'
+    }
+  },
+  {
+    // Grandfather the pre-existing `any` in these files (flexible config maps /
+    // loosely-typed REST payloads). The rule stays 'error' everywhere else, so
+    // new code cannot silently introduce `any`. Trim this list as files get typed.
+    files: [
+      '**/stores/appSettings.ts',
+      '**/stores/userSettings.ts',
+      '**/pages/install.client.vue',
+      '**/pages/slider/app-options.client.vue',
+      '**/middleware/01.app.page.or.slider.global.ts',
+      '**/shared/types/base.d.ts'
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
     }
   }
 )
