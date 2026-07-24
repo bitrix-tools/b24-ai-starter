@@ -90,4 +90,7 @@ jobs:
       # skipped because several dependencies are dev-branch git sources that
       # require GitHub authentication not available to a generic CI runner.
       - name: Validate composer.json / composer.lock
-        run: composer validate --no-check-publish --strict
+        # No --strict: benign schema warnings (version field, unbound constraint)
+        # must not fail CI, but a lock out of sync with composer.json still
+        # returns a non-zero exit — which is exactly the #19 drift we guard against.
+        run: composer validate --no-check-publish
