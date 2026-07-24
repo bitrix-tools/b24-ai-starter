@@ -91,7 +91,7 @@ onMounted(async () => {
           :label="$t('page.index.action.telemetry_test')"
           color="air-secondary"
           loading-auto
-          @click="$router.push('/telemetry-test')"
+          @click="() => { $router.push('/telemetry-test') }"
         />
       </template>
     </B24Card>

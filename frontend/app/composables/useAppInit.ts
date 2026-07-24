@@ -114,7 +114,7 @@ export const useAppInit = (loggerTitle?: string) => {
   ) {
     const b24CurrentLang = $b24.getLang()
     if (localesI18n.value.filter(i => i.code === b24CurrentLang).length > 0) {
-      await setLocale(b24CurrentLang)
+      await setLocale(b24CurrentLang as Locale)
       $logger.log('setLocale >>>', b24CurrentLang)
     } else {
       $logger.warn('not support locale >>>', b24CurrentLang)

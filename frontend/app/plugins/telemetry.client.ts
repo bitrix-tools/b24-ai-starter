@@ -50,7 +50,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   // ------------------------------------------------------------------
   window.addEventListener('error', (event: ErrorEvent) => {
     // Пропускаем ошибки загрузки ресурсов (img, script, link)
-    if (event.target instanceof HTMLElement && event.target !== window) return
+    if (event.target instanceof HTMLElement) return
 
     track('ui_error', {
       'error.type': 'uncaught_exception',

@@ -256,12 +256,20 @@ const stepCode = ref<string>('init' as const)
 // region Actions ////
 async function makeInit(): Promise<void> {
   if (steps.value.init) {
-    const response = await $b24.actions.v2.batch.make({ calls: {
-      appInfo: { method: 'app.info' },
-      profile: { method: 'profile' },
-      userFieldTypeList: { method: 'userfieldtype.list' },
-      placementList: { method: 'placement.get' }
-    } })
+    const response = await $b24.actions.v2.batch.make({
+      calls: {
+        appInfo: { method: 'app.info' },
+        profile: { method: 'profile' },
+        userFieldTypeList: { method: 'userfieldtype.list' },
+        placementList: { method: 'placement.get' }
+      }
+    })
+
+    // A failed sub-command is silently omitted from the batch result, so guard
+    // before reading fields like data.appInfo.LICENSE downstream.
+    if (!response.isSuccess) {
+      throw new Error(response.getErrorMessages().join('; '))
+    }
 
     steps.value.init.data = response.getData() as {
       appInfo: {
