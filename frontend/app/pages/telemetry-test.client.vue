@@ -7,7 +7,7 @@ const { t, locales: localesI18n, setLocale } = useI18n()
 useHead({ title: t('page.telemetry-test.seo.title') })
 
 // region Init ////
-const { $logger, initApp, processErrorGlobal } = useAppInit('TelemetryTestPage')
+const { initApp, processErrorGlobal } = useAppInit('TelemetryTestPage')
 const { $initializeB24Frame } = useNuxtApp()
 let $b24: null | B24Frame = null
 
