@@ -1,4 +1,4 @@
-import {computed, type ComputedRef, ref} from "vue";
+import { computed, type ComputedRef, ref } from 'vue'
 import { LoggerBrowser, AjaxError, LoadDataType, useB24Helper } from '@bitrix24/b24jssdk'
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import type { Locale } from 'vue-i18n'

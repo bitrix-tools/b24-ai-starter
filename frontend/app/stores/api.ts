@@ -21,6 +21,13 @@ export const useApiStore = defineStore(
       }
     })
 
+    /**
+     * Authorization header with the current JWT for protected backend routes
+     */
+    const authHeaders = (): Record<string, string> => ({
+      Authorization: `Bearer ${tokenJWT.value}`
+    })
+
     // Health check
     const checkHealth = async (): Promise<{
       status: string
@@ -29,9 +36,7 @@ export const useApiStore = defineStore(
     }> => {
       try {
         return await $api('/api/health', {
-          headers: {
-            Authorization: `Bearer ${tokenJWT.value}`
-          }
+          headers: authHeaders()
         })
       } catch {
         throw new Error('Backend health check failed')
@@ -41,17 +46,13 @@ export const useApiStore = defineStore(
     // API
     const getEnum = async (): Promise<string[]> => {
       return await $api('/api/enum', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 
     const getList = async (): Promise<string[]> => {
       return await $api('/api/list', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 
@@ -70,9 +71,7 @@ export const useApiStore = defineStore(
       portal_domain: string
     }> => {
       return await $api('/api/telemetry/test', {
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        }
+        headers: authHeaders()
       })
     }
 

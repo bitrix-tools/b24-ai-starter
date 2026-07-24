@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { B24Frame } from '@bitrix24/b24jssdk'
-import { onMounted, getCurrentInstance } from 'vue'
+import { onMounted } from 'vue'
 import { useDashboard } from '@bitrix24/b24ui-nuxt/utils/dashboard'
 
 const { t, locales: localesI18n, setLocale } = useI18n()

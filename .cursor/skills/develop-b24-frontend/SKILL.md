@@ -1,20 +1,26 @@
 ---
 name: develop-b24-frontend
-description: Develop frontend applications for Bitrix24 using Nuxt 3, Bitrix24 UI Kit, and JS SDK. Use this skill when you need to create pages, components, or interact with Bitrix24 API from the frontend.
+description: Develop frontend applications for Bitrix24 using Nuxt 4, Bitrix24 UI Kit, and JS SDK. Use this skill when you need to create pages, components, or interact with Bitrix24 API from the frontend.
 ---
 
 # Develop Bitrix24 Frontend
 
 ## Quick Start
 
-The frontend is built with **Nuxt 3** and uses **@bitrix24/b24ui-nuxt** (UI Kit) and **@bitrix24/b24jssdk-nuxt** (JS SDK).
+The frontend is built with **Nuxt 4** (`ssr: false`, runs inside a Bitrix24 iframe) and uses **@bitrix24/b24ui-nuxt** (UI Kit) and **@bitrix24/b24jssdk-nuxt** (JS SDK).
 
 ### Key Directories
 
 *   `frontend/app/pages/`: Application pages (must end with `.client.vue` for client-side rendering).
-*   `frontend/app/components/`: Reusable components.
-*   `frontend/app/stores/`: Pinia stores for state management.
-*   `frontend/app/composables/`: Shared logic (e.g., `useApi`, `useAppInit`).
+*   `frontend/app/layouts/`: Page layouts (`default.vue` wraps `B24SidebarLayout`; also `placement.vue`, `slider.vue`, `uf-placement.vue`).
+*   `frontend/app/components/`: Reusable components (e.g., `BackendStatus.vue`, `Logo.vue`).
+*   `frontend/app/stores/`: Pinia stores (`api`, `appSettings`, `userSettings`, `user`, `page`).
+*   `frontend/app/composables/`: Shared logic (`useAppInit`, `useBackend`, `useTelemetry`).
+*   `frontend/app/middleware/`: Route middleware (e.g., page/slider detection).
+*   `frontend/app/assets/css/main.css`: Single entry CSS (`@import "tailwindcss"; @import "@bitrix24/b24ui-nuxt";`).
+*   `frontend/server/routes/`: Nitro server routes (e.g., `install.post.ts`).
+*   `frontend/shared/types/`: Shared TypeScript types.
+*   `frontend/i18n/`: Locales and i18n map.
 
 ## Bitrix24 UI Kit
 
