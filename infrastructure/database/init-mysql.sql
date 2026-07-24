@@ -25,8 +25,14 @@ CREATE TABLE IF NOT EXISTS bitrix24account (
     expires_in INT NULL,
     application_scope_current_scope JSON NULL,
     current_scope JSON NULL,
+    -- NULL for soft-deleted accounts (status='deleted'); MySQL has no partial
+    -- indexes but treats NULLs as distinct, so on re-install the previous
+    -- (deleted) row and the fresh one no longer collide on the unique key,
+    -- while two active accounts for the same (user, domain) are still rejected.
+    -- See issue #8.
+    active_account_guard TINYINT GENERATED ALWAYS AS (IF(status = 'deleted', NULL, 1)) VIRTUAL,
     PRIMARY KEY (id),
-    UNIQUE KEY unique_b24_user_domain (b24_user_id, domain_url),
+    UNIQUE KEY unique_b24_user_domain (b24_user_id, domain_url, active_account_guard),
     KEY idx_bitrix24account_member_id (member_id),
     KEY idx_bitrix24account_domain_url (domain_url)
 );
