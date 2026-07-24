@@ -1,1 +1,4 @@
 node-compile-cache
+
+# Nuxt-generated runtime config
+.nuxtrc

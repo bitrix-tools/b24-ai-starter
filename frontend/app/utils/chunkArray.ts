@@ -1,4 +1,9 @@
 export function chunkArray<T>(array: T[], chunkSize: number = 50): T[][] {
+  if (!Number.isInteger(chunkSize) || chunkSize < 1) {
+    // A non-positive step would make the loop below spin forever.
+    throw new RangeError(`chunkArray: chunkSize must be a positive integer, got ${chunkSize}`)
+  }
+
   const result: T[][] = []
   for (let i = 0; i < array.length; i += chunkSize) {
     const chunk = array.slice(i, i + chunkSize)
@@ -32,6 +37,10 @@ export function chunkProductsList<T>(
   perPageMap = { first: 9, second: 15 },
   fix = 2
 ): T[][] {
+  // Work on a copy — never mutate the caller's object (perPageMap.first += fix
+  // below would otherwise leak across repeated calls with the same object).
+  perPageMap = { ...perPageMap }
+
   let currentPage = 0
   const pageItems: T[][] = []
 
