@@ -1,0 +1,55 @@
+# /etc/nginx/sites-available/1daa.ru
+# Существующий лендинg / CRM на / — не трогаем, добавляем только /tochka/
+#
+# certbot certonly --nginx -d 1daa.ru -d www.1daa.ru
+# ln -sf /etc/nginx/sites-available/1daa.ru /etc/nginx/sites-enabled/
+# nginx -t && systemctl reload nginx
+
+upstream tochka_frontend {
+    server 127.0.0.1:3010;
+}
+
+upstream tochka_api {
+    server 127.0.0.1:8010;
+}
+
+server {
+    listen 80;
+    server_name 1daa.ru www.1daa.ru;
+    return 301 https://1daa.ru$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name 1daa.ru www.1daa.ru;
+
+    ssl_certificate     /etc/letsencrypt/live/1daa.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/1daa.ru/privkey.pem;
+
+    # --- Точка Банк. Интеграция (Docker: 3010 / 8010) ---
+    location /tochka/api/ {
+        proxy_pass http://tochka_api/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /tochka/ {
+        proxy_pass http://tochka_frontend/tochka/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # --- Существующий сайт / CRM (ваш текущий root) ---
+    location / {
+        root /var/www/1daa;
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -23,6 +23,9 @@ help: ## Show this help message
 	@echo "  prod-php          Deploy PHP backend to production"
 	@echo "  prod-python       Deploy Python backend to production"
 	@echo "  prod-node         Deploy Node.js backend to production"
+	@echo "  db-migrate-init   PostgreSQL init.sql + Django migrate"
+	@echo "  db-migrate-full   Full schema-production.sql dump"
+	@echo "  db-migrate-python Django migrate only (updates)"
 	@echo ""
 	@echo "🐘 PHP Tools:"
 	@echo "  composer-install  Install PHP dependencies"
@@ -240,12 +243,32 @@ prod-php:
 	COMPOSE_PROFILES=php FRONTEND_TARGET=production docker compose up --build -d
 
 prod-python:
-	@echo "Starting prod python environment"
-	COMPOSE_PROFILES=python FRONTEND_TARGET=production docker compose up --build -d
+	@echo "Starting prod python environment (1daa.ru/tochka/)"
+	BUILD_TARGET=production COMPOSE_PROFILES=python,frontend,db-postgres \
+		docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+
+deploy-1daa:
+	@chmod +x scripts/deploy-1daa-production.sh scripts/push-to-server.sh scripts/server-bootstrap.sh
+	@./scripts/push-to-server.sh
+
+push-server:
+	@chmod +x scripts/push-to-server.sh
+	@./scripts/push-to-server.sh
 
 prod-node:
 	@echo "Starting prod node environment"
 	COMPOSE_PROFILES=node FRONTEND_TARGET=production docker compose up --build -d
+
+# Production database (PostgreSQL + Django)
+.PHONY: db-migrate-init db-migrate-full db-migrate-python
+db-migrate-init:
+	@./scripts/production-db-migrate.sh init
+
+db-migrate-full:
+	@./scripts/production-db-migrate.sh full
+
+db-migrate-python:
+	@./scripts/production-db-migrate.sh migrate-only
 
 # Utils
 status:

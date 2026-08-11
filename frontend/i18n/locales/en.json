@@ -1,5 +1,24 @@
 {
   "layout": {},
+  "dashboard": {
+    "settings_subtab_payment_crm": "Acquiring",
+    "acquiring_setup_title": "Internet acquiring setup",
+    "acquiring_setup_step4": "Return to Bitrix24 → Settings → Acquiring and click Check status. Then create payment links from deal or lead cards.",
+    "acquiring_crm_fields_title": "CRM fields for link payments",
+    "acquiring_status_connected": "Acquiring is active — you can create payment links.",
+    "acquiring_status_not_connected": "Acquiring is not active — payment links are unavailable. Follow the steps below.",
+    "acquiring_status_loading": "Checking status…",
+    "acquiring_refresh": "Check status",
+    "acquiring_not_connected_tochka": "Connect the app to Tochka Bank first (Bank accounts tab or setup wizard).",
+    "payment_crm_intro": "Select your field or create a system one. Fields are created for both deals and leads with the same code.",
+    "payment_crm_kind_hint": "Values: full, remainder, advance — payment kind written to deal",
+    "payment_crm_channel_hint": "Values: card, sbp, mir_pay — payment method written to deal",
+    "loading_uf": "Loading fields…",
+    "uf_not_selected": "not selected",
+    "create_uf": "Create field",
+    "uf_search_placeholder": "Search by name or code…",
+    "uf_selected": "Selected"
+  },
   "page": {
     "index": {
       "seo": {
@@ -31,7 +50,9 @@
           "caption": "Events..."
         },
         "placement": {
-          "caption": "Widgets..."
+          "caption": "Widgets...",
+          "deal_tab_title": "Payments",
+          "lead_tab_title": "Payments"
         },
         "userFields": {
           "caption": "Uf..."
@@ -98,6 +119,107 @@
         "description": "Demonstration."
       },
       "action": "Shuffle"
+    },
+    "crm_entity_payments": {
+      "title_deal": "Deal payment",
+      "title_lead": "Lead payment",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "empty": "No payments for this record yet: match statement lines on the dashboard or create a payment link.",
+      "not_connected": "Tochka Bank is not connected. Connect in the app to sync statements.",
+      "overpayment": "Overpayment",
+      "bad_entity_id": "Could not determine the CRM record ID.",
+      "unlink": "Unlink payment",
+      "unlink_action": "Unlink",
+      "refund_action": "Refund",
+      "refund_confirm": "Process refund via Tochka?",
+      "refund_failed": "Refund failed",
+      "vat_none": "No VAT",
+      "method": {
+        "bank_transfer": "Bank transfer (statement)"
+      },
+      "status": {
+        "pending": "Pending",
+        "matched": "Matched",
+        "applied": "Applied",
+        "refunded": "Refunded",
+        "error": "Error",
+        "ignored": "Ignored"
+      },
+      "col": {
+        "amount": "Amount",
+        "status": "Status",
+        "invoice": "Invoice no.",
+        "vat": "VAT",
+        "method": "Method",
+        "channel": "Method",
+        "payment_kind": "Payment type",
+        "counterparty": "Counterparty",
+        "inn": "TIN"
+      },
+      "channel": {
+        "bank_account": "Bank account (statement)",
+        "payment_link": "Payment link",
+        "card": "Card",
+        "sbp": "SBP",
+        "mir_pay": "T-Pay / Mir",
+        "dolyame": "Dolyame"
+      },
+      "payment_kind": {
+        "full": "Full amount",
+        "remainder": "Remainder",
+        "advance": "Advance"
+      },
+      "link_pay": "Pay",
+      "link_copy": "Copy link",
+      "link_copied": "Copied",
+      "create_link_open": "Payment link",
+      "create_link_title": "New payment link",
+      "create_link_amount": "Amount",
+      "create_link_kind": "Amount kind",
+      "create_link_modes": "Payment methods on the Tochka page",
+      "create_link_modes_required": "Select at least one payment method.",
+      "create_link_modes_tochka_help": "The Tochka checkout only shows methods enabled for your merchant. T-Pay and Dolyame must be connected separately in online banking (often 2–3 business days). Very small amounts may hide installments on Tochka/Dolyame side.",
+      "create_link_modes_retailer_missing": "This merchant has no T-Pay and/or Dolyame in Tochka data — request them under Services → Internet acquiring in online banking.",
+      "create_link_low_amount_modes": "Very small amounts may hide T-Pay or Dolyame on the checkout even if enabled — try a higher amount to verify.",
+      "create_link_modes_dropped_hint": "Not all methods were sent to Tochka; removed: {list}. The checkout will only show methods allowed for the merchant.",
+      "create_link_failed": "Could not create link",
+      "create_link_submit": "Create",
+      "create_link_cancel": "Cancel",
+      "create_link_merchant_hint": "Merchant ID (if you have multiple outlets)",
+      "create_link_merchant_placeholder": "Optional",
+      "create_link_acquiring_required_title": "Connect internet acquiring in Tochka first",
+      "create_link_acquiring_required_intro": "Payment links (card, SBP) work only after internet acquiring is enabled in Tochka online banking. Bank statement sync and payment matching work without acquiring.",
+      "create_link_acquiring_required_step1": "Sign in to Tochka online banking with a user who can sign applications.",
+      "create_link_acquiring_required_step2": "Open Services → Internet acquiring.",
+      "create_link_acquiring_required_step3": "Submit the connection request and wait until your merchant outlet is active (usually 2–5 business days).",
+      "create_link_acquiring_required_step4": "Return to Bitrix24, click Refresh on the payments tab, then Payment link again.",
+      "create_link_acquiring_required_merchant": "Leave Merchant ID empty if you have only one merchant outlet.",
+      "create_link_acquiring_required_support": "If you already applied, wait until status shows as connected in online banking. For multiple outlets, enter Merchant ID from your Tochka dashboard.",
+      "create_link_purpose": "Payment purpose (shown to payer)",
+      "create_link_purpose_hint": "Insert CRM fields below or type your own text. The default line depends on the amount kind.",
+      "create_link_purpose_snippets": "Insert into text",
+      "create_link_purpose_snippet_title": "Title",
+      "create_link_purpose_snippet_no": "No. {no}",
+      "create_link_purpose_snippet_date": "of {date}",
+      "create_link_purpose_snippet_date_btn": "Date",
+      "create_link_purpose_apply_template": "Apply amount-kind template",
+      "create_link_purpose_snippet_pct_30": "30%",
+      "create_link_purpose_snippet_pct_50": "50%",
+      "create_link_purpose_snippet_pct_70": "70%",
+      "create_link_purpose_clear": "Clear",
+      "create_link_purpose_pattern_deal_full": "Payment under contract No. {no} of {date}",
+      "create_link_purpose_pattern_deal_remainder": "Additional payment under contract No. {no} of {date}",
+      "create_link_purpose_pattern_deal_advance": "Advance under contract No. {no} of {date}",
+      "create_link_purpose_pattern_lead_full": "Payment for lead No. {no} of {date}",
+      "create_link_purpose_pattern_lead_remainder": "Additional payment for lead No. {no} of {date}",
+      "create_link_purpose_pattern_lead_advance": "Advance for lead No. {no} of {date}",
+      "settings_uf_kind": "Payment kind",
+      "settings_uf_channel": "Payment method",
+      "settings_uf_save": "Save CRM field codes",
+      "settings_uf_hint": "After a successful link payment, values are written to the deal/lead fields.",
+      "consent_upgrade_required": "To create payment links, you need to update Tochka account permissions. Click the button below and confirm access.",
+      "consent_upgrade_button": "Update permissions"
     }
   },
   "components": {

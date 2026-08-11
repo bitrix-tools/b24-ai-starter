@@ -1,3 +1,5 @@
+import logging
+
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -6,7 +8,8 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 
 from .utils.decorators import auth_required, log_errors
 from .utils import AuthorizedRequest
-from .models import ApplicationInstallation
+from .bitrix_rest import ensure_tochka_integration_chat_bot_id
+from .models import ApplicationInstallation, TochkaPortalPreferences
 
 from config import load_config
 
@@ -20,6 +23,7 @@ __all__ = [
 ]
 
 config = load_config()
+logger = logging.getLogger(__name__)
 
 
 @xframe_options_exempt
@@ -76,6 +80,26 @@ def install(request: AuthorizedRequest):
             "application_token": bitrix24_account.application_token,
         },
     )
+
+    try:
+        prefs, _ = TochkaPortalPreferences.objects.get_or_create(
+            member_id=bitrix24_account.member_id,
+            defaults={
+                "client_auto_sync_interval_minutes": 15,
+                "client_auto_sync_enabled": True,
+            },
+        )
+        if not prefs.notify_chat_bot_id:
+            bid = ensure_tochka_integration_chat_bot_id(bitrix24_account)
+            if bid:
+                prefs.notify_chat_bot_id = bid
+                prefs.save(update_fields=["notify_chat_bot_id"])
+            else:
+                logger.warning(
+                    "imbot.v2.Bot.register did not return bot id (add imbot scope / reinstall app)"
+                )
+    except Exception:
+        logger.exception("ensure chat bot on install")
 
     return JsonResponse({"message": "Installation successful"})
 

@@ -1,5 +1,24 @@
 {
   "layout": {},
+  "dashboard": {
+    "settings_subtab_payment_crm": "Эквайринг",
+    "acquiring_setup_title": "Подключение интернет-эквайринга",
+    "acquiring_setup_step4": "Вернитесь в Bitrix24 → Настройки → Эквайринг и нажмите «Проверить статус». Затем создавайте ссылку на оплату в карточке сделки или лида.",
+    "acquiring_crm_fields_title": "Поля CRM для оплат по ссылке",
+    "acquiring_status_connected": "Эквайринг подключён — можно создавать платёжные ссылки.",
+    "acquiring_status_not_connected": "Эквайринг не активен — платёжные ссылки пока недоступны. Выполните шаги ниже.",
+    "acquiring_status_loading": "Проверка статуса…",
+    "acquiring_refresh": "Проверить статус",
+    "acquiring_not_connected_tochka": "Сначала подключите приложение к Точке Банку (вкладка «Банковские счета» или мастер установки).",
+    "payment_crm_intro": "Выберите своё поле или создайте системное. Поля создаются одновременно для сделок и лидов с одинаковым кодом.",
+    "payment_crm_kind_hint": "Значения: full, remainder, advance — вид суммы при оплате по ссылке",
+    "payment_crm_channel_hint": "Значения: card, sbp, mir_pay — способ оплаты",
+    "loading_uf": "Загрузка полей…",
+    "uf_not_selected": "не выбрано",
+    "create_uf": "Создать поле",
+    "uf_search_placeholder": "Поиск по названию или коду…",
+    "uf_selected": "Выбрано"
+  },
   "page": {
     "index": {
       "seo": {
@@ -31,7 +50,9 @@
           "caption": "События..."
         },
         "placement": {
-          "caption": "Виджеты..."
+          "caption": "Виджеты...",
+          "deal_tab_title": "Оплаты",
+          "lead_tab_title": "Оплаты"
         },
         "userFields": {
           "caption": "Uf..."
@@ -98,6 +119,107 @@
         "description": "Демонстрация."
       },
       "action": "Перемешать"
+    },
+    "crm_entity_payments": {
+      "title_deal": "Оплата сделки",
+      "title_lead": "Оплата лида",
+      "refresh": "Обновить",
+      "loading": "Загрузка…",
+      "empty": "Нет оплат по этой записи: сопоставьте платежи из выписки на дашборде или создайте ссылку на оплату.",
+      "not_connected": "Банк Точка не подключён. Подключите в приложении, чтобы синхронизировать выписку.",
+      "overpayment": "Переплата",
+      "bad_entity_id": "Не удалось определить ID записи CRM.",
+      "unlink": "Отвязать платёж",
+      "unlink_action": "Отвязать",
+      "refund_action": "Возврат",
+      "refund_confirm": "Оформить возврат через Точку?",
+      "refund_failed": "Не удалось оформить возврат",
+      "vat_none": "Без НДС",
+      "method": {
+        "bank_transfer": "По счёту (выписка)"
+      },
+      "status": {
+        "pending": "Ожидает",
+        "matched": "Сопоставлен",
+        "applied": "Применён",
+        "refunded": "Возвращён",
+        "error": "Ошибка",
+        "ignored": "Игнорирован"
+      },
+      "col": {
+        "amount": "Сумма",
+        "status": "Статус",
+        "invoice": "Счёт №",
+        "vat": "НДС",
+        "method": "Способ",
+        "channel": "Способ",
+        "payment_kind": "Вид оплаты",
+        "counterparty": "Контрагент",
+        "inn": "ИНН"
+      },
+      "channel": {
+        "bank_account": "Счёт (выписка)",
+        "payment_link": "Платёжная ссылка",
+        "card": "Карта",
+        "sbp": "СБП",
+        "mir_pay": "T-Pay / Мир",
+        "dolyame": "Долями"
+      },
+      "payment_kind": {
+        "full": "Полностью",
+        "remainder": "Остаток",
+        "advance": "Аванс"
+      },
+      "link_pay": "Оплатить",
+      "link_copy": "Копировать ссылку",
+      "link_copied": "Скопировано",
+      "create_link_open": "Ссылка на оплату",
+      "create_link_title": "Новая платёжная ссылка",
+      "create_link_amount": "Сумма",
+      "create_link_kind": "Вид суммы",
+      "create_link_modes": "Доступные способы оплаты на странице Точки",
+      "create_link_modes_required": "Выберите хотя бы один способ оплаты.",
+      "create_link_modes_tochka_help": "Страница оплаты Точки показывает только те способы, которые подключены для вашей торговой точки. T-Pay и «Долями» подключаются отдельно в интернет-банке (обычно 2–3 рабочих дня). Маленькая сумма заказа может скрывать рассрочку на стороне Точки/Долями.",
+      "create_link_modes_retailer_missing": "Для выбранной торговой точки в данных Точки нет T-Pay и/или «Долями» — заявку на подключение оставьте в интернет-банке: Сервисы → Интернет-эквайринг.",
+      "create_link_low_amount_modes": "При очень маленькой сумме T-Pay или «Долями» могут не появиться на странице оплаты даже при подключении — увеличьте сумму для проверки.",
+      "create_link_modes_dropped_hint": "В запрос к Точке ушли не все способы: снято {list}. На странице оплаты будут только разрешённые для торговой точки.",
+      "create_link_failed": "Не удалось создать ссылку",
+      "create_link_submit": "Создать",
+      "create_link_cancel": "Отмена",
+      "create_link_merchant_hint": "Merchant ID (если несколько торговых точек)",
+      "create_link_merchant_placeholder": "Необязательно",
+      "create_link_acquiring_required_title": "Сначала подключите интернет-эквайринг в Точке",
+      "create_link_acquiring_required_intro": "Платёжные ссылки (карта, СБП) работают только после подключения интернет-эквайринга в интернет-банке. Синхронизация выписки и сопоставление платежей работают и без эквайринга.",
+      "create_link_acquiring_required_step1": "Войдите в интернет-банк Точки под учётной записью с правом подписи.",
+      "create_link_acquiring_required_step2": "Откройте раздел Сервисы → Интернет-эквайринг.",
+      "create_link_acquiring_required_step3": "Подайте заявку на подключение и дождитесь активации торговой точки (обычно 2–5 рабочих дней).",
+      "create_link_acquiring_required_step4": "Вернитесь в Bitrix24, нажмите «Обновить» на вкладке оплат и снова «Ссылка на оплату».",
+      "create_link_acquiring_required_merchant": "Поле Merchant ID оставьте пустым, если у вас одна торговая точка.",
+      "create_link_acquiring_required_support": "Если заявка уже подана — дождитесь статуса «Подключено» в интернет-банке. При нескольких точках укажите Merchant ID из личного кабинета Точки.",
+      "create_link_purpose": "Назначение платежа (для покупателя)",
+      "create_link_purpose_hint": "Подставьте данные из CRM или введите текст вручную. Шаблон ниже зависит от вида суммы.",
+      "create_link_purpose_snippets": "Вставить в текст",
+      "create_link_purpose_snippet_title": "Название",
+      "create_link_purpose_snippet_no": "№{no}",
+      "create_link_purpose_snippet_date": "от {date}",
+      "create_link_purpose_snippet_date_btn": "Дата",
+      "create_link_purpose_apply_template": "Шаблон по виду суммы",
+      "create_link_purpose_snippet_pct_30": "30%",
+      "create_link_purpose_snippet_pct_50": "50%",
+      "create_link_purpose_snippet_pct_70": "70%",
+      "create_link_purpose_clear": "Стереть",
+      "create_link_purpose_pattern_deal_full": "Оплата по договору №{no} от {date}",
+      "create_link_purpose_pattern_deal_remainder": "Доплата по договору №{no} от {date}",
+      "create_link_purpose_pattern_deal_advance": "Аванс по договору №{no} от {date}",
+      "create_link_purpose_pattern_lead_full": "Оплата по заявке №{no} от {date}",
+      "create_link_purpose_pattern_lead_remainder": "Доплата по заявке №{no} от {date}",
+      "create_link_purpose_pattern_lead_advance": "Аванс по заявке №{no} от {date}",
+      "settings_uf_kind": "Вид оплаты",
+      "settings_uf_channel": "Способ оплаты",
+      "settings_uf_save": "Сохранить поля CRM",
+      "settings_uf_hint": "При успешной оплате по ссылке значения записываются в указанные поля сделки/лида.",
+      "consent_upgrade_required": "Для создания платёжных ссылок необходимо обновить разрешения аккаунта Точки. Нажмите кнопку ниже и подтвердите доступ.",
+      "consent_upgrade_button": "Обновить разрешения"
     }
   },
   "components": {

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import type { ProgressProps } from '@bitrix24/b24ui-nuxt'
 import type { IStep } from '#shared/types/base'
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { ref, onMounted } from 'vue'
 import { sleepAction } from '~/utils/sleep'
 import { withoutTrailingSlash } from 'ufo'
-import Logo from '~/components/Logo.vue'
+import AppLaunchSplash from '~/components/AppLaunchSplash.vue'
 
 const { t, locales: localesI18n, setLocale } = useI18n()
 
@@ -21,13 +20,6 @@ const { $logger, initLang, processErrorGlobal } = useAppInit('Install')
 const { $initializeB24Frame } = useNuxtApp()
 const $b24: B24Frame = await $initializeB24Frame()
 await initLang($b24, localesI18n, setLocale)
-
-const confetti = useConfetti()
-
-const isShowDebug = ref(false)
-
-const progressColor = ref<ProgressProps['color']>('air-primary')
-const progressValue = ref<null | number>(null)
 
 const apiStore = useApiStore()
 // endregion ////
@@ -85,48 +77,37 @@ const steps = ref<Record<string, IStep>>({
   placement: {
     caption: t('page.install.step.placement.caption'),
     action: async () => {
-      const key = {
-        placement: 'CRM_DEAL_DETAIL_TAB',
-        handler: `${appUrl}/handler/placement-crm-deal-detail-tab`
-      }
-      const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement && item.handler === key.handler )
-      if (exists) {
-        await $b24.callBatch([
-          {
-            method: 'placement.unbind',
-            params: {
-              PLACEMENT: key.placement
-            }
-          },
-          {
-            method: 'placement.bind',
-            params: {
-              PLACEMENT: key.placement,
-              HANDLER: key.handler,
-              TITLE: '[demo] Some Tab',
-              OPTIONS: {
-                errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-              }
-            }
-          }
-        ])
-
-        return
-      }
-
-      await $b24.callBatch([
+      const errorHandlerUrl = `${appUrl}/handler/background-some-problem`
+      const placementDefs = [
         {
+          placement: 'CRM_DEAL_DETAIL_TAB',
+          handler: `${appUrl}/handler/placement-crm-deal-detail-tab`,
+          title: t('page.install.step.placement.deal_tab_title'),
+        },
+        {
+          placement: 'CRM_LEAD_DETAIL_TAB',
+          handler: `${appUrl}/handler/placement-crm-lead-detail-tab`,
+          title: t('page.install.step.placement.lead_tab_title'),
+        },
+      ] as const
+      const list = (steps.value.init?.data?.placementList || []) as { placement: string; handler: string }[]
+      const batch: { method: string; params: Record<string, unknown> }[] = []
+      for (const def of placementDefs) {
+        const exists = list.some((item) => item.placement === def.placement && item.handler === def.handler)
+        if (exists) {
+          batch.push({ method: 'placement.unbind', params: { PLACEMENT: def.placement } })
+        }
+        batch.push({
           method: 'placement.bind',
           params: {
-            PLACEMENT: key.placement,
-            HANDLER: key.handler,
-            TITLE: '[demo] Some Tab',
-            OPTIONS: {
-              errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-            }
-          }
-        }
-      ])
+            PLACEMENT: def.placement,
+            HANDLER: def.handler,
+            TITLE: def.title,
+            OPTIONS: { errorHandlerUrl },
+          },
+        })
+      }
+      await $b24.callBatch(batch)
     }
   },
   userFields: {
@@ -221,7 +202,6 @@ const steps = ref<Record<string, IStep>>({
     action: makeFinish
   }
 })
-const stepCode = ref<string>('init' as const)
 // endregion ////
 
 // region Actions ////
@@ -260,7 +240,7 @@ async function makeInit(): Promise<void> {
         placement: string
         userId: number
         handler: string
-        options: any
+        options: unknown
         title: string
         description: string
       }[]
@@ -269,23 +249,8 @@ async function makeInit(): Promise<void> {
 }
 
 async function makeFinish(): Promise<void> {
-  progressColor.value = 'air-primary-success'
-  progressValue.value = 100
-
-  confetti.fire()
-  await sleepAction(3000)
-
   await $b24.installFinish()
 }
-
-const stepsData = computed(() => {
-  return Object.entries(steps.value).map(([index, row]) => {
-    return {
-      step: index,
-      data: row?.data
-    }
-  })
-})
 // endregion ////
 
 // region Lifecycle Hooks ////
@@ -295,11 +260,10 @@ onMounted(async () => {
   try {
     await $b24.parent.setTitle(t('page.install.seo.title'))
 
-    for (const [key, step] of Object.entries(steps.value)) {
-      stepCode.value = key
+    for (const step of Object.values(steps.value)) {
       await step.action()
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     processErrorGlobal(error)
   }
 })
@@ -307,31 +271,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-3 flex flex-col items-center justify-center gap-1 h-dvh">
-    <Logo
-      class="size-[208px]"
-      :class="[
-        stepCode === 'finish' ? 'text-(--ui-color-accent-main-success)' : 'text-(--ui-color-accent-soft-green-1)'
-      ]"
-    />
-    <B24Progress
-      v-model="progressValue"
-      size="xs"
-      animation="elastic"
-      :color="progressColor"
-      class="w-1/2 sm:w-1/3"
-    />
-    <div class="mt-6 flex flex-col items-center justify-center gap-2">
-      <ProseH1 class="text-nowrap mb-0">
-        {{ $t('page.install.ui.title') }}
-      </ProseH1>
-      <ProseP small accent="less">
-        {{ steps[stepCode]?.caption || '...' }}
-      </ProseP>
-    </div>
-
-    <ProsePre v-if="isShowDebug">
-      {{ stepsData }}
-    </ProsePre>
-  </div>
+  <AppLaunchSplash class="min-h-dvh bg-white" />
 </template>

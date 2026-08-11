@@ -150,3 +150,173 @@ class ApplicationInstallation(models.Model):
     class Meta:
         managed = False
         db_table = "application_installation"
+
+
+def _default_deal_matching() -> dict:
+    return {}
+
+
+class TochkaPortalPreferences(models.Model):
+    """Портальные настройки фоновой серверной синхронизации и интерфейса."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=255, unique=True)
+    client_auto_sync_enabled = models.BooleanField(default=False)
+    client_auto_sync_interval_minutes = models.PositiveIntegerField(default=15)
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    deal_payment_kind_uf_code = models.CharField(max_length=64, blank=True, default="")
+    deal_payment_channel_uf_code = models.CharField(max_length=64, blank=True, default="")
+    lead_payment_kind_uf_code = models.CharField(max_length=64, blank=True, default="")
+    lead_payment_channel_uf_code = models.CharField(max_length=64, blank=True, default="")
+
+    notify_deal_responsible = models.BooleanField(default=True)
+    notify_deal_timeline = models.BooleanField(default=True)
+    notify_chat_id = models.IntegerField(null=True, blank=True)
+    notify_chat_bot_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Bitrix24 chat bot ID for imbot.v2.Chat.Message.send; empty = im.message.add as app user",
+    )
+
+    invoice_auto_update_stage = models.BooleanField(default=False)
+    invoice_stage_id_paid = models.CharField(max_length=128, blank=True, default="")
+    invoice_stage_id_partial = models.CharField(max_length=128, blank=True, default="")
+    invoice_match_by_inn = models.BooleanField(default=False)
+    invoice_match_by_amount = models.BooleanField(default=True)
+
+    deal_matching = models.JSONField(
+        default=_default_deal_matching,
+        blank=True,
+        help_text="Настройки сопоставления платежей со сделками (вкладка «Сопоставление»).",
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tochka_portal_preferences"
+
+
+class PaymentNotifyLog(models.Model):
+    """Идемпотентность уведомлений по банковским платежам (tochka_payments — unmanaged)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=255, db_index=True)
+    payment_id = models.UUIDField(db_index=True)
+    event_kind = models.CharField(max_length=64, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "payment_notify_log"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["payment_id", "event_kind"],
+                name="uniq_payment_notify_event",
+            )
+        ]
+
+
+class TochkaAcquiringOperation(models.Model):
+    """Платёжные ссылки / эквайринг Точки (отдельно от TochkaPayment по выписке)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=255, db_index=True)
+    deal_id = models.IntegerField(null=True, blank=True)
+    lead_id = models.IntegerField(null=True, blank=True)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    currency = models.CharField(max_length=3, default="RUB")
+    customer_code = models.CharField(max_length=255)
+    merchant_id = models.CharField(max_length=255, null=True, blank=True)
+    payment_link_id = models.CharField(max_length=255, null=True, blank=True)
+    external_operation_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    payment_url = models.TextField(null=True, blank=True)
+    payment_modes_requested = models.JSONField(default=list, blank=True)
+    payment_mode_effective = models.CharField(max_length=32, null=True, blank=True)
+    payment_kind = models.CharField(max_length=32, null=True, blank=True)
+    purpose = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=32, default="pending")
+    webhook_raw = models.TextField(null=True, blank=True)
+    duplicate_bank_payment_id = models.UUIDField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tochka_acquiring_operations"
+
+
+class TochkaCredentials(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=255, unique=True)
+    client_id = models.CharField(max_length=255)
+    client_secret = models.CharField(max_length=255)
+    access_token = models.TextField(null=True, blank=True)
+    refresh_token = models.TextField(null=True, blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    is_connected = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        from .datetime_utils import normalize_model_datetimes
+
+        normalize_model_datetimes(self)
+        super().save(*args, **kwargs)
+
+    class Meta:
+        managed = False
+        db_table = "tochka_credentials"
+
+
+class TochkaPayment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=255)
+    account_id = models.CharField(max_length=255)
+    transaction_id = models.CharField(max_length=255, null=True, blank=True)
+    payment_slip_number = models.CharField(max_length=255, null=True, blank=True)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    amount_nat = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default='RUB')
+    credit_debit = models.CharField(max_length=10)
+    counterparty_name = models.CharField(max_length=255, null=True, blank=True)
+    counterparty_inn = models.CharField(max_length=12, null=True, blank=True)
+    counterparty_account = models.CharField(max_length=255, null=True, blank=True)
+    counterparty_bik = models.CharField(max_length=9, null=True, blank=True)
+    purpose = models.TextField(null=True, blank=True)
+    invoice_number = models.CharField(max_length=255, null=True, blank=True)
+    vat_type = models.CharField(max_length=20, null=True, blank=True)
+    transaction_date = models.DateTimeField()
+    status = models.CharField(max_length=20, default='pending')
+    matched_deal_id = models.IntegerField(null=True, blank=True)
+    matched_lead_id = models.IntegerField(null=True, blank=True)
+    matched_invoice_id = models.IntegerField(null=True, blank=True)
+    # Deal info cache
+    deal_title = models.CharField(max_length=255, null=True, blank=True)
+    deal_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    deal_currency = models.CharField(max_length=3, null=True, blank=True)
+    deal_responsible_id = models.IntegerField(null=True, blank=True)
+    deal_responsible_name = models.CharField(max_length=255, null=True, blank=True)
+    deal_responsible_photo = models.CharField(max_length=500, null=True, blank=True)
+    deal_paid_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    deal_paid_percent = models.IntegerField(default=0)
+    # Invoice info cache (классический счёт crm.invoice)
+    invoice_title = models.CharField(max_length=255, null=True, blank=True)
+    invoice_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    invoice_currency = models.CharField(max_length=3, null=True, blank=True)
+    invoice_account_number = models.CharField(max_length=255, null=True, blank=True)
+    invoice_responsible_id = models.IntegerField(null=True, blank=True)
+    invoice_responsible_name = models.CharField(max_length=255, null=True, blank=True)
+    invoice_responsible_photo = models.CharField(max_length=500, null=True, blank=True)
+    invoice_paid_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    invoice_paid_percent = models.IntegerField(default=0)
+    ledger_exclude = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        from .datetime_utils import normalize_model_datetimes
+
+        normalize_model_datetimes(self)
+        super().save(*args, **kwargs)
+
+    class Meta:
+        managed = False
+        db_table = "tochka_payments"
+        unique_together = ("member_id", "transaction_id")

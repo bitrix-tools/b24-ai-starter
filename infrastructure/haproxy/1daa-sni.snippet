@@ -1,0 +1,6 @@
+# Add to /etc/haproxy/haproxy.cfg frontend tls_front (before vkvideo.ru rule):
+#   use_backend caddy_1daa if { req.ssl_sni -i 1daa.ru } || { req.ssl_sni -i www.1daa.ru }
+#
+# Add backend:
+#   backend caddy_1daa
+#       server caddy 127.0.0.1:7444 check

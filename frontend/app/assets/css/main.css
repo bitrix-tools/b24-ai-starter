@@ -1,6 +1,22 @@
 @import "tailwindcss";
 @import "@bitrix24/b24ui-nuxt";
 
+/* Полоса навигации Nuxt сверху — не нужна в приложении внутри Битрикс24 */
+.nuxt-loading-indicator {
+  display: none !important;
+}
+
 @theme static {
 
+}
+
+/* White background for B24 sidebar layout (used on non-setup pages) */
+.sidebar-layout.--inner,
+.sidebar-layout,
+body {
+  background: #ffffff !important;
+}
+
+.sidebar-layout__content {
+  background: #ffffff !important;
 }

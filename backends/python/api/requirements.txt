@@ -1,4 +1,5 @@
 Django
+Pillow>=10.0,<12
 psycopg2-binary
 PyMySQL
 django-cors-headers

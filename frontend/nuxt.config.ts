@@ -10,6 +10,10 @@ export default defineNuxtConfig({
     '@pinia/nuxt'
   ],
 
+  imports: {
+    dirs: ['stores']
+  },
+
   ssr: false,
 
   devtools: { enabled: false },
@@ -28,10 +32,15 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-16',
 
   app: {
+    // Production: /tochka/  Dev/cloudpub: /
+    baseURL: process.env.NUXT_APP_BASE_URL || '/',
+    pageTransition: false,
+    layoutTransition: false,
     head: {
       title: 'Starter',
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'preload', href: '/tochka-logo-white.png', as: 'image' },
       ],
       meta: [
         { charset: 'utf-8' },

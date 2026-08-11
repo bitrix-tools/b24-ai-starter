@@ -1,0 +1,30 @@
+# TLS termination for 1daa.ru (HAProxy SNI -> 127.0.0.1:7444).
+# Caddy handles Chrome TLS 1.3 post-quantum key shares that OpenSSL 3.0 rejects.
+{
+    admin off
+    auto_https off
+    servers {
+        protocols h1 h2
+    }
+}
+
+https://1daa.ru:7444 {
+    tls /etc/letsencrypt/live/1daa.ru/fullchain.pem /etc/letsencrypt/live/1daa.ru/privkey.pem
+
+    header Content-Security-Policy "frame-ancestors *"
+    header -Alt-Svc
+
+    handle /tochka/api/* {
+        uri strip_prefix /tochka
+        reverse_proxy 127.0.0.1:8010
+    }
+
+    handle /tochka/* {
+        reverse_proxy 127.0.0.1:3010
+    }
+
+    handle {
+        root * /var/www/1daa
+        file_server
+    }
+}
