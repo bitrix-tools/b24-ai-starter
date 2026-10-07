@@ -7,14 +7,18 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "cors": "^2.8.5",
-    "pg": "^8.16.3",
-    "mysql2": "^3.15.3",
-    "jsonwebtoken": "^9.0.2",
-    "dotenv": "^17.2.3"
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.5",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.14"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=22"
   }
 }
