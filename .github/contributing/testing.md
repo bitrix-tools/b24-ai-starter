@@ -78,3 +78,11 @@
 | 8 | `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
 | 9 | В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
 | 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
+| 11 | Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |
+| 12 | Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |
+| 13 | Python: `DEBUG = True` захардкожен; при пустом `VIRTUAL_HOST` в `ALLOWED_HOSTS` попадает `None` | `backends/python/django/settings.py` | Prod-запуск с пустым `VIRTUAL_HOST` |
+| 14 | Python Dockerfile выполняет `makemigrations` при старте (dev и prod) — миграции генерируются в рантайме | `backends/python/django/Dockerfile` | `git status` после `make dev-python` |
+| 15 | `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
+| 16 | Схема БД для PHP создаётся init-скриптами, а единственная Doctrine-миграция не содержит уникального индекса из #8 | `backends/php/migrations/`, `infrastructure/database/` | `make dev-php-db-migrate` на пустой БД без init-скриптов |
+
+Проблемы безопасности в эту таблицу не вносятся — они передаются мейнтейнерам по [SECURITY.md](../../SECURITY.md).

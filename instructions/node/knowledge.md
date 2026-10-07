@@ -4,6 +4,16 @@
 
 Этот файл содержит **общую информацию по разработке Node.js-приложений** для Битрикс24, не зависящую от конкретных задач. Для специфических инструкций обратитесь к соответствующим файлам в этой папке.
 
+### Что есть в стартере на самом деле
+
+Примеры ниже (TypeScript, `src/`, Jest, Winston, Joi, Redis) — **целевая архитектура**, а не текущий код. Фактическое состояние `backends/node/api/`:
+
+- Node 24 (Docker-образы `node:24-slim` / `node:24-alpine`), pnpm 12 (`packageManager: pnpm@12.9.1`), ES-модули, чистый JavaScript без сборки.
+- Зависимости: `express` 5.2, `cors`, `dotenv` 18, `jsonwebtoken` 9, `pg`, `mysql2`; dev — `nodemon`. **`@bitrix24/b24jssdk` не установлен** — добавьте его (`pnpm add @bitrix24/b24jssdk`), прежде чем использовать примеры с SDK.
+- `server.js` — все маршруты и пул БД (`DB_TYPE=postgresql|mysql`); `utils/verifyToken.js` — JWT-middleware (кладёт payload в `req.user`).
+- Маршруты: `GET /api/health`, `GET /api/enum`, `GET /api/list` (под JWT); `POST /api/install` (только логирует тело с маскировкой токенов), `POST /api/getToken` (выдаёт JWT без проверки данных Битрикс24 — заглушка).
+- Тестов, линтера и TypeScript в Node-бэкенде нет; в CI выполняется только `node --check`.
+
 ---
 
 ## 🚀 Node.js экосистема для Битрикс24
@@ -12,7 +22,7 @@
 
 #### Bitrix24 JavaScript SDK
 - **Библиотека**: `@bitrix24/b24jssdk`
-- **Версия**: Последняя стабильная
+- **Версия**: 3.x
 - **Требования**: Node.js 22+ (в Docker и CI — Node 24), ES2022+
 - **Лицензия**: MIT
 
@@ -20,18 +30,18 @@
 ```json
 {
   "dependencies": {
-    "@bitrix24/b24jssdk": "^2.0.0",
-    "express": "^4.18.2",
+    "@bitrix24/b24jssdk": "^3.0.0",
+    "express": "^5.2.1",
     "axios": "^1.6.0",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5",
+    "dotenv": "^18.0.5",
+    "cors": "^2.8.6",
     "helmet": "^7.1.0",
     "compression": "^1.7.4",
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/express": "^4.17.21",
+    "@types/node": "^24.0.0",
+    "@types/express": "^5.0.0",
     "typescript": "^5.2.2",
     "tsx": "^4.0.0",
     "eslint": "^8.0.0",
@@ -90,7 +100,7 @@ project/
 ### 1. Инициализация SDK
 
 > ⚠️ **Канонический API:** вызовы REST выполняются через `$b24.actions.v{2,3}.*.make()`
-> (`call`, `batch`, `callList`, `fetchList`). Хелперы `callMethod` / `callBatch` — **устаревшие**, не используйте их.
+> (`call`, `batch`, `callList`, `fetchList`). Хелперы `callMethod` / `callBatch` **удалены** в JS SDK 3.
 > Для бэкенда точкой входа служит `B24Hook` (входящий вебхук), а не вымышленный класс `Bitrix24`.
 
 #### Простая инициализация (TypeScript)
@@ -250,7 +260,7 @@ export class DealService {
 // controllers/dealController.ts
 import { Request, Response, NextFunction } from 'express';
 import { DealService } from '../services/dealService';
-import { validateDealData } from '../middleware/validation';
+import { validateDealCreate, validateDealUpdate } from '../middleware/validation';
 
 export class DealController {
   constructor(private dealService: DealService) {}
@@ -1147,24 +1157,27 @@ export { router as healthRouter };
 
 ### Docker
 
+Реальный образ стартера — `backends/node/api/Dockerfile` (стадии `dev` на `node:24-slim` и `production` на `node:24-alpine`, `corepack enable` + `pnpm install --frozen-lockfile`). Пример ниже — для варианта с TypeScript-сборкой.
+
 ```dockerfile
 # Dockerfile
-FROM node:18-alpine
+FROM node:24-alpine
 
 # Установка рабочей директории
 WORKDIR /app
+RUN corepack enable
 
 # Копирование файлов зависимостей
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Установка зависимостей
-RUN npm ci --only=production
+RUN pnpm install --frozen-lockfile
 
 # Копирование исходного кода
 COPY . .
 
 # Компиляция TypeScript
-RUN npm run build
+RUN pnpm run build
 
 # Создание пользователя без root прав
 RUN addgroup -g 1001 -S nodejs
@@ -1185,9 +1198,10 @@ CMD ["node", "dist/server.js"]
 
 ### docker-compose для разработки
 
+В стартере Node-бэкенд — сервис `api-node` (профиль `node`, контейнер `api`, порт 8000) в корневом `docker-compose.yml`; запуск — `make dev-node`. Пример ниже — автономный compose для отдельного проекта.
+
 ```yaml
 # docker-compose.dev.yml
-version: '3.8'
 
 services:
   app:
@@ -1266,5 +1280,5 @@ process.on('uncaughtException', (error: Error) => {
 
 ---
 
-*Обновлено: 25 ноября 2025*
+*Обновлено: 7 октября 2026*
 *Версия: 2.0 - Модульная архитектура знаний*

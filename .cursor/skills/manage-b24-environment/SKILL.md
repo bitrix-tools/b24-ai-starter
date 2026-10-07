@@ -22,12 +22,12 @@ make down
 
 # View logs
 make logs         # All logs
-docker logs api   # Backend logs
+docker logs api   # Backend logs (container name `api` for every backend)
 docker logs frontend # Frontend logs
 
-# Restart specific service
-docker compose restart api
-docker compose restart frontend
+# Restart specific container
+docker restart api
+docker restart frontend
 ```
 
 ## Environment Setup
@@ -36,7 +36,9 @@ docker compose restart frontend
 2. **Configuration**: All configuration is in `.env`.
     * `CLOUDPUB_TOKEN`: Required for public URL (get from cloudpub.ru).
     * `CLIENT_ID` / `CLIENT_SECRET`: Bitrix24 application credentials.
-    * `SERVER_HOST`: Backend URL (e.g., `http://api-php:8000`).
+    * `SERVER_HOST`: Backend URL (e.g., `http://api-php:8000`; services are `api-php`, `api-python`, `api-node`).
+    * `DB_TYPE`: `postgresql` (default) or `mysql`; selects the `db-postgres` / `db-mysql` profile.
+    * `ENABLE_RABBITMQ`: `1` adds the `queue` profile (and `python-worker` for Python).
 
 ## Cloudpub & Tunnels
 
@@ -45,14 +47,16 @@ The project uses Cloudpub to expose the local environment to Bitrix24.
 * **Public URL**: Found in `docker logs cloudpubFront` or `.env` (`VIRTUAL_HOST`).
 * **Troubleshooting**:
   * If the tunnel is not working, check `CLOUDPUB_TOKEN` in `.env`.
-  * On macOS (ARM64), ensure `platform: linux/amd64` is set for the cloudpub service in `docker-compose.yml`.
+  * The cloudpub image platform comes from `CLOUDPUB_PLATFORM` in `.env` (default `linux/amd64`); adjust it on ARM64 if needed.
 
 ## Database Management
 
-* **PHP**: Run `make dev-php-init-database` to apply migrations.
-* **Python/Node**: Database is initialized automatically on first run.
+* **PHP**: `make dev-php-db-migrate` applies migrations. `make dev-php-init-database` **drops** the database, recreates it and migrates — only for a fresh project.
+* **Python**: `python manage.py migrate` runs automatically when the container starts.
+* **Node**: no migrations; the database container runs `infrastructure/database/init.sql` (PostgreSQL) or `init-mysql.sql` (MySQL) on first start.
 * **Access**:
-  * PostgreSQL/MySQL runs in the `database` container.
+  * PostgreSQL/MySQL runs as the `database-postgres` / `database-mysql` service (network alias `database`).
+  * Backups: `make db-backup` / `make db-restore`.
   * Credentials in `.env` (`DB_USER`, `DB_PASSWORD`, `DB_NAME`).
 
 ## Troubleshooting

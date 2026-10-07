@@ -7,11 +7,13 @@ description: Develop backend applications for Bitrix24 using Node.js, Express, a
 
 ## Quick Start
 
-The Node.js backend is built with **Express** and uses **@bitrix24/b24jssdk** for Bitrix24 interaction.
+The Node.js backend runs on **Node 24** with **Express 5** (ES modules, `pnpm` 12). Bitrix24 calls are made with **@bitrix24/b24jssdk** 3.x.
+
+> `@bitrix24/b24jssdk` is **not** a dependency of `backends/node/api` yet. Add it before using the samples below: `pnpm add @bitrix24/b24jssdk` in `backends/node/api` (commit `pnpm-lock.yaml`).
 
 ### Key Files
 
-* `backends/node/api/server.js`: Main entry point and API routes.
+* `backends/node/api/server.js`: Main entry point, DB pool and API routes (`/api/health`, `/api/enum`, `/api/list` under JWT; `/api/install`, `/api/getToken` public).
 * `backends/node/api/utils/verifyToken.js`: JWT verification middleware.
 
 ## Creating API Endpoints
@@ -22,16 +24,16 @@ Use Express routing and the `verifyToken` middleware.
 import verifyToken from './utils/verifyToken.js';
 
 app.get('/api/my-endpoint', verifyToken, async (req, res) => {
-  // JWT payload is available in req.user (if verifyToken adds it, check implementation)
-  // or you can decode it manually if needed
-  
+  // verifyToken puts the decoded JWT payload into req.user
+  const payload = req.user;
+
   res.json({ data: 'value' });
 });
 ```
 
 ## Bitrix24 Interaction (JS SDK)
 
-Use `@bitrix24/b24jssdk` (specifically `B24Hook` for backend or `B24Frame` if rendering UI, but usually backend uses Hook or OAuth).
+On the server use `B24Hook` (webhook). `B24Frame` works only inside the Bitrix24 iframe (frontend). For logging use `LoggerFactory` (`LoggerBrowser` was removed in v3).
 
 ### Initialization
 
@@ -49,8 +51,8 @@ b24.offClientSideWarning(); // server-side only: silence the client-side warning
 
 ### Common Operations
 
-> The canonical REST API is `b24.actions.v{2,3}.*.make()`. The older
-> `callMethod` / `callBatch` helpers are deprecated — do not use them.
+> The REST API is `b24.actions.v{2,3}.*.make()`. The legacy
+> `callMethod` / `callBatch` helpers were removed in JS SDK 3.
 
 ```javascript
 // Single call
@@ -82,15 +84,15 @@ const batchRes = await b24.actions.v2.batch.make({
 
 ## Authentication Flow
 
-1. **Installation**: `/api/install` receives OAuth data.
-2. **Token Issue**: `/api/getToken` issues a JWT for the frontend using `jsonwebtoken`.
+1. **Installation**: `/api/install` receives OAuth data. In the starter it only logs the (redacted) body — persisting tokens and binding events is up to you.
+2. **Token Issue**: `/api/getToken` issues a JWT (`{ id: 1 }`, 1h, `JWT_SECRET`) using `jsonwebtoken`. The starter does **not** validate Bitrix24 auth data here — add that check before production.
 3. **Requests**: Frontend sends JWT in `Authorization` header. `verifyToken` middleware validates it.
 
 ## Database
 
 * **Drivers**: `pg` (PostgreSQL) or `mysql2` (MySQL).
 * **Configuration**: Based on `DB_TYPE` env var.
-* **Connection**: `pool` object in `server.js`.
+* **Connection**: `pool` object in `server.js` (not used by the sample routes yet; there are no migrations in the Node backend).
 
 ## Best Practices
 

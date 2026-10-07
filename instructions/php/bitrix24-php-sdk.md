@@ -5,8 +5,8 @@
 **Bitrix24 PHP SDK** — официальная PHP библиотека для работы с REST API Bitrix24.
 
 ### Основные характеристики:
-- **Версия**: 1.7.* (стабильная)
-- **Требования**: PHP 8.2+, ext-json, ext-curl, ext-intl
+- **Версия в стартере**: `dev-v3-dev` (ветка `v3-dev`, тянется вместе с `mesilov/bitrix24-php-lib` 0.5.2; см. `backends/php/composer.lock`)
+- **Требования стартера**: PHP 8.4
 - **Лицензия**: MIT
 - **Репозиторий**: https://github.com/bitrix24/b24phpsdk
 
@@ -23,8 +23,11 @@
 ## 🚀 Установка
 
 ### Composer установка:
+
+В стартере SDK уже установлен. Пакеты ставятся внутри контейнера через make:
 ```bash
-composer require bitrix24/b24phpsdk
+make composer-install
+make composer require vendor/package   # добавить зависимость
 ```
 
 ### Для Windows пользователей:
@@ -35,12 +38,14 @@ composer require bitrix24/b24phpsdk
 ```json
 {
   "require": {
-    "bitrix24/b24phpsdk": "1.7.*"
+    "mesilov/bitrix24-php-lib": "^0.5.2"
   }
 }
 ```
 
-**📚 Документация по установке**: [README.md](https://github.com/bitrix24/b24phpsdk/blob/main/README.md#installation)
+SDK приходит транзитивно (`bitrix24/b24phpsdk` `dev-v3-dev`). Исходники именно этой версии — в ветке [`v3-dev`](https://github.com/bitrix24/b24phpsdk/tree/v3-dev); ссылки ниже ведут на `main` (стабильная ветка), API может отличаться — сверяйтесь с `v3-dev`.
+
+**📚 Документация по установке**: [README.md](https://github.com/bitrix24/b24phpsdk/blob/v3-dev/README.md)
 
 ---
 
@@ -63,6 +68,9 @@ $serviceBuilder = ServiceBuilderFactory::createServiceBuilderFromWebhook(
 ```
 
 #### Работа с OAuth приложением (marketplace):
+
+В стартере для этого есть `App\Bitrix24Core\Bitrix24ServiceBuilderFactory` (`createFromFrontendPayload()`, `createFromIncomingEvent()`, `createFromStoredTokenForDomain()`). Пример «голого» SDK:
+
 ```php
 use Bitrix24\SDK\Services\ServiceBuilderFactory;
 use Bitrix24\SDK\Core\Credentials\ApplicationProfile;
@@ -93,7 +101,8 @@ $contact = $crmService->contact()->add(['NAME' => 'Иван', 'LAST_NAME' => 'И
 
 // Работа с задачами
 $taskService = $serviceBuilder->getTaskScope();
-$tasks = $taskService->task()->list();
+$task = $taskService->task()->get(1);
+// списки — через генератор: $taskService->task()->batch->list(...)
 
 // Пользователи
 $userService = $serviceBuilder->getUserScope();
@@ -113,7 +122,7 @@ $currentUser = $userService->user()->current();
 - `getBizProcScope()` - Бизнес-процессы
 - И другие...
 
-**📚 Полный список scope**: [src/Services/ServiceBuilder.php](https://github.com/bitrix24/b24phpsdk/blob/main/src/Services/ServiceBuilder.php)
+**📚 Полный список scope**: [src/Services/ServiceBuilder.php](https://github.com/bitrix24/b24phpsdk/blob/v3-dev/src/Services/ServiceBuilder.php)
 
 ### 3. Вызов неподдерживаемых методов
 
@@ -381,7 +390,19 @@ Services\* (работа с сущностями Bitrix24)
 
 ## ⚡ Быстрая справка по командам
 
-### Makefile команды для разработки:
+### Makefile команды стартера (корень репозитория):
+
+```bash
+make php-cli-lint-phpstan  # PHPStan (backends/php/phpstan.dist.neon)
+make lint-rector           # Rector (backends/php/rector.php)
+make lint-rector-fix
+make lint-cs-fixer         # PHP CS Fixer (backends/php/.php-cs-fixer.dist.php)
+make lint-cs-fixer-fix
+make test-telemetry        # PHPUnit-тесты телеметрии (см. make help)
+make dev-php-db-migrate    # Doctrine-миграции
+```
+
+### Makefile команды репозитория SDK (`bitrix24/b24phpsdk`, при доработке самого SDK):
 
 ```bash
 # Статический анализ
@@ -400,7 +421,7 @@ make test-integration-scope-task   # Интеграционные тесты Tas
 make build-documentation   # Обновить список методов в документации
 ```
 
-**📖 Подробнее**: [Makefile](https://github.com/bitrix24/b24phpsdk/blob/main/Makefile)
+**📖 Подробнее**: [Makefile](https://github.com/bitrix24/b24phpsdk/blob/v3-dev/Makefile)
 
 ---
 
@@ -432,8 +453,8 @@ make build-documentation   # Обновить список методов в д�
 
 ---
 
-**Версия документа**: 1.0 (для SDK v1.7.*)
-**Дата последнего обновления**: 2025-10-23
+**Версия документа**: 1.1 (для SDK `dev-v3-dev`)
+**Дата последнего обновления**: 2026-10-07
 **Целевая аудитория**: ИИ агенты, работающие с Bitrix24 PHP SDK
 
 ---

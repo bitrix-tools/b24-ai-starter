@@ -42,7 +42,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
 - **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt`; страницы — `*.client.vue`; вызовы бэкенда — через `useApiStore`.
 - **JS SDK 3**: `$b24.actions.v2|v3.*.make()` (нет `callMethod` / `callBatch`), логгер — `LoggerFactory.createForBrowser(name, isDev)`, вызовы `logger.info('message', { context })`.
-- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/install`, `/api/getToken` и `/api/app-events/`. Не логировать OAuth-токены и URL вебхуков.
+- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/install`, `/api/getToken` и `/api/app-events/` (в PHP публичны также `/api/health` и `/api/custom-b24-events/` — см. `PUBLIC_ROUTES` в `JwtAuthenticationListener`). Не логировать OAuth-токены и URL вебхуков.
 - **Bitrix24**: виджеты — `placement.bind`, роботы — `bizproc.robot.add`, события — `event.bind`.
 - **Conventional Commits**: `feat`, `fix`, `perf`, `security`, `deps`, `refactor`, `build`, `docs`, `test`, `ci`, `chore`. Область — часть репозитория: `feat(frontend): …`, `deps(php): …`. Заголовок понятен без чтения диффа.
 - **CHANGELOG**: заметное изменение — запись в `## [Unreleased]` в [CHANGELOG.md](CHANGELOG.md) в том же PR.
@@ -71,7 +71,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `instructions/front/` | Фронтенд: JS SDK, UI Kit, рецепты компонентов |
 | `instructions/{php,python,node}/` | Бэкенды, включая `code-review.md` для каждого |
 | `instructions/bitrix24/`, `instructions/queues/` | Виджеты, роботы, MCP; очереди |
-| `.github/contributing/` | Процессы: ревью, зависимости |
+| `.github/contributing/` | Процессы: ревью, зависимости, [план проверки](.github/contributing/testing.md) и известные проблемы кода |
 
 Документация обновляется **в том же PR**, что и код. Устаревшая документация — такой же баг, как упавший тест: агенты копируют примеры из `instructions/` дословно.
 

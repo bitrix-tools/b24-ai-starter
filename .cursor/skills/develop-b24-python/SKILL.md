@@ -7,14 +7,16 @@ description: Develop backend applications for Bitrix24 using Python, Django, and
 
 ## Quick Start
 
-The Python backend is built with **Django** and uses **b24pysdk** for Bitrix24 interaction.
+The Python backend is built with **Django 6.1** and uses **b24pysdk 1.3** (`b24pysdk[signals,django]`) for Bitrix24 interaction.
 
 ### Key Directories
 
-* `backends/python/django/main/views.py`: API endpoints.
+* `backends/python/django/main/views.py` + `main/urls.py`: API endpoints (`/api`, `/api/health`, `/api/enum`, `/api/list`, `/api/install`, `/api/getToken`; no trailing slash).
 * `backends/python/django/bitrix_auth/models.py`: `Bitrix24Account` and `ApplicationInstallation`.
 * `backends/python/django/bitrix_auth/decorators/`: Authentication decorators.
-* `backends/python/django/bitrix_events/`: Bitrix24 lifecycle event processing.
+* `backends/python/django/bitrix_events/`: Bitrix24 lifecycle event processing (`/api/app-events/`).
+* `backends/python/django/middleware.py`: `LogErrorsMiddleware`.
+* `backends/python/django/celery_app.py`: Celery app.
 
 ## Creating API Endpoints
 
@@ -51,14 +53,18 @@ Use `request.bitrix24_account.get_client()` for typed SDK calls. Low-level REST 
 # Call a single method
 result = client.crm.deal.get(bitrix_id=123).result
 
-# Batch request (if supported by SDK wrapper, otherwise use call_batch)
-# Check b24pysdk documentation for specific batch syntax
+# Batch request: pass prepared (not yet called) requests to call_batch
+# (same pattern as install() in main/views.py)
+client.call_batch([
+    client.crm.deal.get(bitrix_id=1),
+    client.crm.deal.get(bitrix_id=2),
+]).call()
 ```
 
 ## Authentication Flow
 
-1. **Installation**: `/api/install` receives OAuth data, creates or updates `Bitrix24Account`, creates a new `ApplicationInstallation`, and registers lifecycle events.
-2. **Token Issue**: `/api/getToken` issues a JWT for the frontend.
+1. **Installation**: `/api/install` (protected by `@auth_required`, which validates the Bitrix24 OAuth data) receives OAuth data, creates or updates `Bitrix24Account`, creates a new `ApplicationInstallation`, and registers lifecycle events.
+2. **Token Issue**: `/api/getToken` issues a JWT for the frontend via `Bitrix24Account.create_jwt_token()`.
 3. **Requests**: Frontend sends JWT in `Authorization` header. `@auth_required` validates it and populates `request.bitrix24_account`.
 4. **Events**: `/api/app-events/` receives Bitrix24 lifecycle events and queues them through Celery.
 

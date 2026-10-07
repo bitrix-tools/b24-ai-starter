@@ -13,8 +13,9 @@
 
 ### Основные технологии
 - **Django** — веб-фреймворк, управляющий middleware, ORM, admin и точками входа WSGI/ASGI.
-- **b24pysdk[signals]** — SDK для общения с Bitrix24 (OAuth, REST, события); extra `signals` нужен для сохранения обновленных OAuth-токенов.
-- **PostgreSQL + psycopg2-binary** — БД по умолчанию, используется напрямую из Django.
+- **Django 6.1** + **b24pysdk[signals,django] 1.3.0** — SDK для общения с Bitrix24 (OAuth, REST, события); extra `signals` нужен для сохранения обновленных OAuth-токенов, extra `django` даёт декораторы `collect_request_params` / `event_required`.
+- **Celery 5.6** (+ kombu) — асинхронная обработка событий `/api/app-events/` (`celery_app.py`, сервис `python-worker`).
+- **PostgreSQL + psycopg2-binary** — БД по умолчанию; при `DB_TYPE=mysql` используется MySQL через `PyMySQL`.
 - **PyJWT** — генерация и валидация внутренних JWT-токенов.
 - **django-cors-headers** — заголовки CORS/X-Frame для работы внутри интерфейса Bitrix24.
 - **environs** — загрузка конфигурации из `.env` / переменных окружения.
@@ -45,6 +46,8 @@ backends/python/django/
 ├── manage.py                  # CLI Django
 ├── requirements.txt
 ├── settings.py / urls.py      # глобальные настройки и маршрутизация
+├── middleware.py              # LogErrorsMiddleware
+├── celery_app.py              # Celery-приложение
 ├── bitrix_auth/               # Bitrix24Account, ApplicationInstallation, auth_required
 ├── bitrix_events/             # /api/app-events/ и Celery processor
 └── main/                      # /api*, /api/health и т.д.
@@ -65,7 +68,8 @@ backends/python/django/
 | `DB_NAME`         | имя БД                                          | `appdb`               |
 | `DB_USER`         | пользователь БД                                 | `appuser`             |
 | `DB_PASSWORD`     | пароль БД                                       | `apppass`             |
-| `DB_HOST` / `PORT`| адрес PostgreSQL (`database`/`5432` в Docker)    | `database` / `5432`   |
+| `DB_TYPE`         | `postgresql` или `mysql`                         | `postgresql`          |
+| `DB_HOST` / `DB_PORT`| адрес БД (`database` в Docker)               | `database` / `5432` (`3306` для MySQL) |
 | `CLOUDPUB_TOKEN`  | токен CloudPub                                  | пусто                 |
 | `JWT_SECRET`      | используется и как `SECRET_KEY` Django           | `default_jwt_secret`  |
 | `JWT_ALGORITHM`   | алгоритм подписи JWT                            | `HS256`               |
@@ -76,11 +80,11 @@ backends/python/django/
 Доп. переменные (например, `ENABLE_RABBITMQ`) читаются Makefile'ом при запуске docker compose.
 
 ### `settings.py`
-- `SECRET_KEY = config.jwt_secret`, `DEBUG` определяется `BUILD_TARGET`.
+- `SECRET_KEY = config.jwt_secret`. `DEBUG` сейчас жёстко задан `True` (поле `config.debug`, вычисляемое из `BUILD_TARGET`, в `settings.py` не используется).
 - `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` автоматически формируются из `VIRTUAL_HOST`, запасные домены — `localhost`, `api-python`.
-- `INSTALLED_APPS` включает стандартный набор Django + `corsheaders` + `main`.
+- `INSTALLED_APPS` включает стандартный набор Django + `corsheaders` + `bitrix_auth` + `bitrix_events` + `main`.
 - `MIDDLEWARE` начинается с `CorsMiddleware`, чтобы корректно проставлять заголовки.
-- `DATABASES['default']` использует `django.db.backends.postgresql_psycopg2` и параметры `Config`.
+- `DATABASES['default']` использует `django.db.backends.postgresql_psycopg2` или `django.db.backends.mysql` (по `DB_TYPE`) и параметры `Config`.
 - `CORS_ALLOW_ALL_ORIGINS = True` — удобно для dev, но в проде лучше задавать белый список.
 
 ```python
@@ -92,6 +96,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "bitrix_auth",
+    "bitrix_events",
     "main",
 ]
 ```
@@ -101,7 +107,7 @@ INSTALLED_APPS = [
 ## 🚀 Запуск и локальная разработка
 
 ### Docker / Makefile
-- `make dev-python` — основной сценарий, поднимает профили `frontend,python,cloudpub` (+ `queue`, если в `.env` `ENABLE_RABBITMQ=1`).
+- `make dev-python` — основной сценарий, поднимает профили `frontend,python,cloudpub` и профиль БД (`db-postgres`/`db-mysql`); при `ENABLE_RABBITMQ=1` добавляются `queue` и `python-worker`.
 - `make prod-python` — собирает и запускает только Python backend в production-режиме.
 
 ### Без Docker
@@ -115,7 +121,7 @@ python manage.py runserver 0.0.0.0:8000
 Конвейер в `Dockerfile` автоматически запускает `makemigrations`, `migrate` и `createsuperuser --noinput`, но локально эти команды можно выполнять вручную.
 
 ### Dockerfile (кратко)
-- **base**: `python:3.11-slim`, устанавливает `postgresql-client` и Python-зависимости.
+- **base**: `python:3.13-slim`, устанавливает `postgresql-client`, `default-mysql-client` и Python-зависимости.
 - **dev**: монтирует проект как volume и запускает `runserver` после миграций.
 - **prod**: копирует код в образ и стартует Gunicorn (`gunicorn wsgi:application --bind 0.0.0.0:8000`).
 
@@ -138,13 +144,13 @@ python manage.py runserver 0.0.0.0:8000
 
 ### Views (`main/views.py`)
 - Простые GET-эндпоинты служат шаблоном — можно расширять их под нужды проекта.
-- `install` сохраняет `ApplicationInstallation` для портала Bitrix24, используя поля из `request.bitrix24_account`.
+- `install` вызывает `Bitrix24Account.create_application_installation(request.params)` и привязывает события `ONAPPINSTALL`/`ONAPPUNINSTALL` на `<VIRTUAL_HOST>/api/app-events/` через `client.call_batch([...]).call()`.
 - `get_token` вызывает `Bitrix24Account.create_jwt_token()` (TTL по умолчанию 60 минут).
 - Защищенные view декорированы `@auth_required`, а неожиданные ошибки сериализует `LogErrorsMiddleware`.
 
 ### Декораторы и `AuthorizedRequest`
 - `AuthorizedRequest` дополняет `HttpRequest` полем `bitrix24_account` для удобных type hints.
-- `collect_request_data` объединяет JSON-тело, GET и POST-параметры в `request.data`, аккуратно обрабатывая списки значений.
+- `collect_request_params` (из `b24pysdk.integrations.django.decorators`) собирает параметры запроса в `request.params`.
 - `auth_required`:
   1. Ищет заголовок `Authorization: Bearer <jwt>`.
   2. При наличии JWT вызывает `Bitrix24Account.get_from_jwt_token()` и кладёт объект в `request.bitrix24_account`.
@@ -153,7 +159,7 @@ python manage.py runserver 0.0.0.0:8000
 ### Модели (`bitrix_auth/models.py`)
 - `Bitrix24Account` наследует `AbstractBitrixToken` и связан с таблицей `bitrix24account` (UUID PK). Важные методы:
   - `bitrix_app` — класс-свойство, строящее `BitrixApp` из `CLIENT_ID/CLIENT_SECRET`.
-  - `get_client()` — враппер над `b24pysdk.Client` для работы с REST API.
+  - `get_client()` — унаследован от `AbstractBitrixToken`, возвращает `b24pysdk.Client` для работы с REST API.
   - `call_method(...)` — низкоуровневый REST-вызов с синхронизацией статусов по API/refresh ошибкам.
   - `create_jwt_token(minutes=60)` / `get_from_jwt_token` — выпуск и проверка внутренних токенов PyJWT.
   - Обработчики сигналов (`portal_domain_changed_signal`, `oauth_token_renewed_signal`) синхронизируют поля записи при событиях Bitrix24.
@@ -167,7 +173,7 @@ python manage.py runserver 0.0.0.0:8000
 
 ## 🔄 Жизненный цикл установки и выдачи токенов
 1. Bitrix24 вызывает backend и передаёт payload OAuth placement.
-2. `collect_request_data` кладёт JSON + query-параметры в `request.data`.
+2. `collect_request_params` кладёт параметры запроса в `request.params`.
 3. `auth_required` валидирует OAuth placement payload через SDK и создаёт или обновляет `Bitrix24Account`.
 4. После успешной авторизации:
    - `install` создаёт/обновляет `ApplicationInstallation`.
@@ -186,7 +192,7 @@ python manage.py runserver 0.0.0.0:8000
 ---
 
 ## 📦 Развёртывание
-- Docker-образ собирается из `python:3.11-slim`. Следите, чтобы в `requirements.txt` не было лишних пакетов, иначе образ разрастётся.
+- Docker-образ собирается из `python:3.13-slim`. Следите, чтобы в `requirements.txt` не было лишних пакетов, иначе образ разрастётся.
 - Перед деплоем обновите `.env`: параметры БД, OAuth, JWT, `VIRTUAL_HOST`.
 - `docker compose --env-file .env up --build` использует указанные профили (`COMPOSE_PROFILES=python` для прод-режима).
 - В Kubernetes/аналогах выполняйте `python manage.py migrate` отдельным job, чтобы исключить гонки миграций.
@@ -218,4 +224,4 @@ python manage.py runserver 0.0.0.0:8000
 - `instructions/queues/python.md` — рекомендации по фоновой обработке (Celery/RabbitMQ).
 - `README.md` и `makefile` в корне описывают общую структуру docker-профилей и сценарии запуска стенда.
 
-*Обновлено: 5 декабря 2025 года.*
+*Обновлено: 7 октября 2026 года.*
