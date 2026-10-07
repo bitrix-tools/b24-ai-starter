@@ -14,7 +14,7 @@ FROM node:24-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
 RUN npm install -g pnpm@12
-COPY .npmrc package.json pnpm-lock.yaml ./
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . ./
 RUN pnpm run build
