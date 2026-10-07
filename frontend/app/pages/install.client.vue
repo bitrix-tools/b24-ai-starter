@@ -23,7 +23,7 @@ const $b24: B24Frame = await $initializeB24Frame()
 await initLang($b24, localesI18n, setLocale)
 
 // Логируем конфигурацию для отладки
-$logger.log('Installation started', {
+$logger.debug('Installation started', {
   appUrl,
   configPublicAppUrl: config.public.appUrl,
   configPublicApiUrl: config.public.apiUrl,
@@ -100,7 +100,7 @@ const steps = ref<Record<string, IStep>>({
       const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement)
 
       // Логируем для отладки
-      $logger.log('Placement registration', {
+      $logger.debug('Placement registration', {
         appUrl,
         placement: key.placement,
         handler: key.handler,
@@ -156,7 +156,7 @@ const steps = ref<Record<string, IStep>>({
       const exists = (steps.value.init?.data?.userFieldTypeList as { USER_TYPE_ID: string }[]).some(item => item.USER_TYPE_ID === typeId)
 
       // Логируем для отладки
-      $logger.log('UserField registration', {
+      $logger.debug('UserField registration', {
         appUrl,
         typeId,
         handler: `${appUrl}/handler/uf.demo`,

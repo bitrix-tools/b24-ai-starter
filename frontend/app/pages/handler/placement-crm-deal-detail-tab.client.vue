@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useDashboard } from '@bitrix24/b24ui-nuxt/utils/dashboard'
 import PlusLIcon from '@bitrix24/b24icons-vue/outline/PlusLIcon'
 
 definePageMeta({
@@ -18,13 +17,7 @@ let $b24: null | B24Frame = null
 const apiStore = useApiStore()
 // endregion ////
 
-const { contextId, isLoading: isLoadingState, load } = useDashboard({ isLoading: ref(false), load: () => {} })
-const isLoading = computed({
-  get: () => isLoadingState?.value === true,
-  set: (value: boolean) => {
-    load?.(value, contextId)
-  }
-})
+const isLoading = ref(false)
 
 // region Init ////
 const elementList = ref<string[]>([])
@@ -138,8 +131,8 @@ onUnmounted(() => {
         />
         <div>
           <B24InputMenu
-            v-model="dropdownValue"
             id="select"
+            v-model="dropdownValue"
             multiple
             class="w-[200px]"
             value-key="value"

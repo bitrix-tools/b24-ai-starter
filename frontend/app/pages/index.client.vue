@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { onMounted } from 'vue'
-import { useDashboard } from '@bitrix24/b24ui-nuxt/utils/dashboard'
 
 const { t, locales: localesI18n, setLocale } = useI18n()
 
@@ -26,25 +25,18 @@ async function getEnums() {
   track('ui_button_click', { 'ui.button_id': 'get_enums', 'ui.path': route.path })
   const enums = await apiStore.getEnum()
 
-  $logger.info(enums)
+  $logger.info('enums', { enums })
 }
 
 async function getItems() {
   track('ui_button_click', { 'ui.button_id': 'get_items', 'ui.path': route.path })
   const items = await apiStore.getList()
 
-  $logger.info(items)
+  $logger.info('items', { items })
 }
 // endregion ////
 
-const { contextId, isLoading: isLoadingState, load } = useDashboard({ isLoading: ref(false), load: () => {} })
-const isLoading = computed({
-  get: () => isLoadingState?.value === true,
-  set: (value: boolean) => {
-    $logger.info(load, value, contextId, isLoadingState?.value)
-    load?.(value, contextId)
-  }
-})
+const isLoading = ref(false)
 
 // region Lifecycle Hooks ////
 const isInit = ref(false)

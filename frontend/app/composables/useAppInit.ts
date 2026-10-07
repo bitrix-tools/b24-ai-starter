@@ -1,5 +1,5 @@
 import { computed, type ComputedRef, ref } from 'vue'
-import { LoggerBrowser, AjaxError, LoadDataType, useB24Helper } from '@bitrix24/b24jssdk'
+import { LoggerFactory, AjaxError, LoadDataType, useB24Helper } from '@bitrix24/b24jssdk'
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import type { Locale } from 'vue-i18n'
 import type { LocaleObject } from '@nuxtjs/i18n'
@@ -24,7 +24,7 @@ const moduleId = 'main'
  * Coordinates data loading via batch request
  */
 export const useAppInit = (loggerTitle?: string) => {
-  const $logger = LoggerBrowser.build(
+  const $logger = LoggerFactory.createForBrowser(
     loggerTitle ?? 'App',
     import.meta.dev
   )
@@ -65,7 +65,7 @@ export const useAppInit = (loggerTitle?: string) => {
       userSettings: getB24Helper().userOptions,
       profileData: getB24Helper().profileInfo,
     }
-    $logger.log('Init data >>', data)
+    $logger.debug('Init data', { data })
 
     /**
      * @memo This can be used instead of `initB24Helper`
@@ -80,7 +80,7 @@ export const useAppInit = (loggerTitle?: string) => {
     // const response = await $b24.actions.v2.batch.make({ calls: commands })
     //
     // const data = response.getData()
-    // $logger.log('Init data >>', data)
+    // $logger.debug('Init data', { data })
 
     // Update stores with received data
     user.initFromBatch({
@@ -115,9 +115,9 @@ export const useAppInit = (loggerTitle?: string) => {
     const b24CurrentLang = $b24.getLang()
     if (localesI18n.value.filter(i => i.code === b24CurrentLang).length > 0) {
       await setLocale(b24CurrentLang as Locale)
-      $logger.log('setLocale >>>', b24CurrentLang)
+      $logger.debug('setLocale', { lang: b24CurrentLang })
     } else {
-      $logger.warn('not support locale >>>', b24CurrentLang)
+      $logger.warning('Locale is not supported', { lang: b24CurrentLang })
     }
   }
 
@@ -136,7 +136,7 @@ export const useAppInit = (loggerTitle?: string) => {
       userSettings: getB24Helper().userOptions
     }
 
-    $logger.log('Reload data >>', data)
+    $logger.debug('Reload data', { data })
 
     // Update stores with received data
     appSettings.initFromBatch({
@@ -167,10 +167,10 @@ export const useAppInit = (loggerTitle?: string) => {
     error: unknown | string | Error,
     processErrorData?: ProcessErrorData
   ) {
-    $logger.error(error)
+    $logger.error('Application error', { error })
 
     let statusMessage = 'Error'
-    let message = ''
+    let message: string
     let statusCode = 404
 
     if (error instanceof AjaxError) {

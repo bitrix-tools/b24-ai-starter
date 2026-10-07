@@ -2,7 +2,6 @@
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import type { AccordionItem } from '@bitrix24/b24ui-nuxt'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useDashboard } from '@bitrix24/b24ui-nuxt/utils/dashboard'
 import { usePageStore } from '~/stores/page'
 import { useUserStore } from '~/stores/user'
 import { useAppSettingsStore } from '~/stores/appSettings'
@@ -49,13 +48,7 @@ const infoItems = computed(() => [
 ] satisfies AccordionItem[])
 // endregion ////
 
-const { contextId, isLoading: isLoadingState, load } = useDashboard({ isLoading: ref(false), load: () => {} })
-const isLoading = computed({
-  get: () => isLoadingState?.value === true,
-  set: (value: boolean) => {
-    load?.(value, contextId)
-  }
-})
+const isLoading = ref(false)
 
 // region Actions ////
 function initData() {
@@ -78,7 +71,7 @@ async function makeSave() {
     await makeSendPullCommand('reload.options', { from: 'app.options' })
     await makeClose()
   } catch (error) {
-    $logger.error(error)
+    $logger.error('Failed to save settings', { error })
 
     let title = t('page.app-options.error.title')
     let description = ''
@@ -105,7 +98,7 @@ async function makeSave() {
 
 async function makeSendPullCommand(command: string, params: Record<string, any> = {}) {
   try {
-    $logger.warn('>> pull.send >>>', {
+    $logger.debug('pull.send', {
       COMMAND: command,
       PARAMS: params,
       MODULE_ID: moduleId
