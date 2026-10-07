@@ -11,8 +11,8 @@ The Node.js backend is built with **Express** and uses **@bitrix24/b24jssdk** fo
 
 ### Key Files
 
-*   `backends/node/api/server.js`: Main entry point and API routes.
-*   `backends/node/api/utils/verifyToken.js`: JWT verification middleware.
+* `backends/node/api/server.js`: Main entry point and API routes.
+* `backends/node/api/utils/verifyToken.js`: JWT verification middleware.
 
 ## Creating API Endpoints
 
@@ -82,18 +82,18 @@ const batchRes = await b24.actions.v2.batch.make({
 
 ## Authentication Flow
 
-1.  **Installation**: `/api/install` receives OAuth data.
-2.  **Token Issue**: `/api/getToken` issues a JWT for the frontend using `jsonwebtoken`.
-3.  **Requests**: Frontend sends JWT in `Authorization` header. `verifyToken` middleware validates it.
+1. **Installation**: `/api/install` receives OAuth data.
+2. **Token Issue**: `/api/getToken` issues a JWT for the frontend using `jsonwebtoken`.
+3. **Requests**: Frontend sends JWT in `Authorization` header. `verifyToken` middleware validates it.
 
 ## Database
 
-*   **Drivers**: `pg` (PostgreSQL) or `mysql2` (MySQL).
-*   **Configuration**: Based on `DB_TYPE` env var.
-*   **Connection**: `pool` object in `server.js`.
+* **Drivers**: `pg` (PostgreSQL) or `mysql2` (MySQL).
+* **Configuration**: Based on `DB_TYPE` env var.
+* **Connection**: `pool` object in `server.js`.
 
 ## Best Practices
 
-1.  **Middleware**: Use `verifyToken` for protected routes.
-2.  **Async/Await**: Use async/await for database and API calls.
-3.  **Environment**: Use `process.env` for configuration.
+1. **Middleware**: Use `verifyToken` for protected routes.
+2. **Async/Await**: Use async/await for database and API calls.
+3. **Environment**: Use `process.env` for configuration.

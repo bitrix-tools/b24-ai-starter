@@ -11,9 +11,9 @@ The PHP backend is built with **Symfony** and uses **bitrix24/b24phpsdk** for Bi
 
 ### Key Directories
 
-*   `backends/php/src/Controller/`: API endpoints.
-*   `backends/php/src/Service/`: Business logic.
-*   `backends/php/src/Bitrix24Core/`: Core integration logic (OAuth, Events).
+* `backends/php/src/Controller/`: API endpoints.
+* `backends/php/src/Service/`: Business logic.
+* `backends/php/src/Bitrix24Core/`: Core integration logic (OAuth, Events).
 
 ## Creating API Endpoints
 
@@ -74,19 +74,19 @@ $batch = $serviceBuilder->getBatchService();
 
 ## Authentication Flow
 
-1.  **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data.
-2.  **Token Issue**: `/api/getToken` issues a JWT for the frontend.
-3.  **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload` in request attributes.
+1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data.
+2. **Token Issue**: `/api/getToken` issues a JWT for the frontend.
+3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload` in request attributes.
 
 ## Database
 
-*   **ORM**: Doctrine.
-*   **Migrations**: `php bin/console doctrine:migrations:migrate`.
-*   **Entities**: Located in `src/Entity/` (if any custom entities are added).
+* **ORM**: Doctrine.
+* **Migrations**: `php bin/console doctrine:migrations:migrate`.
+* **Entities**: Located in `src/Entity/` (if any custom entities are added).
 
 ## Best Practices
 
-1.  **Dependency Injection**: Inject services into controllers.
-2.  **Logging**: Use `LoggerInterface` for logging.
-3.  **Error Handling**: Wrap logic in `try/catch` and return `JsonResponse` with error details.
-4.  **Strict Types**: Use `declare(strict_types=1);`.
+1. **Dependency Injection**: Inject services into controllers.
+2. **Logging**: Use `LoggerInterface` for logging.
+3. **Error Handling**: Wrap logic in `try/catch` and return `JsonResponse` with error details.
+4. **Strict Types**: Use `declare(strict_types=1);`.

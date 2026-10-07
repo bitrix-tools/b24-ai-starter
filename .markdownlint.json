@@ -1,0 +1,10 @@
+{
+  "$comment": "Как в bitrix24/b24jssdk. Отключено намеренно: MD013 (длина строки — длинные строки в руководствах допустимы), MD033 (inline HTML — <sub> для штампов Last reviewed), MD041 (первая строка H1 — у навыков frontmatter); MD024 только для соседних заголовков (в навыках повторяются «Registration» / «Handling» в разных разделах).",
+  "default": true,
+  "MD013": false,
+  "MD033": false,
+  "MD041": false,
+  "MD024": {
+    "siblings_only": true
+  }
+}

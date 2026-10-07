@@ -11,7 +11,7 @@ The project is a monorepo containing frontend, multiple backend options, and inf
 
 ```text
 b24-ai-starter/
-├── frontend/                 # Nuxt 3 Frontend
+├── frontend/                 # Nuxt 4 Frontend
 │   ├── app/                  # Application source code
 │   │   ├── pages/            # Pages (.client.vue)
 │   │   ├── components/       # UI Components
@@ -20,7 +20,7 @@ b24-ai-starter/
 │   └── nuxt.config.ts        # Nuxt Configuration
 │
 ├── backends/                 # Backend Implementations
-│   ├── php/                  # Symfony 7 + PHP SDK
+│   ├── php/                  # Symfony 7.4 LTS + PHP SDK
 │   │   ├── src/              # Source code
 │   │   └── docker/           # PHP-specific Docker config
 │   ├── python/               # Django + b24pysdk
@@ -46,7 +46,7 @@ b24-ai-starter/
 ## Key Locations by Task
 
 | Task | Location |
-|------|----------|
+| ------ | ---------- |
 | **Frontend UI** | `frontend/app/components/` (use B24UI) |
 | **Frontend Pages** | `frontend/app/pages/` (must be `.client.vue`) |
 | **Frontend API Logic** | `frontend/app/stores/` or `frontend/app/composables/` |
@@ -61,8 +61,8 @@ b24-ai-starter/
 
 ## Documentation
 
-*   **General**: `instructions/knowledge.md`
-*   **Frontend**: `instructions/front/knowledge.md`
-*   **PHP**: `instructions/php/knowledge.md`
-*   **Python**: `instructions/python/knowledge.md`
-*   **Node.js**: `instructions/node/knowledge.md`
+* **General**: `instructions/knowledge.md`
+* **Frontend**: `instructions/front/knowledge.md`
+* **PHP**: `instructions/php/knowledge.md`
+* **Python**: `instructions/python/knowledge.md`
+* **Node.js**: `instructions/node/knowledge.md`

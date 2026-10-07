@@ -1,0 +1,9 @@
+# pnpm 12 refuses to install while a dependency's build script is neither
+# allowed nor denied. None of these need their script: esbuild and
+# unrs-resolver ship prebuilt binaries via optional dependencies, vue-demi only
+# switches Vue 2/3 entry points (Vue 3 is the default). Same list as
+# bitrix24/b24jssdk.
+allowBuilds:
+  esbuild: false
+  unrs-resolver: false
+  vue-demi: false

@@ -130,7 +130,7 @@ const currentTitle = computed(() =>
 
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent } from 'vue'
-import { SearchIcon } from '@bitrix24/b24icons'
+import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
 
 // Типы
 interface MenuItem {
@@ -222,7 +222,7 @@ const handleUpdate = (data: any) => {
   useToast().add({
     title: 'Сохранено',
     description: 'Настройки успешно обновлены',
-    color: 'green'
+    color: 'air-primary-success'
   })
 }
 
@@ -249,7 +249,7 @@ onMounted(() => {
   <div class="space-y-6">
     <!-- Заголовок подраздела -->
     <div class="flex items-center gap-2 mb-6">
-      <B24Icon :icon="SettingsIcon" class="w-5 h-5 text-gray-500" />
+      <SettingsIcon class="w-5 h-5 text-gray-500" />
       <h2 class="text-xl font-semibold text-gray-800">
         Какие инструменты показывать в меню
       </h2>
@@ -297,9 +297,8 @@ onMounted(() => {
               <span class="text-base font-medium text-gray-900">
                 {{ tool.name }}
               </span>
-              <B24Icon 
+              <ChevronDownIcon
                 v-if="tool.hasSubmenu"
-                :icon="ChevronDownIcon" 
                 class="w-4 h-4 text-gray-400"
               />
             </div>
@@ -324,7 +323,7 @@ onMounted(() => {
               :key="subItem.id"
               class="flex items-center gap-2 text-sm text-gray-600"
             >
-              <B24Icon :icon="CheckIcon" class="w-4 h-4 text-green-500" />
+              <CheckIcon class="w-4 h-4 text-green-500" />
               {{ subItem.name }}
             </div>
           </div>
@@ -354,11 +353,9 @@ onMounted(() => {
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import {
-  SettingsIcon,
-  ChevronDownIcon,
-  CheckIcon
-} from '@bitrix24/b24icons'
+import SettingsIcon from '@bitrix24/b24icons-vue/main/SettingsIcon'
+import ChevronDownIcon from '@bitrix24/b24icons-vue/actions/ChevronDownIcon'
+import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
 
 interface Tool {
   id: string
@@ -447,13 +444,13 @@ const saveSettings = async () => {
     useToast().add({
       title: 'Сохранено',
       description: 'Настройки успешно обновлены',
-      color: 'green'
+      color: 'air-primary-success'
     })
   } catch (error) {
     useToast().add({
       title: 'Ошибка',
       description: 'Не удалось сохранить настройки',
-      color: 'red'
+      color: 'air-primary-alert'
     })
   } finally {
     saving.value = false
@@ -578,7 +575,9 @@ const cancelForm = () => {
 </template>
 
 <script setup lang="ts">
-import { PlusIcon, EditIcon, TrashIcon } from '@bitrix24/b24icons'
+import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
+import EditIcon from '@bitrix24/b24icons-vue/button/EditIcon'
+import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
 
 const items = ref([])
 const loading = ref(false)
@@ -688,7 +687,7 @@ watch(() => route.query.section, (newSection) => {
 <template>
   <div class="flex items-center gap-2 text-sm text-gray-600 mb-4">
     <span>Настройки</span>
-    <B24Icon :icon="ChevronRightIcon" class="w-4 h-4" />
+    <ChevronRightIcon class="w-4 h-4" />
     <span class="font-semibold text-gray-900">
       {{ currentSectionData?.title }}
     </span>

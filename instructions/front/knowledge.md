@@ -542,12 +542,12 @@ confetti.fire()
 ```json
 {
   "dependencies": {
-    "@bitrix24/b24ui-nuxt": "^2.0.0",
-    "@bitrix24/b24icons-vue": "^2.0.0",
-    "@bitrix24/b24jssdk": "^2.0.0",
-    "@bitrix24/b24jssdk-nuxt": "^2.0.0",
-    "nuxt": "^4.2.2",
-    "vue": "^3.0.0"
+    "@bitrix24/b24ui-nuxt": "^2.14.0",
+    "@bitrix24/b24icons-vue": "^2.0.8",
+    "@bitrix24/b24jssdk": "^3.0.0",
+    "@bitrix24/b24jssdk-nuxt": "^3.0.0",
+    "nuxt": "~4.6.0",
+    "vue": "^3.5.0"
   }
 }
 ```
@@ -778,7 +778,7 @@ export default defineNuxtConfig({
 ```vue
 <!-- components/MobileNavigation.vue -->
 <script setup lang="ts">
-import BurgerMenuIcon from '@bitrix24/b24icons-vue/main/BurgerMenuIcon'
+import BurgerMenuIcon from '@bitrix24/b24icons-vue/outline/HamburgerMenuIcon'
 
 const isOpen = ref(false)
 </script>

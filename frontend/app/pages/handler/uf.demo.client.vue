@@ -34,7 +34,7 @@ async function setData() {
 
   await $b24.placement.call('setValue', { value: dataField.value })
 
-  $logger.warn('send >> ', { value: dataField.value })
+  $logger.debug('send', { value: dataField.value })
 }
 
 function openSliderForOptions() {
@@ -46,10 +46,10 @@ function openSliderForOptions() {
 }
 
 const makeSendPullCommandHandler = async (message: TypePullMessage) => {
-  $logger.warn('<< pull.get <<<', message)
+  $logger.debug('pull.get', { message })
 
   if (message.command === 'reload.options') {
-    $logger.info("Get pull command for update. Reinit the application")
+    $logger.info('Get pull command for update. Reinit the application')
     await reloadData()
   }
 }
@@ -88,9 +88,9 @@ onMounted(async () => {
     startPullClient()
     await resizeWindow()
 
-    $logger.info('Hi from uf-placement', $b24.placement.options)
+    $logger.info('Hi from uf-placement', { options: $b24.placement.options })
 
-    dataField.value = Number.parseInt($b24.placement.options?.VALUE || '0')
+    dataField.value = Number.parseInt(String($b24.placement.options?.VALUE || '0'))
     enumList.value = await apiStore.getEnum()
 
     isInit.value = true
@@ -124,8 +124,8 @@ onUnmounted(() => {
           </B24FormField>
           <B24FormField :label="$t('uf.demo.field.label')" class="w-full">
             <B24InputNumber
-              class="w-[200px]"
               v-model="dataField"
+              class="w-[200px]"
               @change="setData"
             />
           </B24FormField>

@@ -70,6 +70,6 @@ Without these two protections, archive can be valid but app still fails on start
 ## References
 
 - Bitrix24 static local app docs:
-  - https://raw.githubusercontent.com/bitrix24/b24restdocs/main/local-integrations/static-local-app.md
+  - <https://raw.githubusercontent.com/bitrix24/b24restdocs/main/local-integrations/static-local-app.md>
 - Bitrix24 JS SDK docs index:
-  - https://bitrix24.github.io/b24jssdk/llms.txt
+  - <https://bitrix24.github.io/b24jssdk/llms.txt>

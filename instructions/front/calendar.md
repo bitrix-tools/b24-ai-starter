@@ -139,22 +139,25 @@ const calendarDays = computed(() => {
       </div>
     </div>
 
-    <B24Modal v-model="showModal">
-      <B24Card v-if="selectedEvent">
-        <template #header>
-          <h3 class="text-lg font-semibold">{{ selectedEvent.name }}</h3>
-        </template>
-        <div class="space-y-3 p-4">
-          <p>{{ selectedEvent.description }}</p>
-          <p class="text-sm text-gray-600">{{ formatDate(selectedEvent.date) }}</p>
-        </div>
-      </B24Card>
+    <B24Modal v-model:open="showModal">
+      <template #content>
+        <B24Card v-if="selectedEvent">
+          <template #header>
+            <h3 class="text-lg font-semibold">{{ selectedEvent.name }}</h3>
+          </template>
+          <div class="space-y-3 p-4">
+            <p>{{ selectedEvent.description }}</p>
+            <p class="text-sm text-gray-600">{{ formatDate(selectedEvent.date) }}</p>
+          </div>
+        </B24Card>
+      </template>
     </B24Modal>
   </B24Container>
 </template>
 
 <script setup lang="ts">
-import { ChevronLeftIcon, ChevronRightIcon } from '@bitrix24/b24icons'
+import ChevronLeftIcon from '@bitrix24/b24icons-vue/actions/ChevronToTheLeftIcon'
+import ChevronRightIcon from '@bitrix24/b24icons-vue/actions/ChevronToTheRightIcon'
 
 const currentDate = ref(new Date())
 const events = ref([])
@@ -252,5 +255,5 @@ onMounted(() => {
 ---
 
 **Дата**: Октябрь 2025  
-**Версия**: 2.0 (Bitrix24 UI Kit)  
+**Версия**: 2.14 (Bitrix24 UI Kit)  
 **Компоненты**: B24* (Calendar Grid - кастомный)

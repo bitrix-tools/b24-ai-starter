@@ -5,8 +5,8 @@
 ## 1. Зависимости
 `backends/python/django/requirements.txt`:
 ```
-celery==5.4.0
-kombu==5.3.5
+celery==5.6.3
+kombu==5.6.2
 ```
 
 Установите и пересоберите контейнер:

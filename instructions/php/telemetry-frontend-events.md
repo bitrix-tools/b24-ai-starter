@@ -32,7 +32,7 @@
 ## 2. Архитектура потока данных
 
 ```
-Браузер (Nuxt 3)
+Браузер (Nuxt 4)
     │
     │  POST /api/telemetry/event
     │  Bearer <JWT>

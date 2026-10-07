@@ -23,7 +23,7 @@
     v-model="selected"
     :items="options"
     multiple
-    searchable
+    :search-input="{ placeholder: 'Поиск...' }"
     placeholder="Выберите объекты..."
   />
 </template>
@@ -95,7 +95,7 @@ const selected = ref([])
               :items="options"
               :loading="loading"
               multiple
-              searchable
+              :search-input="{ placeholder: 'Поиск...' }"
               placeholder="Выберите..."
             />
           </div>
@@ -132,7 +132,7 @@ const selected = ref([])
 </template>
 
 <script setup lang="ts">
-import { SearchIcon } from '@bitrix24/b24icons'
+import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
 
 const items = ref([])
 const selected = ref([])
@@ -181,5 +181,5 @@ onMounted(() => loadItems())
 ---
 
 **Дата**: Октябрь 2025  
-**Версия**: 2.0 (Bitrix24 UI Kit)  
+**Версия**: 2.14 (Bitrix24 UI Kit)  
 **Компонент**: B24SelectMenu (НЕ USelectMenu!)

@@ -1,5 +1,5 @@
 # Dev stage
-FROM node:20-slim AS dev
+FROM node:24-slim AS dev
 RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 RUN corepack enable
@@ -10,7 +10,7 @@ CMD ["sh", "-c", "pnpm install --frozen-lockfile \
   && pnpm run dev"]
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 RUN apk add --no-cache openssl
 WORKDIR /app
 RUN corepack enable

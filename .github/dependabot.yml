@@ -1,0 +1,106 @@
+# Weekly dependency updates, grouped to keep noise down (the pattern follows
+# bitrix24/b24jssdk). Minor + patch arrive as one PR per ecosystem; majors come
+# individually because they need a human review and usually a code migration.
+# `cooldown` skips releases younger than 3 days so a freshly published (and
+# possibly broken or compromised) version cannot land before it is vetted.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "deps"
+    # TypeScript 7 (native) is not supported yet by vue-tsc and typescript-eslint:
+    # `pnpm typecheck` and `pnpm lint` both fail with it. Drop this entry once
+    # both declare support for TS 7.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    groups:
+      frontend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/backends/node/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "deps"
+    groups:
+      node-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "pip"
+    directory: "/backends/python/django"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "deps"
+    groups:
+      python-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "composer"
+    directory: "/backends/php"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "deps"
+    # Symfony majors are bumped deliberately (extra.symfony.require in
+    # composer.json); bitrix24-php-lib does not support Symfony 8 yet.
+    ignore:
+      - dependency-name: "symfony/*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      php-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/frontend"
+      - "/backends/node/api"
+      - "/backends/python/django"
+      - "/backends/php/docker/php-cli"
+      - "/backends/php/docker/php-fpm"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    groups:
+      docker-images:
+        patterns:
+          - "*"

@@ -11,9 +11,11 @@
 - 📡 Pull Client для real-time коммуникации
 - 🔐 Автоматическое управление OAuth токенами и refresh
 
-**Версия:** `^2.0.0` | **Лицензия:** MIT | **Node.js:** `^18.0.0 || ^20.0.0 || >=22.0.0`
+**Версия:** `^3.0.0` | **Лицензия:** MIT | **Node.js:** `>=22.0.0`
 
-⚠️ **С версии 0.4.0 поддерживаются только ESM и UMD** (CommonJS удален)
+ℹ️ Пакет поставляется в сборках ESM (рекомендуется), CommonJS и UMD.
+
+⚠️ **В версии 3.0.0 удалены** `callMethod`, `callBatch`, `callBatchByChunk`, `callListMethod`, `fetchListMethod`, `LoggerBrowser`, `LoggerType`. См. [Migration to v3](https://bitrix24.github.io/b24jssdk/docs/getting-started/migration/v3/).
 
 ---
 
@@ -29,7 +31,7 @@ npm install @bitrix24/b24jssdk
 <script src="https://unpkg.com/@bitrix24/b24jssdk@latest/dist/umd/index.min.js"></script>
 ```
 
-### Nuxt 3
+### Nuxt 4
 ```bash
 npx nuxi module add @bitrix24/b24jssdk-nuxt
 ```
@@ -131,9 +133,10 @@ await $b24.auth.handleOAuthCallback(callbackParams)
 #### Базовые методы (AbstractB24)
 
 > ⚠️ **Актуальный API — `$b24.actions.v{2,3}.*.make()`.** Старые хелперы
-> `callMethod`, `callBatch`, `callListMethod`, `fetchListMethod` — **устаревшие**, не используйте их.
+> `callMethod`, `callBatch`, `callBatchByChunk`, `callListMethod`, `fetchListMethod` — **удалены в v3.0.0**, не используйте их.
 > Соответствие: `callMethod → actions.v2.call.make`, `callBatch → actions.v2.batch.make`,
-> `callListMethod → actions.v2.callList.make`, `fetchListMethod → actions.v2.fetchList.make`.
+> `callBatchByChunk → actions.v2.batchByChunk.make`, `callListMethod → actions.v2.callList.make`,
+> `fetchListMethod → actions.v2.fetchList.make` (для REST API v3 — аналогично `actions.v3.*`).
 
 ```typescript
 // Одиночный вызов
@@ -335,7 +338,7 @@ startPullClient()
 ### 6. Utilities
 
 ```typescript
-import { Type, Text, LoggerBrowser, EnumCrmEntityTypeId } from '@bitrix24/b24jssdk'
+import { Type, Text, LoggerFactory, EnumCrmEntityTypeId } from '@bitrix24/b24jssdk'
 
 // Type helpers
 Type.isStringFilled('test') // true
@@ -347,15 +350,17 @@ const uuid = Text.getUuidRfc4122()
 const num = Text.numberFormat(12345.67, 2, '.', ' ') // "12 345.67"
 
 // Logger
-const logger = LoggerBrowser.build('MyApp', true) // isDev = true
-logger.info('message', data)
-logger.error('error', error)
+const logger = LoggerFactory.createForBrowser('MyApp', true) // isDev = true
+// Сигнатура: (message: string, context?: Record<string, any>)
+// Методы: debug, info, notice, warning, error, critical, alert, emergency
+logger.info('message', { data })
+logger.error('error', { error })
 ```
 
 📚 **Ссылки:**
 - [Type utilities](https://github.com/bitrix24/b24jssdk/blob/main/packages/jssdk/src/tools/type.ts)
 - [Text utilities](https://github.com/bitrix24/b24jssdk/blob/main/packages/jssdk/src/tools/text.ts)
-- [LoggerBrowser](https://github.com/bitrix24/b24jssdk/blob/main/packages/jssdk/src/logger/browser.ts)
+- [Logger](https://github.com/bitrix24/b24jssdk/tree/main/packages/jssdk/src/logger)
 - [Документация Tools](https://github.com/bitrix24/b24jssdk/blob/main/docs/reference/tools-type.md)
 
 ---
@@ -369,8 +374,7 @@ import {
   EnumCrmEntityTypeId,
   EnumCrmEntityType,
   type TypeB24,
-  type AuthData,
-  type AjaxResultParams
+  type AuthData
 } from '@bitrix24/b24jssdk'
 
 // Использование enum для CRM сущностей
@@ -401,17 +405,14 @@ function processB24(b24: TypeB24) {
 SDK автоматически управляет лимитами запросов через `RestrictionManager`:
 
 ```typescript
-import { RestrictionManagerParamsForEnterprise } from '@bitrix24/b24jssdk'
+import { ParamsFactory, ApiVersion } from '@bitrix24/b24jssdk'
 
-// Получить HTTP клиент
-const http = $b24.getHttpClient()
+// Получить HTTP клиент (версия API обязательна)
+const http = $b24.getHttpClient(ApiVersion.v2)
 
 // Для Enterprise тарифа можно увеличить лимиты
 // (автоматически делается через LicenseManager в useB24Helper)
-http.setRestrictionManagerParams(RestrictionManagerParamsForEnterprise)
-
-// Проверить текущие параметры
-const params = http.getRestrictionManagerParams()
+await $b24.setRestrictionManagerParams(ParamsFactory.getEnterprise())
 ```
 
 **Лимиты по умолчанию:**
@@ -527,7 +528,7 @@ const params = http.getRestrictionManagerParams()
 
 #### Фронтенд (B24Frame)
 ```typescript
-import { initializeB24Frame, B24Frame } from '@bitrix24/b24jssdk'
+import { initializeB24Frame, B24Frame, useB24Helper, LoadDataType } from '@bitrix24/b24jssdk'
 
 let $b24: B24Frame
 
@@ -554,9 +555,9 @@ function cleanup() {
 
 #### Бэкенд (B24Hook)
 ```typescript
-import { B24Hook, LoggerBrowser } from '@bitrix24/b24jssdk'
+import { B24Hook, LoggerFactory } from '@bitrix24/b24jssdk'
 
-const logger = LoggerBrowser.build('App', true)
+const logger = LoggerFactory.createForBrowser('App', true)
 
 const $b24 = B24Hook.fromWebhookUrl(process.env.B24_WEBHOOK_URL!)
 $b24.setLogger(logger)
@@ -568,7 +569,7 @@ async function getData() {
     const result = await $b24.actions.v2.call.make({ method: 'crm.deal.list', params: { select: ['ID'] } })
     return result.getData()
   } catch (error) {
-    logger.error('API error:', error)
+    logger.error('API error', { error })
     throw error
   }
 }
@@ -583,13 +584,13 @@ async function getData() {
 - Для больших списков (>1000) использовать `actions.v2.fetchList.make()` вместо `actions.v2.callList.make()`
 - Проверять `response.isSuccess` перед обработкой данных
 - Использовать TypeScript типы для безопасности
-- Логировать ошибки через `LoggerBrowser`
+- Логировать ошибки через логгер из `LoggerFactory.createForBrowser()`
 
 ❌ **Никогда:**
 - Не использовать B24Hook на клиенте (только сервер!)
 - Не забывать `await` перед асинхронными вызовами
 - Не игнорировать ошибки (всегда обрабатывать через `catch`)
-- Не использовать CommonJS (с версии 0.4.0 только ESM/UMD)
+- Не использовать удалённые в v3 методы (`callMethod`, `callBatch`, `callListMethod`, `fetchListMethod`, `LoggerBrowser`)
 - Не забывать вызывать `destroy()` при очистке
 - Не превышать лимиты batch (по умолчанию 50 команд)
 
@@ -611,4 +612,4 @@ async function getData() {
 
 **Версия документа:** 1.0  
 **Дата:** 2025-10-23  
-**SDK версия:** 2.0.0
+**SDK версия:** 3.0.0
