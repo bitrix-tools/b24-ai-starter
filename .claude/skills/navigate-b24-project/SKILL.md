@@ -46,7 +46,7 @@ b24-ai-starter/
 ## Key Locations by Task
 
 | Task | Location |
-|------|----------|
+| ------ | ---------- |
 | **Frontend UI** | `frontend/app/components/` (use B24UI) |
 | **Frontend Pages** | `frontend/app/pages/` (must be `.client.vue`) |
 | **Frontend API Logic** | `frontend/app/stores/` or `frontend/app/composables/` |
@@ -61,8 +61,8 @@ b24-ai-starter/
 
 ## Documentation
 
-*   **General**: `instructions/knowledge.md`
-*   **Frontend**: `instructions/front/knowledge.md`
-*   **PHP**: `instructions/php/knowledge.md`
-*   **Python**: `instructions/python/knowledge.md`
-*   **Node.js**: `instructions/node/knowledge.md`
+* **General**: `instructions/knowledge.md`
+* **Frontend**: `instructions/front/knowledge.md`
+* **PHP**: `instructions/php/knowledge.md`
+* **Python**: `instructions/python/knowledge.md`
+* **Node.js**: `instructions/node/knowledge.md`

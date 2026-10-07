@@ -24,9 +24,9 @@ await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
 
 ### Handling
 
-*   **Frontend**: Create a page (e.g., `pages/handler/my-widget.client.vue`) that renders the widget content.
-*   **Backend**: Ensure the handler URL points to this page (or a backend endpoint that serves it).
-*   **Context**: Bitrix24 sends `PLACEMENT_OPTIONS` (e.g., `ID` of the deal) in the POST request.
+* **Frontend**: Create a page (e.g., `pages/handler/my-widget.client.vue`) that renders the widget content.
+* **Backend**: Ensure the handler URL points to this page (or a backend endpoint that serves it).
+* **Context**: Bitrix24 sends `PLACEMENT_OPTIONS` (e.g., `ID` of the deal) in the POST request.
 
 ## Robots (Automation)
 
@@ -49,9 +49,9 @@ await $b24.actions.v2.call.make({ method: 'bizproc.robot.add', params: {
 
 ### Handling
 
-*   **Backend**: Create a public endpoint (e.g., `/api/robot-handler`) that receives the robot execution request.
-*   **Logic**: Perform the task (e.g., call external API).
-*   **Result**: If `USE_SUBSCRIPTION` is 'Y', call `bizproc.event.send` to return data to the workflow.
+* **Backend**: Create a public endpoint (e.g., `/api/robot-handler`) that receives the robot execution request.
+* **Logic**: Perform the task (e.g., call external API).
+* **Result**: If `USE_SUBSCRIPTION` is 'Y', call `bizproc.event.send` to return data to the workflow.
 
 ## Events
 
@@ -70,20 +70,20 @@ await $b24.actions.v2.call.make({ method: 'event.bind', params: {
 
 ### Handling
 
-*   **Backend**: Create a public endpoint (e.g., `/api/events`) to receive event data.
-*   **Verification**: Verify the request comes from Bitrix24 (check `auth` tokens).
+* **Backend**: Create a public endpoint (e.g., `/api/events`) to receive event data.
+* **Verification**: Verify the request comes from Bitrix24 (check `auth` tokens).
 
 ## Queues (RabbitMQ)
 
 Use queues for background processing (long-running tasks).
 
-*   **Configuration**: `ENABLE_RABBITMQ=1` in `.env`.
-*   **PHP**: Use Symfony Messenger (`instructions/queues/php.md`).
-*   **Python**: Use Celery (`instructions/queues/python.md`).
-*   **Node.js**: Use `amqplib` (`instructions/queues/node.md`).
+* **Configuration**: `ENABLE_RABBITMQ=1` in `.env`.
+* **PHP**: Use Symfony Messenger (`instructions/queues/php.md`).
+* **Python**: Use Celery (`instructions/queues/python.md`).
+* **Node.js**: Use `amqplib` (`instructions/queues/node.md`).
 
 ## Best Practices
 
-1.  **Public URLs**: Handlers for Widgets, Robots, and Events MUST be publicly accessible (use Cloudpub in dev).
-2.  **Authentication**: Robots and Events send auth tokens in the request body. Use them to authorize API calls back to Bitrix24.
-3.  **Idempotency**: Event handlers should be idempotent as Bitrix24 might retry requests.
+1. **Public URLs**: Handlers for Widgets, Robots, and Events MUST be publicly accessible (use Cloudpub in dev).
+2. **Authentication**: Robots and Events send auth tokens in the request body. Use them to authorize API calls back to Bitrix24.
+3. **Idempotency**: Event handlers should be idempotent as Bitrix24 might retry requests.
