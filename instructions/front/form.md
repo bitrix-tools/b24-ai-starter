@@ -50,7 +50,7 @@ const onSubmit = async (data) => {
   <B24App>
     <B24Container class="py-8">
       <div v-if="loading" class="flex items-center justify-center min-h-screen">
-        <B24Icon :icon="LoadingIcon" class="w-8 h-8 animate-spin" />
+        <LoadingIcon class="w-8 h-8 animate-spin" />
       </div>
 
       <div v-else class="space-y-6">
@@ -65,7 +65,7 @@ const onSubmit = async (data) => {
                 class="text-2xl font-bold"
               />
               <div class="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                <B24Icon :icon="CalendarIcon" />
+                <CalendarIcon />
                 <span>Создан: {{ formatDate(item.createdAt) }}</span>
               </div>
             </div>
@@ -209,14 +209,12 @@ const onSubmit = async (data) => {
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import {
-  LoadingIcon,
-  CalendarIcon,
-  CheckIcon,
-  CloseIcon,
-  CopyIcon,
-  TrashIcon
-} from '@bitrix24/b24icons'
+import LoadingIcon from '@bitrix24/b24icons-vue/animated/LoaderWaitIcon'
+import CalendarIcon from '@bitrix24/b24icons-vue/outline/CalendarIcon'
+import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
+import CloseIcon from '@bitrix24/b24icons-vue/actions/Cross30Icon'
+import CopyIcon from '@bitrix24/b24icons-vue/outline/CopyIcon'
+import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
 
 const item = ref({ id: 1, createdAt: new Date().toISOString() })
 const form = reactive({
@@ -251,7 +249,7 @@ const saveItem = async () => {
       method: 'PUT',
       body: JSON.stringify(form)
     })
-    useToast().add({ title: 'Сохранено', color: 'green' })
+    useToast().add({ title: 'Сохранено', color: 'air-primary-success' })
   } finally {
     saving.value = false
   }
@@ -303,5 +301,5 @@ const formatDate = (date) => new Date(date).toLocaleString('ru-RU')
 ---
 
 **Дата**: Октябрь 2025  
-**Версия**: 2.0 (Bitrix24 UI Kit)  
+**Версия**: 2.14 (Bitrix24 UI Kit)  
 **Компоненты**: B24Form, B24FormField (НЕ UForm/UFormGroup!)

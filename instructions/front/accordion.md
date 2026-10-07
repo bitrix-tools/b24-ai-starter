@@ -94,7 +94,7 @@ const items = ref([
               <p class="text-sm text-gray-600 dark:text-gray-400">Всего объектов</p>
               <p class="text-2xl font-bold">{{ totalItems }}</p>
             </div>
-            <B24Icon :icon="ChartIcon" class="w-8 h-8 text-primary" />
+            <ChartIcon class="w-8 h-8 text-primary" />
           </div>
         </B24Card>
 
@@ -104,7 +104,7 @@ const items = ref([
               <p class="text-sm text-gray-600 dark:text-gray-400">Активных</p>
               <p class="text-2xl font-bold text-green-600">{{ activeItems }}</p>
             </div>
-            <B24Icon :icon="CheckIcon" class="w-8 h-8 text-green-500" />
+            <CheckIcon class="w-8 h-8 text-green-500" />
           </div>
         </B24Card>
 
@@ -114,21 +114,21 @@ const items = ref([
               <p class="text-sm text-gray-600 dark:text-gray-400">Найдено</p>
               <p class="text-2xl font-bold">{{ filteredItems.length }}</p>
             </div>
-            <B24Icon :icon="SearchIcon" class="w-8 h-8 text-blue-500" />
+            <SearchIcon class="w-8 h-8 text-blue-500" />
           </div>
         </B24Card>
       </div>
 
       <!-- Accordion -->
       <B24Card v-if="loading" class="text-center py-8">
-        <B24Icon :icon="LoadingIcon" class="w-8 h-8 animate-spin mx-auto text-primary" />
+        <LoadingIcon class="w-8 h-8 animate-spin mx-auto text-primary" />
         <p class="mt-2 text-gray-600">Загрузка...</p>
       </B24Card>
 
       <B24Accordion
         v-else
         :items="accordionItems"
-        multiple
+        type="multiple"
         class="space-y-2"
       >
         <!-- Кастомный контент для каждого элемента -->
@@ -201,7 +201,7 @@ const items = ref([
 
       <!-- Пусто -->
       <B24Card v-if="!loading && filteredItems.length === 0" class="text-center py-8">
-        <B24Icon :icon="InboxIcon" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <InboxIcon class="w-12 h-12 mx-auto text-gray-400 mb-4" />
         <h3 class="text-lg font-semibold mb-2">Нет объектов</h3>
         <p class="text-gray-600 mb-4">Создайте первый объект</p>
         <B24Button :icon="PlusIcon" color="air-primary" @click="addItem">
@@ -214,18 +214,16 @@ const items = ref([
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { 
-  PlusIcon, 
-  RefreshIcon, 
-  SearchIcon, 
-  ChartIcon,
-  CheckIcon,
-  LoadingIcon,
-  EditIcon,
-  TrashIcon,
-  CopyIcon,
-  InboxIcon
-} from '@bitrix24/b24icons'
+import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
+import RefreshIcon from '@bitrix24/b24icons-vue/main/RefreshIcon'
+import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
+import ChartIcon from '@bitrix24/b24icons-vue/outline/GraphsDiagramIcon'
+import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
+import LoadingIcon from '@bitrix24/b24icons-vue/animated/LoaderWaitIcon'
+import EditIcon from '@bitrix24/b24icons-vue/button/EditIcon'
+import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
+import CopyIcon from '@bitrix24/b24icons-vue/outline/CopyIcon'
+import InboxIcon from '@bitrix24/b24icons-vue/outline/BoxIcon'
 
 interface Item {
   id: number
@@ -256,7 +254,7 @@ const loadItems = async () => {
     useToast().add({
       title: 'Ошибка',
       description: 'Не удалось загрузить данные',
-      color: 'red'
+      color: 'air-primary-alert'
     })
   } finally {
     loading.value = false
@@ -297,13 +295,13 @@ const formatDate = (dateString: string) => {
 }
 
 const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    'ACTIVE': 'green',
-    'PENDING': 'yellow',
-    'INACTIVE': 'gray',
-    'ARCHIVED': 'red'
-  }
-  return colors[status] || 'gray'
+  const colors = {
+    'ACTIVE': 'air-primary-success',
+    'PENDING': 'air-primary-warning',
+    'INACTIVE': 'air-secondary',
+    'ARCHIVED': 'air-primary-alert'
+  } as const
+  return colors[status as keyof typeof colors] || 'air-secondary'
 }
 
 const getStatusIcon = (status: string) => {
@@ -342,7 +340,7 @@ const deleteItem = async (item: Item) => {
     useToast().add({
       title: 'Удалено',
       description: `Объект "${item.name}" удалён`,
-      color: 'green'
+      color: 'air-primary-success'
     })
     
     await loadItems()
@@ -350,7 +348,7 @@ const deleteItem = async (item: Item) => {
     useToast().add({
       title: 'Ошибка',
       description: 'Не удалось удалить объект',
-      color: 'red'
+      color: 'air-primary-alert'
     })
   }
 }
@@ -376,7 +374,7 @@ onMounted(() => {
 ```vue
 <template>
   <!-- Позволяет открыть несколько элементов одновременно -->
-  <B24Accordion :items="items" multiple />
+  <B24Accordion :items="items" type="multiple" />
 </template>
 ```
 
@@ -384,7 +382,8 @@ onMounted(() => {
 
 ```vue
 <script setup>
-import { RocketIcon, StarIcon } from '@bitrix24/b24icons'
+import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
+import StarIcon from '@bitrix24/b24icons-vue/outline/FavoriteIcon'
 
 const items = ref([
   {
@@ -444,7 +443,7 @@ const faqItems = ref([
 
 ```vue
 <template>
-  <B24Accordion :items="groupedItems" multiple>
+  <B24Accordion :items="groupedItems" type="multiple">
     <template v-for="(group, index) in groups" :key="group.id" #[`group-${index}`]>
       <div class="space-y-2">
         <div v-for="item in group.items" :key="item.id" class="p-2 bg-gray-50 rounded">
@@ -549,5 +548,5 @@ interface AccordionItem {
 ---
 
 **Дата**: Октябрь 2025  
-**Версия**: 2.0 (Bitrix24 UI Kit)  
+**Версия**: 2.14 (Bitrix24 UI Kit)  
 **Компонент**: B24Accordion (НЕ UAccordion!)

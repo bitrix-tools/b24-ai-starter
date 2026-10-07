@@ -25,9 +25,10 @@
 </template>
 
 <script setup>
+// Колонки в формате TanStack Table: accessorKey + header
 const columns = [
-  { key: 'id', header: 'ID' },
-  { key: 'name', header: 'Название' }
+  { accessorKey: 'id', header: 'ID' },
+  { accessorKey: 'name', header: 'Название' }
 ]
 
 const data = ref([
@@ -90,7 +91,7 @@ const data = ref([
               <p class="text-sm text-gray-600">Всего</p>
               <p class="text-2xl font-bold">{{ total }}</p>
             </div>
-            <B24Icon :icon="ChartIcon" class="w-8 h-8 text-primary" />
+            <ChartIcon class="w-8 h-8 text-primary" />
           </div>
         </B24Card>
 
@@ -100,7 +101,7 @@ const data = ref([
               <p class="text-sm text-gray-600">На странице</p>
               <p class="text-2xl font-bold">{{ data.length }}</p>
             </div>
-            <B24Icon :icon="DocumentIcon" class="w-8 h-8 text-blue-500" />
+            <DocumentIcon class="w-8 h-8 text-blue-500" />
           </div>
         </B24Card>
 
@@ -110,7 +111,7 @@ const data = ref([
               <p class="text-sm text-gray-600">Выбрано</p>
               <p class="text-2xl font-bold">{{ selectedRows.length }}</p>
             </div>
-            <B24Icon :icon="CheckIcon" class="w-8 h-8 text-green-500" />
+            <CheckIcon class="w-8 h-8 text-green-500" />
           </div>
         </B24Card>
       </div>
@@ -118,29 +119,28 @@ const data = ref([
       <!-- Таблица -->
       <B24Card>
         <B24Table
-          v-model:selection="selectedRows"
+          v-model:row-selection="rowSelection"
           :columns="columns"
           :data="filteredData"
           :loading="loading"
-          :enable-row-selection="true"
           class="w-full"
         >
           <!-- ID колонка -->
-          <template #id="{ row }">
+          <template #id-cell="{ row }">
             <span class="font-mono text-sm text-gray-500">
               #{{ row.original.id }}
             </span>
           </template>
 
           <!-- Название -->
-          <template #name="{ row }">
+          <template #name-cell="{ row }">
             <div class="flex items-center gap-2">
               <span class="font-medium">{{ row.original.name }}</span>
             </div>
           </template>
 
           <!-- Статус -->
-          <template #status="{ row }">
+          <template #status-cell="{ row }">
             <B24Badge
               :color="getStatusColor(row.original.status)"
             >
@@ -149,14 +149,14 @@ const data = ref([
           </template>
 
           <!-- Дата -->
-          <template #date="{ row }">
+          <template #date-cell="{ row }">
             <span class="text-sm text-gray-600">
               {{ formatDate(row.original.date) }}
             </span>
           </template>
 
           <!-- Действия -->
-          <template #actions="{ row }">
+          <template #actions-cell="{ row }">
             <div class="flex gap-1">
               <B24Button
                 :icon="EyeIcon"
@@ -183,11 +183,10 @@ const data = ref([
         <!-- Пагинация -->
         <div v-if="total > pageSize" class="flex justify-center mt-6 border-t pt-6">
           <B24Pagination
-            v-model="page"
+            v-model:page="page"
             :total="total"
-            :page-size="pageSize"
-            show-first
-            show-last
+            :items-per-page="pageSize"
+            show-edges
           />
         </div>
       </B24Card>
@@ -219,19 +218,17 @@ const data = ref([
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, h, resolveComponent } from 'vue'
 import type { TableColumn } from '@bitrix24/b24ui-nuxt'
-import { 
-  PlusIcon, 
-  DownloadIcon, 
-  SearchIcon,
-  ChartIcon,
-  DocumentIcon,
-  CheckIcon,
-  EyeIcon,
-  EditIcon,
-  TrashIcon
-} from '@bitrix24/b24icons'
+import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
+import DownloadIcon from '@bitrix24/b24icons-vue/outline/DownloadIcon'
+import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
+import ChartIcon from '@bitrix24/b24icons-vue/outline/GraphsDiagramIcon'
+import DocumentIcon from '@bitrix24/b24icons-vue/main/DocumentIcon'
+import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
+import EyeIcon from '@bitrix24/b24icons-vue/main/OpenedEyeIcon'
+import EditIcon from '@bitrix24/b24icons-vue/button/EditIcon'
+import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
 
 interface Item {
   id: number
@@ -242,20 +239,35 @@ interface Item {
 
 // State
 const data = ref<Item[]>([])
-const selectedRows = ref([])
+// Состояние выбора строк TanStack: { [rowId]: true }
+const rowSelection = ref<Record<string, boolean>>({})
+const selectedRows = computed(() => filteredData.value.filter((_, index) => rowSelection.value[index]))
 const loading = ref(false)
 const searchQuery = ref('')
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
-// Columns
-const columns: TableColumn[] = [
-  { key: 'id', header: 'ID', sortable: true },
-  { key: 'name', header: 'Название', sortable: true },
-  { key: 'status', header: 'Статус' },
-  { key: 'date', header: 'Дата', sortable: true },
-  { key: 'actions', header: 'Действия' }
+// Columns (формат TanStack Table)
+const B24Checkbox = resolveComponent('B24Checkbox')
+
+const columns: TableColumn<Item>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => h(B24Checkbox, {
+      'modelValue': table.getIsSomePageRowsSelected() ? 'indeterminate' : table.getIsAllPageRowsSelected(),
+      'onUpdate:modelValue': (value: boolean | 'indeterminate') => table.toggleAllPageRowsSelected(!!value)
+    }),
+    cell: ({ row }) => h(B24Checkbox, {
+      'modelValue': row.getIsSelected(),
+      'onUpdate:modelValue': (value: boolean | 'indeterminate') => row.toggleSelected(!!value)
+    })
+  },
+  { accessorKey: 'id', header: 'ID' },
+  { accessorKey: 'name', header: 'Название' },
+  { accessorKey: 'status', header: 'Статус' },
+  { accessorKey: 'date', header: 'Дата' },
+  { id: 'actions', header: 'Действия' }
 ]
 
 // Filtered data
@@ -290,7 +302,7 @@ const loadData = async () => {
     useToast().add({
       title: 'Ошибка',
       description: 'Не удалось загрузить данные',
-      color: 'red'
+      color: 'air-primary-alert'
     })
   } finally {
     loading.value = false
@@ -303,13 +315,13 @@ const formatDate = (dateString: string) => {
 }
 
 const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    'NEW': 'blue',
-    'IN_PROGRESS': 'yellow',
-    'COMPLETED': 'green',
-    'CANCELLED': 'red'
-  }
-  return colors[status] || 'gray'
+  const colors = {
+    'NEW': 'air-primary',
+    'IN_PROGRESS': 'air-primary-warning',
+    'COMPLETED': 'air-primary-success',
+    'CANCELLED': 'air-primary-alert'
+  } as const
+  return colors[status as keyof typeof colors] || 'air-secondary'
 }
 
 // Actions
@@ -332,13 +344,13 @@ const deleteItem = async (item: Item) => {
     await fetch(`/api/items/${item.id}`, { method: 'DELETE' })
     useToast().add({
       title: 'Удалено',
-      color: 'green'
+      color: 'air-primary-success'
     })
     await loadData()
   } catch (error) {
     useToast().add({
       title: 'Ошибка',
-      color: 'red'
+      color: 'air-primary-alert'
     })
   }
 }
@@ -368,9 +380,10 @@ const exportData = () => {
 }
 
 // Watchers
+// (для debounce используйте, например, watchDebounced из @vueuse/core)
 watch([page, searchQuery], () => {
   loadData()
-}, { debounce: 500 })
+})
 
 // Lifecycle
 onMounted(() => {
@@ -385,11 +398,20 @@ onMounted(() => {
 
 ### Сортировка
 
+Состояние сортировки — `SortingState` из TanStack Table, передаётся через `v-model:sorting`.
+Переключение сортировки по клику на заголовок реализуется в `header` колонки (`column.toggleSorting()`).
+
 ```vue
+<template>
+  <B24Table v-model:sorting="sorting" :columns="columns" :data="data" />
+</template>
+
 <script setup>
+const sorting = ref([{ id: 'id', desc: false }])
+
 const columns = [
-  { key: 'id', header: 'ID', sortable: true },
-  { key: 'name', header: 'Название', sortable: true }
+  { accessorKey: 'id', header: 'ID' },
+  { accessorKey: 'name', header: 'Название' }
 ]
 </script>
 ```
@@ -399,12 +421,16 @@ const columns = [
 ```vue
 <template>
   <B24Table
-    v-model:selection="selectedRows"
+    v-model:row-selection="rowSelection"
     :columns="columns"
     :data="data"
-    :enable-row-selection="true"
   />
 </template>
+
+<script setup>
+// { [rowId]: true } — колонку с чекбоксами (id: 'select') добавьте в columns, см. полный пример выше
+const rowSelection = ref({})
+</script>
 ```
 
 ### Loading состояние
@@ -424,12 +450,16 @@ const columns = [
 ## 📊 Props
 
 ```typescript
-interface TableColumn {
-  key: string              // Ключ данных
-  header: string           // Заголовок колонки
-  sortable?: boolean       // Включить сортировку
-  cell?: Function          // Кастомная функция рендеринга
+// TableColumn<T> = ColumnDef<T> из TanStack Table
+import type { TableColumn } from '@bitrix24/b24ui-nuxt'
+
+const column: TableColumn<Item> = {
+  accessorKey: 'name',     // Ключ данных (или id для вычисляемых колонок)
+  header: 'Название',      // Заголовок колонки (строка или функция рендеринга)
+  cell: ({ row }) => row.getValue('name'), // Кастомная функция рендеринга
+  enableSorting: true      // Разрешить сортировку
 }
+// Слоты ячеек/заголовков: #<id>-cell, #<id>-header
 ```
 
 ---
@@ -459,5 +489,5 @@ const loadData = async () => {
 ---
 
 **Дата**: Октябрь 2025  
-**Версия**: 2.0 (Bitrix24 UI Kit)  
+**Версия**: 2.14 (Bitrix24 UI Kit)  
 **Компонент**: B24Table (НЕ UTable!)
