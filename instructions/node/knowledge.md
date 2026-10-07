@@ -13,7 +13,7 @@
 #### Bitrix24 JavaScript SDK
 - **Библиотека**: `@bitrix24/b24jssdk`
 - **Версия**: Последняя стабильная
-- **Требования**: Node.js 18+, ES2022+ поддержка
+- **Требования**: Node.js 22+ (в Docker и CI — Node 24), ES2022+
 - **Лицензия**: MIT
 
 #### Типичные зависимости (package.json)
@@ -96,7 +96,7 @@ project/
 #### Простая инициализация (TypeScript)
 ```typescript
 // config/bitrix24.ts
-import { B24Hook, LoggerBrowser, type TypeB24 } from '@bitrix24/b24jssdk';
+import { B24Hook, LoggerFactory, type TypeB24 } from '@bitrix24/b24jssdk';
 
 /**
  * Бэкенд работает через входящий вебхук (B24Hook).
@@ -106,7 +106,7 @@ export function createB24(webhookUrl: string): TypeB24 {
   const $b24 = B24Hook.fromWebhookUrl(webhookUrl);
   // либо: new B24Hook({ b24Url, userId, secret })
 
-  $b24.setLogger?.(LoggerBrowser.build('Backend', process.env.NODE_ENV !== 'production'));
+  $b24.setLogger?.(LoggerFactory.createForBrowser('Backend', process.env.NODE_ENV !== 'production'));
   $b24.offClientSideWarning(); // только сервер: секрет вебхука не должен попадать на клиент
 
   return $b24;

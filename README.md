@@ -7,7 +7,7 @@
 ## 🎯 Что предоставляет стартер-кит:
 
 - **Три варианта бэкенда** на выбор (PHP, Python, Node.js)
-- **Готовый фронтенд** на Nuxt 3 с интеграцией Bitrix24 UI Kit
+- **Готовый фронтенд** на Nuxt 4 с интеграцией Bitrix24 UI Kit
 - **Воркеры** для фоновых задач
 - **Docker-контейнеры** для быстрого развертывания
 - **Готовые SDK** и общие утилиты для работы с Bitrix24 API
@@ -67,7 +67,7 @@ instructions/
 
 ```text
 b24-ai-starter/
-├── frontend/                 # Nuxt 3 фронтенд с Bitrix24 UI Kit
+├── frontend/                 # Nuxt 4 фронтенд с Bitrix24 UI Kit
 ├── backends/                 # Три варианта бэкенда на выбор
 │   ├── php/                  # Symfony + PHP SDK
 │   ├── python/               # Django + b24pysdk
@@ -191,18 +191,18 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 ### Frontend
 
-- **Nuxt 3** (Vue 3, TypeScript)
-- **Bitrix24 UI Kit** (`@bitrix24/b24ui-nuxt`)
-- **Bitrix24 JS SDK** (`@bitrix24/b24jssdk-nuxt`)
-- **Pinia** (управление состоянием)
+- **Nuxt 4** (Vue 3, TypeScript 6, Node 24, pnpm 12)
+- **Bitrix24 UI Kit** (`@bitrix24/b24ui-nuxt` 2.x)
+- **Bitrix24 JS SDK** (`@bitrix24/b24jssdk-nuxt` 3.x)
+- **Pinia 4** (управление состоянием)
 - **i18n** (многоязычность)
-- **TailwindCSS**
+- **TailwindCSS 4**
 
 ### Backend (на выбор)
 
-- **PHP**: Symfony 7, Doctrine ORM, PHP SDK для Bitrix24
-- **Python**: Django, Python SDK для Bitrix24
-- **Node.js**: Express, PostgreSQL/MySQL, JWT, JS SDK для Bitrix24
+- **PHP**: Symfony 7.4 LTS, Doctrine ORM 3, PHP SDK для Bitrix24
+- **Python**: Django 6.1, Celery, Python SDK (b24pysdk) для Bitrix24
+- **Node.js**: Node 24, Express 5, PostgreSQL/MySQL, JWT, JS SDK для Bitrix24
 
 ### Infrastructure
 

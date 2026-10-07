@@ -23,7 +23,7 @@
 
 ```
 starter-kit/
-├── frontend/               # Nuxt 3 + Vue 3 frontend
+├── frontend/               # Nuxt 4 + Vue 3 frontend
 ├── backends/               # Три варианта бэкенда на выбор
 │   ├── php/               # Symfony + PHP SDK
 │   ├── python/            # Django + b24pysdk
@@ -42,7 +42,7 @@ starter-kit/
 См. также: [инструкция по MCP](../bitrix24/mcp.md) и официальная страница https://apidocs.bitrix24.ru/sdk/mcp.html
 
 **Frontend:**
-- Nuxt 3 (Vue 3, TypeScript)
+- Nuxt 4 (Vue 3, TypeScript)
 - Bitrix24 UI Kit (`@bitrix24/b24ui-nuxt`)
 - Bitrix24 JS SDK (`@bitrix24/b24jssdk-nuxt`)
 - Pinia (state management)
