@@ -4,7 +4,7 @@
 
 ## 1. Зависимости
 ```bash
-composer require symfony/messenger enqueue/amqp-ext
+make composer require symfony/messenger symfony/amqp-messenger
 ```
 
 ## 2. Конфигурация (`config/packages/messenger.yaml`)
@@ -20,10 +20,11 @@ framework:
       App\Message\Bitrix24EventMessage: async
 ```
 
-В `.env` добавьте:
+В `.env` добавьте (синтаксис `%env()%` работает только в YAML-конфигах Symfony, не в `.env`):
 ```
-MESSENGER_TRANSPORT_DSN=amqp://%env(RABBITMQ_USER)%:%env(RABBITMQ_PASSWORD)%@rabbitmq:5672/%2f
+MESSENGER_TRANSPORT_DSN=amqp://queue_user:queue_password@rabbitmq:5672/%2f
 ```
+Значение должно совпадать с `RABBITMQ_DSN`; можно и сразу указать `dsn: '%env(RABBITMQ_DSN)%'` в `messenger.yaml`. Транспорт `amqp://` требует PHP-расширение `amqp` (в образе `php-cli` оно установлено, в `php-fpm` — нет: добавьте его в `backends/php/docker/php-fpm/Dockerfile`, если публикуете сообщения из веб-запросов).
 
 ## 3. Сообщение и обработчик
 ```php

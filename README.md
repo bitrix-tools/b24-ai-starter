@@ -34,7 +34,7 @@ instructions/
 ├── python/knowledge.md       # 🐍 Общие знания по Python  
 ├── node/knowledge.md         # 🟢 Общие знания по Node.js
 ├── queues/                   # 🐇 Очереди и фоновые задачи
-├── frontend/knowledge.md     # 🎨 Общие знания по frontend
+├── front/knowledge.md        # 🎨 Общие знания по frontend
 ├── bitrix24/                 # 🏢 Платформенные инструкции
 ├── versioning/               # 🏢 Инструкции для создания версий
 └── [язык]/[специфика].md     # 📋 Детальные инструкции
@@ -70,8 +70,8 @@ b24-ai-starter/
 ├── frontend/                 # Nuxt 4 фронтенд с Bitrix24 UI Kit
 ├── backends/                 # Три варианта бэкенда на выбор
 │   ├── php/                  # Symfony + PHP SDK
-│   ├── python/               # Django + b24pysdk
-│   └── node/                 # Express + Node.js
+│   ├── python/django/        # Django + b24pysdk
+│   └── node/api/             # Express + Node.js
 ├── infrastructure/
 │   └── database/             # PostgreSQL/MySQL init-скрипты
 ├── instructions/             # 📚 Модульные инструкции для AI-агентов
@@ -79,7 +79,7 @@ b24-ai-starter/
 │   ├── php/                  # PHP-специфичные инструкции
 │   ├── python/               # Python-специфичные инструкции
 │   ├── node/                 # Node.js-специфичные инструкции
-│   ├── frontend/             # Frontend-специфичные инструкции
+│   ├── front/                # Frontend-специфичные инструкции
 │   ├── versioning/           # Инструкции для версионности проекта
 │   ├── queues/               # Инструкции для сервиса очередей RabbitMQ
 │   └── bitrix24/             # Платформенные инструкции
@@ -87,9 +87,15 @@ b24-ai-starter/
 │   └── skills/               # Skills для Cursor Agent
 ├── .claude/
 │   └── skills/               # Skills для Claude Code
+├── scripts/                  # dev-init, версии, security-скрипты (см. scripts/README.md)
+├── .github/                  # CI, Dependabot, гайды для контрибьюторов
 ├── logs/                     # Логи вне контейнеров
-├── versions/                 # Версии проекта
+├── versions/                 # Версии проекта (создаётся make create-version)
+├── AGENTS.md                 # Единый источник правды для агентов и людей (CLAUDE.md ссылается на него)
+├── CHANGELOG.md              # История изменений
+├── SECURITY.md               # Как сообщить об уязвимости
 ├── README.md                 # 🤖 Главный промпт для AI
+├── makefile                  # Команды make
 └── docker-compose.yml        # Docker конфигурация
 ```
 
@@ -97,14 +103,16 @@ b24-ai-starter/
 
 Проект содержит готовые skills для двух сред:
 
-- `.cursor/skills/` — инструкции и сценарии для Cursor Agent
-- `.claude/skills/` — зеркальные инструкции для Claude Code
+- `.claude/skills/` — канонические инструкции для Claude Code
+- `.cursor/skills/` — точная копия для Cursor Agent (после правок синхронизируйте: `rm -rf .cursor/skills && cp -a .claude/skills .cursor/skills`)
 
 Skills покрывают навигацию по проекту, работу с окружением и разработку по каждому стеку (frontend/php/python/node), чтобы ускорить типовые задачи и унифицировать поведение ассистентов.
 
 ## 🚀 Быстрый старт
 
 Текущий проект содержит полнофункциональную заготовку приложения, которую можно использовать как в качестве локального приложения, так и в качестве тиражного решения Маркетплейс.
+
+**Требования:** Docker с Docker Compose (makefile вызывает `docker-compose`, `dev-init.sh` — `docker compose`, поэтому нужны обе команды), Bash (macOS, Linux или WSL), API-ключ CloudPub. Для работы с фронтендом вне Docker — Node 24 и pnpm 12; бэкенды в контейнерах используют PHP 8.4 / Python 3.13 / Node 24.
 
 Последовательность действий для запуска разработки:
 
@@ -119,6 +127,8 @@ Skills покрывают навигацию по проекту, работу �
 После добавления приложения вы получите необходимые параметры CLIENT_ID и CLIENT_SECRET для вашего приложения. Вставьте их в соответствующие переменные окружения в файле `.env` и перезапустите Docker контейнеры командами `make down` и затем `make dev-php` (или `make dev-python` / `make dev-node` в зависимости от выбранного бэкенда).  Подробнее про [добавление локального приложения](https://apidocs.bitrix24.ru/local-integrations/serverside-local-app-with-ui.html) и про [добавление тиражного приложения](https://apidocs.bitrix24.ru/market/preparing-to-publish/how-to-add-app.html)
 
 3. Переустановите приложение в вашем портале Битрикс24.
+
+> **Повторная установка и старая БД.** Ошибка уникального индекса при переустановке приложения (issue #8) исправлена в `infrastructure/database/init.sql` и `init-mysql.sql`: уникальность аккаунта теперь не учитывает строки со `status = 'deleted'`. Init-скрипты выполняются только на пустом volume, поэтому в базе, созданной до исправления, остаётся старое ограничение. Пересоздайте volume БД (`make clean` удаляет все volumes вместе с данными) либо примените изменение индекса из init-скрипта вручную.
 
 Теперь вы готовы начать разработку вашего приложения для Bitrix24 на базе текущего проекта!
 
@@ -164,11 +174,14 @@ make prod-python
 # Продакшн с Node.js
 make prod-node
 
+# Только фронтенд + CloudPub
+make dev-front
+
 # Только PostgreSQL + фронтенд (для тестирования)
 COMPOSE_PROFILES=db-postgres,frontend docker compose up --build
 
-# Полный стек
-COMPOSE_PROFILES=php,worker docker-compose up -d
+# Список всех команд
+make help
 ```
 
 ### Запуск в production режиме
@@ -182,7 +195,7 @@ DB_PASSWORD - пароль пользователя базы данных
 DB_NAME - имя базы данных
 DB_PORT - порт выбранной СУБД (`5432` для PostgreSQL, `3306` для MySQL)
 DATABASE_URL - DSN для PHP/Doctrine (автоматически настраивается через `make dev-init`)
-BUILD_TARGET установить в `production` - для сборки фронтенда в production режиме.
+BUILD_TARGET установить в `production` - для сборки фронтенда и бэкенда в production режиме (переменная `FRONTEND_TARGET`, которую передают цели `make prod-*`, в `docker-compose.yml` не используется).
 DJANGO_SUPERUSER_USERNAME - имя суперпользователя Django в случае backend на Python
 DJANGO_SUPERUSER_EMAIL - email суперпользователя Django.
 DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Django.
@@ -191,8 +204,8 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 ### Frontend
 
-- **Nuxt 4** (Vue 3, TypeScript 6, Node 24, pnpm 12)
-- **Bitrix24 UI Kit** (`@bitrix24/b24ui-nuxt` 2.x)
+- **Nuxt 4.6** (Vue 3, TypeScript 6, Node 24, pnpm 12)
+- **Bitrix24 UI Kit** (`@bitrix24/b24ui-nuxt` 2.14)
 - **Bitrix24 JS SDK** (`@bitrix24/b24jssdk-nuxt` 3.x)
 - **Pinia 4** (управление состоянием)
 - **i18n** (многоязычность)
@@ -200,8 +213,8 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 ### Backend (на выбор)
 
-- **PHP**: Symfony 7.4 LTS, Doctrine ORM 3, PHP SDK для Bitrix24
-- **Python**: Django 6.1, Celery, Python SDK (b24pysdk) для Bitrix24
+- **PHP**: PHP 8.4, Symfony 7.4 LTS, Doctrine ORM 3, PHP SDK для Bitrix24
+- **Python**: Python 3.13, Django 6.1, Celery 5.6, Python SDK (b24pysdk 1.3) для Bitrix24
 - **Node.js**: Node 24, Express 5, PostgreSQL/MySQL, JWT, JS SDK для Bitrix24
 
 ### Infrastructure
@@ -209,7 +222,7 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 - **Docker & Docker Compose**
 - **PostgreSQL 17 / MySQL 8.4**
 - **Cloudpub** (ngrok-like) для туннелирования
-- **Nginx** (production)
+- **RabbitMQ 3.13** (профиль `queue`)
 
 ### Особенности различных backend
 
@@ -261,12 +274,12 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 ### Bitrix24 JS SDK
 
 - Используется через `@bitrix24/b24jssdk-nuxt`
-- Документация: см. [`instructions/frontend/bitrix24-js-sdk.md`](./instructions/frontend/bitrix24-js-sdk.md) в проекте
+- Документация: см. [`instructions/front/bitrix24-js-sdk.md`](./instructions/front/bitrix24-js-sdk.md) в проекте
 
 ### Bitrix24 UI Kit
 
 - Компоненты через `@bitrix24/b24ui-nuxt`
-- Документация: см. [`instructions/frontend/bitrix24-ui-kit.md`](./instructions/frontend/bitrix24-ui-kit.md) в проекте
+- Документация: см. [`instructions/front/knowledge.md`](./instructions/front/knowledge.md) и рецепты компонентов в [`instructions/front/`](./instructions/front/)
 
 ### PHP SDK
 
@@ -303,7 +316,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 3. **События Bitrix24** (`/api/app-events/`):
    - Принимает lifecycle-события приложения от Bitrix24
-   - Передает обработку в Celery worker
+   - Реализован в PHP и Python бэкендах (в Node.js пока отсутствует); в Python обработка передаётся в Celery worker (`python-worker`, запускается при `ENABLE_RABBITMQ=1`)
    - **НЕ требует JWT**
 
 4. **Защищенные endpoints**:
@@ -342,7 +355,7 @@ const {data, error} = await $fetch('/api/protected-route', {
 
 ### `/api/health`
 
-Указывает статус бэкенда.
+Указывает статус бэкенда. В PHP endpoint публичный, в Python и Node.js требует JWT.
 
 - **Метод**: `GET`
 - **Параметры**: нет
@@ -364,7 +377,8 @@ const {data, error} = await $fetch('/api/protected-route', {
 Тестирование:
 
 ```bash
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/health \
+  -H "Authorization: Bearer $JWT"  # для PHP заголовок не нужен
 ```
 
 ### `/api/enum`
@@ -388,7 +402,7 @@ curl http://localhost:8000/api/health
 Тестирование:
 
 ```bash
-curl http://localhost:8000/api/enum
+curl http://localhost:8000/api/enum -H "Authorization: Bearer $JWT"
 ```
 
 ### `/api/list`
@@ -412,7 +426,7 @@ curl http://localhost:8000/api/enum
 Тестирование:
 
 ```bash
-curl http://localhost:8000/api/list
+curl http://localhost:8000/api/list -H "Authorization: Bearer $JWT"
 ```
 
 ### `/api/install`
@@ -553,6 +567,7 @@ app.get('/api/my-endpoint', verifyToken, async (req, res) => {
 **`app/stores/`** - Pinia stores:
 
 - `api.ts` - API методы и JWT управление
+- `page.ts` - Состояние страницы
 - `user.ts` - Данные пользователя
 - `appSettings.ts` - Настройки приложения
 - `userSettings.ts` - Пользовательские настройки
@@ -561,6 +576,7 @@ app.get('/api/my-endpoint', verifyToken, async (req, res) => {
 
 - `useAppInit.ts` - Инициализация приложения, загрузка данных через batch
 - `useBackend.ts` - Работа с бэкендом
+- `useTelemetry.ts` - Отправка событий телеметрии
 
 **`app/middleware/`**:
 
@@ -666,7 +682,7 @@ const myMethod = async (): Promise<MyType> => {
 **Встройки (Widgets):**
 
 - **Онлайн:** [API Reference: Widgets](https://github.com/bitrix-tools/b24-rest-docs/tree/main/api-reference/widgets)
-- **Инструкция:** [Разработка приложения с встройками](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/ai-instructions-widget-app.md)
+- **Инструкция:** [Разработка приложения с встройками](./instructions/bitrix24/widget.md)
 
 **События (Events):**
 
@@ -677,9 +693,9 @@ const myMethod = async (): Promise<MyType> => {
 
 **Роботы (Robots):**
 
-- **Инструкция:** [Создание роботов для бизнес-процессов](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/ai-instructions-robot.md)
+- **Инструкция:** [Создание роботов для бизнес-процессов](./instructions/bitrix24/crm-robot.md)
 - Регистрация через `bizproc.robot.add`
-- Обработка через публичный endpoint `/api/robot-handler` (без JWT)
+- Обработчик — публичный endpoint (например, `/api/robot-handler`, без JWT), который нужно добавить в бэкенд: в стартере он не реализован
 - Поддержка различных форматов данных от Bitrix24
 
 ### Ключевые моменты реализации
@@ -709,7 +725,6 @@ const myMethod = async (): Promise<MyType> => {
 
 **Frontend-специфичные инструкции:**
 - **🎨 [Frontend Knowledge](./instructions/front/knowledge.md)** - общие знания по frontend-разработке
-  - [UI Kit](./instructions/front/bitrix24-ui-kit.md) - работа с UI Kit
   - [JS SDK](./instructions/front/bitrix24-js-sdk.md) - работа с JS SDK
   - [Компоненты](./instructions/front/) - детальные инструкции по компонентам
 
@@ -717,6 +732,7 @@ const myMethod = async (): Promise<MyType> => {
 - **🏢 [Bitrix24 Platform](./instructions/bitrix24/)** - специфика платформы
   - [CRM роботы](./instructions/bitrix24/crm-robot.md)
   - [Виджеты](./instructions/bitrix24/widget.md)
+  - [MCP-сервер](./instructions/bitrix24/mcp.md)
 
 ## 🚀 Рекомендации по разработке
 
@@ -767,6 +783,20 @@ const myMethod = async (): Promise<MyType> => {
 2. **Дорабатывать существующие SDK** примеры
 3. **Добавлять новые бэкенды** в папку `backends/`
 4. **Улучшать документацию** и инструкции
+
+Правила участия описаны в [AGENTS.md](./AGENTS.md): коммиты и заголовки PR — по [Conventional Commits](https://www.conventionalcommits.org/) (`feat(frontend): …`, `deps(php): …`), заметные изменения — запись в `## [Unreleased]` в [CHANGELOG.md](./CHANGELOG.md), документация обновляется в том же PR. Подробнее — [.github/contributing/review.md](./.github/contributing/review.md) и [.github/contributing/dependencies.md](./.github/contributing/dependencies.md). Об уязвимостях сообщайте приватно — см. [SECURITY.md](./SECURITY.md).
+
+### CI
+
+Для каждого PR GitHub Actions (`.github/workflows/ci.yml`) запускает:
+
+- **Frontend**: `pnpm install --frozen-lockfile`, затем `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` — перед коммитом выполните то же в `frontend/`
+- **Node.js**: `node --check` для `server.js` и `utils/verifyToken.js`
+- **Python**: `python manage.py check` и `makemigrations --check --dry-run`
+- **PHP**: `composer validate`
+- **Repo lint**: actionlint и markdownlint
+
+Зависимости обновляет Dependabot (`.github/dependabot.yml`) еженедельно.
 
 ---
 

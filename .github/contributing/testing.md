@@ -60,5 +60,21 @@
 ## Известные риски, найденные при обновлении
 
 - **PHP** локально не запускался: только `composer validate` и разрешение зависимостей. Это первый кандидат на уровень 1.
-- **Node-бэкенд** не реализует `/api/app-events/`, в отличие от PHP и Python — события Bitrix24 с ним не обрабатываются.
 - **pnpm 12** не ставит пакеты моложе суток (`minimumReleaseAge`) и требует решения по build-скриптам (`frontend/pnpm-workspace.yaml`, `allowBuilds`). Новый пакет с postinstall сломает `install` до явного разрешения.
+
+## Найденные проблемы в коде (кандидаты в issues)
+
+Найдены при сверке документации с кодом; не исправлены — каждая требует отдельного решения.
+
+| # | Проблема | Где | Как проверить |
+| --- | --- | --- | --- |
+| 1 | `make prod-*` передаёт `FRONTEND_TARGET`, а compose читает `BUILD_TARGET` — образы собираются в dev-режиме; поднимается только профиль бэкенда (без фронтенда и БД) | `makefile`, `docker-compose.yml` | `make prod-php`, затем `docker compose ps` и `docker inspect` target |
+| 2 | `make down-all` ссылается на несуществующий `docker-compose.server.yml` | `makefile` | `make down-all` |
+| 3 | `DOCKER_COMPOSE = docker-compose` (v1), а `dev-init.sh` / `security-tests.sh` используют `docker compose` (v2) — на хосте только с v2 make-цели падают | `makefile`, `scripts/fix-php.sh` | Запуск на чистой машине с Docker Compose v2 |
+| 4 | `make down` не останавливает профили `db-*` и `python-worker` | `makefile` | `make down` → `docker ps` |
+| 5 | `/api/health` публичный в PHP, но под JWT в Python и Node | бэкенды | `curl /api/health` без токена на каждом |
+| 6 | В Node нет `/api/app-events/`, хотя он описан как общий; у PHP есть лишний публичный `/api/custom-b24-events/` | `backends/node/api/server.js`, PHP-контроллеры | Сценарий 7 уровня 2 на Node |
+| 7 | Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
+| 8 | `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
+| 9 | В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
+| 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |

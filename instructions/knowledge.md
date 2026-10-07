@@ -8,11 +8,12 @@
 
 ```
 knowledge.md (этот файл) - центральный узел
-├── backend/
-│   ├── php/knowledge.md
-│   ├── python/knowledge.md
-│   └── node/knowledge.md
-├── frontend/knowledge.md
+├── php/knowledge.md
+├── python/knowledge.md
+├── node/knowledge.md
+├── front/knowledge.md
+├── bitrix24/          (виджеты, роботы, MCP)
+├── versioning/
 └── queues/
     ├── server.md
     ├── php.md
@@ -98,7 +99,7 @@ knowledge.md (этот файл) - центральный узел
 
 ### Frontend разработка
 
-**Универсальные принципы и компоненты, которые надо использовать вне зависимости от выбранного языка для backend**: [`frontend/knowledge.md`](frontend/knowledge.md)
+**Универсальные принципы и компоненты, которые надо использовать вне зависимости от выбранного языка для backend**: [`front/knowledge.md`](front/knowledge.md)
 
 ## 🛡️ Ручная проверка безопасности
 
@@ -107,6 +108,8 @@ knowledge.md (этот файл) - центральный узел
 - JSON-отчёты сохраняются в `reports/security/`, поэтому их удобно прикладывать к задачам или отчётам в CI.
 - По умолчанию скрипт завершает работу с ошибкой при найденных уязвимостях; мягкий режим включается через `SECURITY_SCAN_ALLOW_FAILURES=1 make security-scan` или `./scripts/security-scan.sh --allow-fail`.
 - Скрипт не запускается автоматически; разработчик сам решает, когда проверять зависимости.
+- Для расширенной проверки (Semgrep, Gitleaks, Trivy, статические анализаторы) используйте `make security-tests` — см. README и `scripts/README.md`.
+- CI (`.github/workflows/ci.yml`) security-сканирование не запускает: он проверяет lint/typecheck/test/build фронтенда, синтаксис Node, `manage.py check` для Python и `composer validate` для PHP.
 
 ---
 
@@ -118,6 +121,7 @@ knowledge.md (этот файл) - центральный узел
 
 - **CRM роботы:** [`bitrix24/crm-robot.md`](bitrix24/crm-robot.md)
 - **Виджеты:** [`bitrix24/widget.md`](bitrix24/widget.md)
+- **MCP-сервер документации REST API:** [`bitrix24/mcp.md`](bitrix24/mcp.md)
 
 ### Управление версиями стартера
 
@@ -190,7 +194,7 @@ knowledge.md (этот файл) - центральный узел
 
 ---
 
-*Обновлено: 25 ноября 2025*
+*Обновлено: 7 октября 2026*
 *Версия: 2.0 - Модульная архитектура знаний*
 
 

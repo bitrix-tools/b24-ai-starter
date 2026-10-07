@@ -10,6 +10,9 @@
 | `security-tests.sh` | 🛡 Оркестрированный запуск security-проверок | `make security-tests` |
 | `fix-php.sh` | 🔧 Исправление PHP зависимостей | `make fix-php` |
 | `test-cloudpub.sh` | 🧪 Тестирование CloudPub | `./scripts/test-cloudpub.sh` |
+| `security-scan.sh` | 🔍 Быстрый аудит зависимостей (composer/pnpm audit) | `make security-scan` |
+| `create-version.sh` | ♻️ Создание копии проекта в `versions/<имя>` | `make create-version VERSION=v2` |
+| `delete-version.sh` | 🗑 Удаление версии из `versions/` | `make delete-version VERSION=v2` |
 
 ---
 
@@ -135,7 +138,7 @@ make security-tests SECURITY_TESTS_ARGS="--profile full --allow-fail"
 ### 🔄 Процесс исправления
 
 1. Останавливает все контейнеры
-2. Удаляет папку `vendor` и `composer.lock`
+2. Удаляет папку `vendor` и `composer.lock` (⚠️ lock-файл будет пересоздан с новыми версиями зависимостей — проверьте `git diff` перед коммитом; CI выполняет `composer validate`)
 3. Перезапускает PHP контейнеры
 4. Переустанавливает зависимости с исправленными версиями
 
@@ -190,10 +193,10 @@ make logs              # Просмотр логов
 
 ## 🔧 Системные требования
 
-- **Docker & Docker Compose**: Последние версии
+- **Docker & Docker Compose v2**: makefile вызывает `docker-compose`, а `dev-init.sh` — `docker compose`, поэтому должны быть доступны обе команды
 - **CloudPub API ключ**: Для создания публичных туннелей ([получить здесь](https://cloudpub.ru/))
 - **Bash shell**: macOS, Linux, WSL на Windows
-- **Свободные порты**: 3000 (frontend), 8000 (API), 5432 (PostgreSQL)
+- **Свободные порты**: 8000 (API), 5432 (PostgreSQL) или 3306 (MySQL), 5672/15672 (RabbitMQ, если включён). Порт фронтенда 3000 наружу не публикуется — доступ через CloudPub
 
 ---
 
@@ -245,7 +248,7 @@ SERVER_HOST=http://api-php:8000                # URL бэкенда для фр�
 CloudPub предоставляет HTTPS туннель к локальным контейнерам:
 
 ```
-Frontend (localhost:3000) → CloudPub → https://domain.cloudpub.ru
+Frontend (frontend:3000 в Docker-сети) → CloudPub → https://domain.cloudpub.ru
 ```
 
 Это позволяет тестировать Bitrix24 приложения с реальными webhook'ами и HTTPS сертификатами.
@@ -258,7 +261,7 @@ Frontend (localhost:3000) → CloudPub → https://domain.cloudpub.ru
 |--------|----------------|-----------|
 | **Frontend** | `./frontend/` | `/app/` |
 | **PHP API** | `./backends/php/` | `/var/www/` |
-| **Python API** | `./backends/python/api/` | `/var/www/api/` |
+| **Python API** | `./backends/python/django/` | `/var/www/api/` |
 | **Node.js API** | `./backends/node/api/` | `/app/` |
 
 **Преимущества:**
@@ -308,7 +311,7 @@ make dev-init
 
 ```bash
 # Полная очистка Docker окружения
-docker-compose down --remove-orphans --volumes
+docker compose down --remove-orphans --volumes
 docker container rm -f $(docker container ls -aq --filter "name=b24") 2>/dev/null || true
 docker network prune -f
 docker volume prune -f
@@ -322,7 +325,6 @@ make dev-init
 ### ❌ Порты заняты
 ```bash
 # Проверьте какие процессы используют порты
-lsof -i :3000
 lsof -i :8000
 lsof -i :5432
 
@@ -341,7 +343,7 @@ docker ps
 # Логи конкретного сервиса
 docker logs frontend -f
 docker logs api -f
-docker logs database-1 -f
+docker compose logs -f database-postgres   # или database-mysql
 
 # Вход в контейнер для отладки
 make php-cli-sh
