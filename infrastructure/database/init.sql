@@ -33,10 +33,7 @@ CREATE TABLE bitrix24account (
 
     -- Embedded Scope field
     application_scope_current_scope JSON,
-    current_scope JSON,
-
-    -- Unique constraint for combination of b24_user_id and domain_url
-    CONSTRAINT unique_b24_user_domain UNIQUE (b24_user_id, domain_url)
+    current_scope JSON
 );
 
 -------------------------------------------------------------
@@ -72,6 +69,15 @@ CREATE TABLE application_installation (
 -------------------------------------------------------------
 CREATE INDEX idx_bitrix24account_member_id ON bitrix24account (member_id);
 CREATE INDEX idx_bitrix24account_domain_url ON bitrix24account (domain_url);
+
+-- Uniqueness of (b24_user_id, domain_url) ONLY among non-deleted accounts.
+-- On re-install the SDK soft-deletes the previous account (status = 'deleted')
+-- and inserts a fresh one; a plain UNIQUE constraint raised SQLSTATE[23505]
+-- (duplicate key). This partial index preserves the single-active-account
+-- guarantee while letting the soft-deleted row coexist. See issue #8.
+CREATE UNIQUE INDEX unique_b24_user_domain
+    ON bitrix24account (b24_user_id, domain_url)
+    WHERE status <> 'deleted';
 
 CREATE INDEX idx_application_installation_status ON application_installation (status);
 CREATE INDEX idx_application_installation_portal_license_family ON application_installation (portal_license_family);
