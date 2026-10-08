@@ -1,5 +1,7 @@
 # Страница настроек с боковым меню
 
+> **Встраивание в проект.** Примеры ниже — фрагменты. Готовую страницу кладите в `frontend/app/pages/<name>.client.vue` и стройте по «Шаблону страницы» из [knowledge.md](./knowledge.md): `useAppInit('Name')` → `$initializeB24Frame()` → `initApp($b24, localesI18n, setLocale)` в `onMounted` с `try/catch` + `processErrorGlobal`, данные — через `$b24.actions.v2.*.make()` или методы `useApiStore()` (не `fetch`/`$fetch`), логи — `$logger`. **Не оборачивайте** разметку в `<B24App>` / `<B24SidebarLayout>` — они уже есть в `app/app.vue` и `layouts/`. Строки интерфейса выносите в `frontend/i18n/locales/*.json` и выводите через `$t('…')` (здесь они оставлены по-русски для краткости). `vue`-API, сторы и composables импортируются автоматически.
+
 > **⚠️ ВАЖНО ДЛЯ ИИ АГЕНТОВ**: Используйте компоненты **B24*** из Bitrix24 UI Kit, а НЕ U* из Nuxt UI!
 
 ## 📋 Описание
@@ -13,6 +15,21 @@
 - 📊 Разделы с подразделами
 - 🎛️ Управление модулями и инструментами
 - 🔧 Конфигурация параметров системы
+
+---
+
+## 🏠 Как настройки устроены в этом проекте
+
+В стартере уже есть рабочая страница настроек — `frontend/app/pages/slider/app-options.client.vue`. Начинайте с неё, а не с нуля:
+
+- Открывается в слайдере: из встройки — `$b24.slider.openSliderAppPage({ place: 'app-options', bx24_width: 650 })` (см. `handler/uf.demo.client.vue`); middleware `01.app.page.or.slider.global.ts` по `placement.options.place === 'app-options'` ведёт на `/slider/app-options`.
+- Layout: `definePageMeta({ layout: false })` + `<NuxtLayout name="slider">`; заголовок/описание — `usePageStore().title/description`, кнопки «Сохранить»/«Отмена» — в слоте `#footer`.
+- Данные: `useAppSettingsStore().configSettings` (общие для портала, `app.option.set`) или `useUserSettingsStore().configSettings` (личные, `user.option.set`); сохранение — `await appSettings.saveSettings()`. Новые поля добавляйте в тип `ConfigType` и значения по умолчанию в сторе.
+- Изменять настройки приложения может только администратор — страница проверяет `useUserStore().isAdmin`.
+- После сохранения страница отправляет pull-команду `reload.options` (`pull.application.event.add`), а встройки по ней вызывают `reloadData()` из `useAppInit`; затем `$b24.parent.closeApplication()`.
+- Ошибки сохранения — `useToast()` + `$logger.error`, клики — `track('ui_button_click', { 'ui.button_id': '…' })`.
+
+Пример ниже (страница с боковым меню) уместен, когда разделов настроек много; его секции тоже должны читать/писать `configSettings` через сторы.
 
 ---
 
@@ -40,13 +57,13 @@
 
     <!-- Content -->
     <main class="flex-1 p-8">
-      <h1 class="text-3xl font-bold mb-4">{{ currentTitle }}</h1>
+      <ProseH1 class="text-3xl font-bold mb-4">{{ currentTitle }}</ProseH1>
       <p>Контент раздела</p>
     </main>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 const menuItems = ref([
   { id: 'settings1', label: 'Settings1' },
   { id: 'settings2', label: 'Settings2' },
@@ -66,15 +83,14 @@ const currentTitle = computed(() =>
 
 ```vue
 <template>
-  <B24App>
     <div class="flex min-h-screen bg-gray-50">
       <!-- Левое боковое меню -->
       <aside class="w-80 bg-white border-r border-gray-200">
         <div class="p-6">
           <!-- Заголовок -->
-          <h2 class="text-2xl font-semibold text-gray-800 mb-4">
+          <ProseH2 class="text-2xl font-semibold text-gray-800 mb-4">
             Настройки
-          </h2>
+          </ProseH2>
 
           <!-- Поиск -->
           <B24Input
@@ -108,9 +124,9 @@ const currentTitle = computed(() =>
         <B24Container class="py-8 px-12 max-w-6xl">
           <!-- Заголовок секции -->
           <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-3">
+            <ProseH1 class="text-3xl font-bold text-gray-900 mb-3">
               {{ currentSectionData?.title }}
-            </h1>
+            </ProseH1>
             <p class="text-gray-600 text-lg">
               {{ currentSectionData?.description }}
             </p>
@@ -125,11 +141,10 @@ const currentTitle = computed(() =>
         </B24Container>
       </main>
     </div>
-  </B24App>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent } from 'vue'
+import type { Component } from 'vue'
 import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
 
 // Типы
@@ -141,15 +156,20 @@ interface MenuItem {
   description: string
 }
 
-// Динамическая загрузка компонентов секций
-const Settings1Section = defineAsyncComponent(() => 
-  import('./components/Settings/Settings1Section.vue')
+const toast = useToast()
+const route = useRoute()
+const router = useRouter()
+const { $logger } = useAppInit('SettingsPage')
+
+// Динамическая загрузка компонентов секций (файлы в app/components/settings/)
+const Settings1Section = defineAsyncComponent(() =>
+  import('~/components/settings/Settings1Section.vue')
 )
-const Settings2Section = defineAsyncComponent(() => 
-  import('./components/Settings/Settings2Section.vue')
+const Settings2Section = defineAsyncComponent(() =>
+  import('~/components/settings/Settings2Section.vue')
 )
-const Settings3Section = defineAsyncComponent(() => 
-  import('./components/Settings/Settings3Section.vue')
+const Settings3Section = defineAsyncComponent(() =>
+  import('~/components/settings/Settings3Section.vue')
 )
 
 // State
@@ -199,12 +219,13 @@ const currentSectionData = computed(() =>
 
 // Динамический компонент
 const currentComponent = computed(() => {
-  const componentMap = {
-    'Settings1Section': Settings1Section,
-    'Settings2Section': Settings2Section,
-    'Settings3Section': Settings3Section
+  const componentMap: Record<string, Component> = {
+    Settings1Section,
+    Settings2Section,
+    Settings3Section
   }
-  return componentMap[currentSectionData.value?.component] || null
+  const name = currentSectionData.value?.component
+  return name ? componentMap[name] ?? null : null
 })
 
 // Методы
@@ -212,14 +233,12 @@ const selectSection = (sectionId: string) => {
   currentSection.value = sectionId
   
   // Обновление URL (опционально)
-  const url = new URL(window.location.href)
-  url.searchParams.set('section', sectionId)
-  window.history.pushState({}, '', url)
+  router.replace({ query: { ...route.query, section: sectionId } })
 }
 
-const handleUpdate = (data: any) => {
-  console.log('Settings updated:', data)
-  useToast().add({
+const handleUpdate = (data: Record<string, unknown>) => {
+  $logger.debug('Settings updated', { data })
+  toast.add({
     title: 'Сохранено',
     description: 'Настройки успешно обновлены',
     color: 'air-primary-success'
@@ -227,10 +246,10 @@ const handleUpdate = (data: any) => {
 }
 
 // Восстановление секции из URL при загрузке
+// (инициализацию фрейма и initApp добавьте по «Шаблону страницы» из knowledge.md)
 onMounted(() => {
-  const urlParams = new URLSearchParams(window.location.search)
-  const sectionFromUrl = urlParams.get('section')
-  
+  const sectionFromUrl = String(route.query.section ?? '')
+
   if (sectionFromUrl && menuItems.value.some(i => i.id === sectionFromUrl)) {
     currentSection.value = sectionFromUrl
   }
@@ -242,7 +261,7 @@ onMounted(() => {
 
 ## 🎨 Компоненты секций
 
-### Settings1Section.vue - Секция с переключателями
+### app/components/settings/Settings1Section.vue — секция с переключателями
 
 ```vue
 <template>
@@ -250,9 +269,9 @@ onMounted(() => {
     <!-- Заголовок подраздела -->
     <div class="flex items-center gap-2 mb-6">
       <SettingsIcon class="w-5 h-5 text-gray-500" />
-      <h2 class="text-xl font-semibold text-gray-800">
+      <ProseH2 class="text-xl font-semibold text-gray-800">
         Какие инструменты показывать в меню
-      </h2>
+      </ProseH2>
     </div>
 
     <!-- Информационный блок -->
@@ -277,20 +296,10 @@ onMounted(() => {
         <div class="p-5 flex items-center justify-between">
           <!-- Левая часть: Toggle + Название -->
           <div class="flex items-center gap-4">
-            <!-- Toggle Switch -->
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                v-model="tool.enabled"
-                class="sr-only peer"
-                @change="updateTool(tool)"
-              >
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
-                <span class="absolute left-1 top-1 text-[10px] font-bold text-white">
-                  {{ tool.enabled ? 'ВКЛ' : '' }}
-                </span>
-              </div>
-            </label>
+            <B24Switch
+              v-model="tool.enabled"
+              @update:model-value="updateTool(tool)"
+            />
 
             <!-- Название инструмента -->
             <div class="flex items-center gap-2">
@@ -352,7 +361,6 @@ onMounted(() => {
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import SettingsIcon from '@bitrix24/b24icons-vue/main/SettingsIcon'
 import ChevronDownIcon from '@bitrix24/b24icons-vue/actions/ChevronDownIcon'
 import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
@@ -413,15 +421,19 @@ const tools = ref<Tool[]>([
 
 const saving = ref(false)
 
+const { $logger } = useAppInit('Settings1Section')
+const appSettings = useAppSettingsStore()
+const toast = useToast()
+
 const updateTool = (tool: Tool) => {
-  console.log('Tool updated:', tool)
+  $logger.debug('Tool updated', { id: tool.id, enabled: tool.enabled })
 }
 
 const performAction = (tool: Tool) => {
   if (tool.hasSubmenu) {
     tool.showSubmenu = !tool.showSubmenu
   } else {
-    console.log('Navigate to:', tool.id)
+    $logger.debug('Navigate to', { id: tool.id })
   }
 }
 
@@ -429,25 +441,21 @@ const saveSettings = async () => {
   saving.value = true
   
   try {
-    // Сохранение настроек через API
-    await fetch('/api/settings/tools', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tools: tools.value.map(t => ({
-          id: t.id,
-          enabled: t.enabled
-        }))
-      })
-    })
-    
-    useToast().add({
+    // Настройки приложения хранятся в app.option через стор (configSettings допускает доп. ключи)
+    appSettings.configSettings.tools = tools.value.map(t => ({
+      id: t.id,
+      enabled: t.enabled
+    }))
+    await appSettings.saveSettings()
+
+    toast.add({
       title: 'Сохранено',
       description: 'Настройки успешно обновлены',
       color: 'air-primary-success'
     })
   } catch (error) {
-    useToast().add({
+    $logger.error('Failed to save settings', { error })
+    toast.add({
       title: 'Ошибка',
       description: 'Не удалось сохранить настройки',
       color: 'air-primary-alert'
@@ -463,14 +471,14 @@ const resetSettings = () => {
 </script>
 ```
 
-### Settings2Section.vue - Секция с формой
+### app/components/settings/Settings2Section.vue — секция с формой
 
 ```vue
 <template>
   <div class="space-y-6">
     <B24Card>
       <div class="p-6">
-        <h3 class="text-lg font-semibold mb-4">Основные параметры</h3>
+        <ProseH3 class="text-lg font-semibold mb-4">Основные параметры</ProseH3>
         
         <div class="space-y-4">
           <B24FormField label="Название компании" required>
@@ -523,8 +531,11 @@ const timezoneOptions = [
   { value: 'America/New_York', label: 'Нью-Йорк (UTC-5)' }
 ]
 
-const saveForm = () => {
-  console.log('Save form:', form)
+const userSettings = useUserSettingsStore()
+
+const saveForm = async () => {
+  Object.assign(userSettings.configSettings, form) // личные настройки -> user.option.set
+  await userSettings.saveSettings()
 }
 
 const cancelForm = () => {
@@ -533,13 +544,13 @@ const cancelForm = () => {
 </script>
 ```
 
-### Settings3Section.vue - Секция со списком
+### app/components/settings/Settings3Section.vue — секция со списком
 
 ```vue
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
-      <h3 class="text-lg font-semibold">Список элементов</h3>
+      <ProseH3 class="text-lg font-semibold">Список элементов</ProseH3>
       <B24Button
         :icon="PlusIcon"
         color="air-primary"
@@ -554,19 +565,19 @@ const cancelForm = () => {
       :data="items"
       :loading="loading"
     >
-      <template #actions="{ row }">
+      <template #actions-cell="{ row }">
         <div class="flex gap-2">
           <B24Button
             :icon="EditIcon"
             size="xs"
             color="air-tertiary"
-            @click="editItem(row)"
+            @click="editItem(row.original)"
           />
           <B24Button
             :icon="TrashIcon"
             size="xs"
             color="air-tertiary"
-            @click="deleteItem(row)"
+            @click="deleteItem(row.original)"
           />
         </div>
       </template>
@@ -579,26 +590,37 @@ import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
 import EditIcon from '@bitrix24/b24icons-vue/button/EditIcon'
 import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
 
-const items = ref([])
+import type { TableColumn } from '@bitrix24/b24ui-nuxt'
+
+interface Row {
+  id: number
+  name: string
+  status: string
+}
+
+const { $logger } = useAppInit('Settings3Section')
+
+const items = ref<Row[]>([])
 const loading = ref(false)
 
-const columns = [
-  { key: 'id', header: 'ID' },
-  { key: 'name', header: 'Название' },
-  { key: 'status', header: 'Статус' },
-  { key: 'actions', header: 'Действия' }
+// Формат TanStack Table: accessorKey / id + header
+const columns: TableColumn<Row>[] = [
+  { accessorKey: 'id', header: 'ID' },
+  { accessorKey: 'name', header: 'Название' },
+  { accessorKey: 'status', header: 'Статус' },
+  { id: 'actions', header: 'Действия' }
 ]
 
 const addItem = () => {
-  console.log('Add item')
+  $logger.debug('Add item')
 }
 
-const editItem = (item) => {
-  console.log('Edit:', item)
+const editItem = (item: Row) => {
+  $logger.debug('Edit', { item })
 }
 
-const deleteItem = (item) => {
-  console.log('Delete:', item)
+const deleteItem = (item: Row) => {
+  $logger.debug('Delete', { item })
 }
 </script>
 ```
@@ -609,40 +631,11 @@ const deleteItem = (item) => {
 
 ### Активный пункт меню
 
-```vue
-<style scoped>
-.menu-item-active {
-  @apply bg-blue-500 text-white font-semibold shadow-sm;
-}
+Задавайте классы прямо в шаблоне (Tailwind 4 + переменные `--ui-*`); `@apply` в `<style scoped>` без `@reference` в Tailwind 4 не работает.
 
-.menu-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100;
-}
-</style>
-```
+### Переключатель
 
-### Toggle Switch (как в Bitrix24)
-
-```vue
-<template>
-  <label class="relative inline-flex items-center cursor-pointer">
-    <input
-      type="checkbox"
-      v-model="enabled"
-      class="sr-only peer"
-    >
-    <div class="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
-      <span class="absolute left-1 top-1 text-[10px] font-bold text-white">
-        {{ enabled ? 'ВКЛ' : '' }}
-      </span>
-    </div>
-  </label>
-</template>
-
-<script setup>
-const enabled = ref(true)
-</script>
-```
+Используйте `<B24Switch v-model="enabled" />` (как в `slider/app-options.client.vue`), а не самодельный `<input type="checkbox">`.
 
 ---
 
@@ -664,14 +657,13 @@ onMounted(() => {
 ### 2. Роутинг с Vue Router
 
 ```typescript
-import { useRouter, useRoute } from 'vue-router'
-
+// useRouter / useRoute в Nuxt импортируются автоматически
 const router = useRouter()
 const route = useRoute()
 
 const selectSection = (sectionId: string) => {
   router.push({
-    name: 'settings',
+    path: '/settings', // app/pages/settings.client.vue
     query: { section: sectionId }
   })
 }
@@ -719,20 +711,14 @@ interface SectionProps {
 ## 🔗 Интеграция с Backend
 
 ```typescript
-// Загрузка настроек
-const loadSettings = async (sectionId: string) => {
-  const response = await fetch(`/api/settings/${sectionId}`)
-  return await response.json()
-}
+// Настройки в Bitrix24 (app.option / user.option) — через сторы
+const appSettings = useAppSettingsStore()   // уже заполнен в initApp()
+appSettings.configSettings.someValue_1 = 60
+await appSettings.saveSettings()
 
-// Сохранение настроек
-const saveSettings = async (sectionId: string, data: any) => {
-  await fetch(`/api/settings/${sectionId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  })
-}
+// Настройки на своём бэкенде — метод в app/stores/api.ts по образцу getList:
+//   const saveSectionSettings = async (sectionId: string, data: Record<string, unknown>) =>
+//     await $api(`/api/settings/${sectionId}`, { method: 'POST', body: JSON.stringify(data), headers: authHeaders() })
 ```
 
 ---
@@ -743,14 +729,14 @@ const saveSettings = async (sectionId: string, data: any) => {
 
 1. **Lazy loading компонентов секций**
    ```typescript
-   const Settings1 = defineAsyncComponent(() => 
-     import('./Settings1Section.vue')
+   const Settings1 = defineAsyncComponent(() =>
+     import('~/components/settings/Settings1Section.vue')
    )
    ```
 
 2. **Сохранение текущей секции в URL**
    ```typescript
-   window.history.pushState({}, '', `?section=${sectionId}`)
+   router.replace({ query: { section: sectionId } })
    ```
 
 3. **Показывать индикатор загрузки при смене секций**
@@ -766,12 +752,11 @@ const saveSettings = async (sectionId: string, data: any) => {
 ## 📚 Ресурсы
 
 - **Bitrix24 UI Kit**: https://bitrix24.github.io/b24ui/llms-full.txt
-- **Toggle Switch**: https://flowbite.com/docs/forms/toggle/
 - **REST API**: https://apidocs.bitrix24.ru/
 
 ---
 
 **Дата**: Октябрь 2025  
 **Версия**: 1.0 (Bitrix24 UI Kit)  
-**Компоненты**: B24App, B24Card, B24Input, B24Button, B24FormField и др.
+**Компоненты**: B24Card, B24Input, B24Switch, B24Button, B24FormField и др.
 

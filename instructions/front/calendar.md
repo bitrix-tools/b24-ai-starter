@@ -1,5 +1,7 @@
 # Calendar: Календарная сетка с событиями
 
+> **Встраивание в проект.** Примеры ниже — фрагменты. Готовую страницу кладите в `frontend/app/pages/<name>.client.vue` и стройте по «Шаблону страницы» из [knowledge.md](./knowledge.md): `useAppInit('Name')` → `$initializeB24Frame()` → `initApp($b24, localesI18n, setLocale)` в `onMounted` с `try/catch` + `processErrorGlobal`, данные — через `$b24.actions.v2.*.make()` или методы `useApiStore()` (не `fetch`/`$fetch`), логи — `$logger`. **Не оборачивайте** разметку в `<B24App>` / `<B24SidebarLayout>` — они уже есть в `app/app.vue` и `layouts/`. Строки интерфейса выносите в `frontend/i18n/locales/*.json` и выводите через `$t('…')` (здесь они оставлены по-русски для краткости). `vue`-API, сторы и composables импортируются автоматически.
+
 > **⚠️ ВАЖНО ДЛЯ ИИ АГЕНТОВ**: Используйте компоненты **B24*** из Bitrix24 UI Kit для создания календарной сетки!
 
 ## 📋 Описание
@@ -42,7 +44,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const calendarDays = computed(() => {
   // Генерация дней месяца
@@ -63,7 +65,7 @@ const calendarDays = computed(() => {
         <B24Card>
           <template #header>
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">{{ monthName }} {{ currentYear }}</h3>
+              <ProseH3 class="text-lg font-semibold">{{ monthName }} {{ currentYear }}</ProseH3>
               <div class="flex gap-2">
                 <B24Button :icon="ChevronLeftIcon" size="sm" color="air-tertiary" 
                            @click="previousMonth" />
@@ -117,7 +119,7 @@ const calendarDays = computed(() => {
       <div>
         <B24Card>
           <template #header>
-            <h3 class="text-lg font-semibold">События ({{ events.length }})</h3>
+            <ProseH3 class="text-lg font-semibold">События ({{ events.length }})</ProseH3>
           </template>
 
           <div v-if="events.length === 0" class="text-center py-8 text-gray-500">
@@ -143,7 +145,7 @@ const calendarDays = computed(() => {
       <template #content>
         <B24Card v-if="selectedEvent">
           <template #header>
-            <h3 class="text-lg font-semibold">{{ selectedEvent.name }}</h3>
+            <ProseH3 class="text-lg font-semibold">{{ selectedEvent.name }}</ProseH3>
           </template>
           <div class="space-y-3 p-4">
             <p>{{ selectedEvent.description }}</p>
@@ -156,36 +158,58 @@ const calendarDays = computed(() => {
 </template>
 
 <script setup lang="ts">
+import type { B24Frame } from '@bitrix24/b24jssdk'
 import ChevronLeftIcon from '@bitrix24/b24icons-vue/actions/ChevronToTheLeftIcon'
 import ChevronRightIcon from '@bitrix24/b24icons-vue/actions/ChevronToTheRightIcon'
 
+interface CalendarEvent {
+  id: number
+  name: string
+  description: string
+  date: string // ISO 8601
+}
+
+interface CalendarDay {
+  key: string
+  date: Date
+  isCurrentMonth: boolean
+  isToday: boolean
+  events: CalendarEvent[]
+}
+
+const { locale, locales: localesI18n, setLocale } = useI18n()
+const { $logger, initApp, processErrorGlobal } = useAppInit('CalendarPage')
+const { $initializeB24Frame } = useNuxtApp()
+let $b24: null | B24Frame = null
+const apiStore = useApiStore()
+
 const currentDate = ref(new Date())
-const events = ref([])
-const selectedEvent = ref(null)
+const events = ref<CalendarEvent[]>([])
+const selectedEvent = ref<CalendarEvent | null>(null)
 const showModal = ref(false)
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 const currentYear = computed(() => currentDate.value.getFullYear())
 const currentMonth = computed(() => currentDate.value.getMonth())
-const monthName = computed(() => 
-  currentDate.value.toLocaleDateString('ru-RU', { month: 'long' })
+const monthName = computed(() =>
+  currentDate.value.toLocaleDateString(locale.value, { month: 'long' })
 )
 
-const calendarDays = computed(() => {
+const calendarDays = computed<CalendarDay[]>(() => {
   const year = currentYear.value
   const month = currentMonth.value
   const lastDay = new Date(year, month + 1, 0)
-  const days = []
+  const days: CalendarDay[] = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
+
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const date = new Date(year, month, i)
-    const dayEvents = events.value.filter(event => {
+    const dayEvents = events.value.filter((event) => {
       const eventDate = new Date(event.date)
       return eventDate.toDateString() === date.toDateString()
     })
-    
+
     days.push({
       key: `day-${i}`,
       date,
@@ -194,19 +218,26 @@ const calendarDays = computed(() => {
       events: dayEvents
     })
   }
-  
+
   return days
 })
 
 const sortedEvents = computed(() => {
-  return [...events.value].sort((a, b) => 
+  return [...events.value].sort((a, b) =>
     new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 })
 
 const loadEvents = async () => {
-  const response = await fetch(`/api/events?year=${currentYear.value}&month=${currentMonth.value + 1}`)
-  events.value = await response.json()
+  try {
+    // Метод своего бэкенда: добавьте getEvents(year, month): Promise<CalendarEvent[]>
+    // в app/stores/api.ts (по образцу getList). Для событий календаря Bitrix24 можно
+    // вызвать $b24.actions.v2.call.make({ method: 'calendar.event.get', params: { ... } })
+    // и привести DATE_FROM к ISO.
+    events.value = await apiStore.getEvents(currentYear.value, currentMonth.value + 1)
+  } catch (error) {
+    processErrorGlobal(error)
+  }
 }
 
 const previousMonth = () => {
@@ -221,25 +252,32 @@ const goToToday = () => {
   currentDate.value = new Date()
 }
 
-const selectDay = (day) => {
-  console.log('Selected:', day.date)
+const selectDay = (day: CalendarDay) => {
+  $logger.debug('Selected', { date: day.date })
 }
 
-const openEvent = (event) => {
+const openEvent = (event: CalendarEvent) => {
   selectedEvent.value = event
   showModal.value = true
 }
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('ru-RU')
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleString(locale.value)
 }
 
 watch([currentYear, currentMonth], () => {
   loadEvents()
 })
 
-onMounted(() => {
-  loadEvents()
+onMounted(async () => {
+  try {
+    $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    await $b24.parent.setTitle('Календарь')
+    await loadEvents()
+  } catch (error) {
+    processErrorGlobal(error)
+  }
 })
 </script>
 ```

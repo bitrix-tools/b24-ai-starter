@@ -1,5 +1,7 @@
 # B24Table: Универсальная таблица с данными
 
+> **Встраивание в проект.** Примеры ниже — фрагменты. Готовую страницу кладите в `frontend/app/pages/<name>.client.vue` и стройте по «Шаблону страницы» из [knowledge.md](./knowledge.md): `useAppInit('Name')` → `$initializeB24Frame()` → `initApp($b24, localesI18n, setLocale)` в `onMounted` с `try/catch` + `processErrorGlobal`, данные — через `$b24.actions.v2.*.make()` или методы `useApiStore()` (не `fetch`/`$fetch`), логи — `$logger`. **Не оборачивайте** разметку в `<B24App>` / `<B24SidebarLayout>` — они уже есть в `app/app.vue` и `layouts/`. Строки интерфейса выносите в `frontend/i18n/locales/*.json` и выводите через `$t('…')` (здесь они оставлены по-русски для краткости). `vue`-API, сторы и composables импортируются автоматически.
+
 > **⚠️ ВАЖНО ДЛЯ ИИ АГЕНТОВ**: Используйте компонент **B24Table** из Bitrix24 UI Kit, а НЕ UTable из Nuxt UI!
 
 ## 📋 Описание
@@ -24,7 +26,7 @@
   <B24Table :columns="columns" :data="data" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 // Колонки в формате TanStack Table: accessorKey + header
 const columns = [
   { accessorKey: 'id', header: 'ID' },
@@ -44,11 +46,10 @@ const data = ref([
 
 ```vue
 <template>
-  <B24App>
     <B24Container class="py-8">
       <!-- Заголовок -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold">📊 Список объектов</h1>
+        <ProseH1 class="text-3xl font-bold">📊 Список объектов</ProseH1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
           Табличное представление данных
         </p>
@@ -214,11 +215,11 @@ const data = ref([
         </div>
       </B24Card>
     </B24Container>
-  </B24App>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, h, resolveComponent } from 'vue'
+import { h, resolveComponent } from 'vue'
+import type { B24Frame } from '@bitrix24/b24jssdk'
 import type { TableColumn } from '@bitrix24/b24ui-nuxt'
 import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
 import DownloadIcon from '@bitrix24/b24icons-vue/outline/DownloadIcon'
@@ -236,6 +237,13 @@ interface Item {
   status: string
   date: string
 }
+
+const { locale, locales: localesI18n, setLocale } = useI18n()
+const { $logger, initApp, processErrorGlobal } = useAppInit('TablePage')
+const { $initializeB24Frame } = useNuxtApp()
+let $b24: null | B24Frame = null
+const apiStore = useApiStore()
+const toast = useToast()
 
 // State
 const data = ref<Item[]>([])
@@ -285,21 +293,20 @@ const loadData = async () => {
   loading.value = true
   
   try {
-    // Замените на ваш API endpoint
-    const params = new URLSearchParams({
-      page: page.value.toString(),
-      pageSize: pageSize.value.toString(),
+    // Метод своего бэкенда: добавьте getItemsPage(params): Promise<{ items: Item[], total: number }>
+    // в app/stores/api.ts (по образцу getList, с headers: authHeaders()).
+    // Для сущностей Bitrix24 — $b24.actions.v2.call.make({ method: 'crm.item.list', params: { ... } }).
+    const result = await apiStore.getItemsPage({
+      page: page.value,
+      pageSize: pageSize.value,
       search: searchQuery.value
     })
-    
-    const response = await fetch(`/api/items?${params}`)
-    const result = await response.json()
-    
+
     data.value = result.items
     total.value = result.total
   } catch (error) {
-    console.error('Error loading data:', error)
-    useToast().add({
+    $logger.error('Error loading data', { error })
+    toast.add({
       title: 'Ошибка',
       description: 'Не удалось загрузить данные',
       color: 'air-primary-alert'
@@ -311,7 +318,7 @@ const loadData = async () => {
 
 const formatDate = (dateString: string) => {
   if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('ru-RU')
+  return new Date(dateString).toLocaleDateString(locale.value)
 }
 
 const getStatusColor = (status: string) => {
@@ -326,29 +333,30 @@ const getStatusColor = (status: string) => {
 
 // Actions
 const addItem = () => {
-  console.log('Add item')
+  $logger.debug('Add item')
 }
 
 const viewItem = (item: Item) => {
-  console.log('View:', item)
+  $logger.debug('View', { item })
 }
 
 const editItem = (item: Item) => {
-  console.log('Edit:', item)
+  $logger.debug('Edit', { item })
 }
 
 const deleteItem = async (item: Item) => {
   if (!confirm(`Удалить объект #${item.id}?`)) return
   
   try {
-    await fetch(`/api/items/${item.id}`, { method: 'DELETE' })
-    useToast().add({
+    await apiStore.deleteItem(item.id) // метод бэкенда в app/stores/api.ts
+    toast.add({
       title: 'Удалено',
       color: 'air-primary-success'
     })
     await loadData()
   } catch (error) {
-    useToast().add({
+    $logger.error('Error deleting item', { error })
+    toast.add({
       title: 'Ошибка',
       color: 'air-primary-alert'
     })
@@ -356,7 +364,7 @@ const deleteItem = async (item: Item) => {
 }
 
 const bulkEdit = () => {
-  console.log('Bulk edit:', selectedRows.value)
+  $logger.debug('Bulk edit', { rows: selectedRows.value })
 }
 
 const bulkDelete = async () => {
@@ -380,14 +388,21 @@ const exportData = () => {
 }
 
 // Watchers
-// (для debounce используйте, например, watchDebounced из @vueuse/core)
+// (для debounce нужна своя реализация на setTimeout — @vueuse/core не входит в зависимости проекта)
 watch([page, searchQuery], () => {
   loadData()
 })
 
 // Lifecycle
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  try {
+    $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    await $b24.parent.setTitle('Список объектов')
+    await loadData()
+  } catch (error) {
+    processErrorGlobal(error)
+  }
 })
 </script>
 ```
@@ -406,7 +421,7 @@ onMounted(() => {
   <B24Table v-model:sorting="sorting" :columns="columns" :data="data" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 const sorting = ref([{ id: 'id', desc: false }])
 
 const columns = [
@@ -427,7 +442,7 @@ const columns = [
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 // { [rowId]: true } — колонку с чекбоксами (id: 'select') добавьте в columns, см. полный пример выше
 const rowSelection = ref({})
 </script>
@@ -467,15 +482,26 @@ const column: TableColumn<Item> = {
 ## 🔗 Интеграция с Backend
 
 ```typescript
+// 1. Свой бэкенд — метод в app/stores/api.ts (JWT подставляет authHeaders()):
+//    const getItems = async (): Promise<Item[]> => await $api('/api/items', { headers: authHeaders() })
 const loadData = async () => {
-  // Любой backend
-  const response = await fetch('/api/items', {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
+  data.value = await useApiStore().getItems()
+}
+
+// 2. Данные Bitrix24 — через JS SDK
+const loadDeals = async ($b24: B24Frame) => {
+  const response = await $b24.actions.v2.call.make<{ ID: string, TITLE: string }[]>({
+    method: 'crm.deal.list',
+    params: { select: ['ID', 'TITLE'] }
   })
-  data.value = await response.json()
+  if (!response.isSuccess) {
+    throw new Error(response.getErrorMessages().join('; '))
+  }
+  return response.getData()?.result ?? []
 }
 ```
+
+Не используйте `fetch`/`$fetch` напрямую из страниц.
 
 ---
 

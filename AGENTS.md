@@ -40,7 +40,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
 ## Ключевые соглашения
 
-- **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt`; страницы — `*.client.vue`; вызовы бэкенда — через `useApiStore`.
+- **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt` (+ `Prose*` для текста; `B24App` уже в `app.vue` — не вкладывать); страницы — `*.client.vue`, инициализация через `useAppInit` (`initApp`, `processErrorGlobal`); вызовы бэкенда — через `useApiStore`; строки — через i18n (`frontend/i18n/locales/`, эталон `en.json`).
 - **JS SDK 3**: `$b24.actions.v2|v3.*.make()` (нет `callMethod` / `callBatch`), логгер — `LoggerFactory.createForBrowser(name, isDev)`, вызовы `logger.info('message', { context })`.
 - **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/install`, `/api/getToken` и `/api/app-events/` (в PHP публичны также `/api/health` и `/api/custom-b24-events/` — см. `PUBLIC_ROUTES` в `JwtAuthenticationListener`). Не логировать OAuth-токены и URL вебхуков.
 - **Bitrix24**: виджеты — `placement.bind`, роботы — `bizproc.robot.add`, события — `event.bind`.

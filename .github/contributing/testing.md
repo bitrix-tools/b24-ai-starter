@@ -85,4 +85,20 @@
 | 15 | `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
 | 16 | Схема БД для PHP создаётся init-скриптами, а единственная Doctrine-миграция не содержит уникального индекса из #8 | `backends/php/migrations/`, `infrastructure/database/` | `make dev-php-db-migrate` на пустой БД без init-скриптов |
 
+### Фронтенд
+
+| # | Проблема | Где |
+| --- | --- | --- |
+| F1 | Whitelist в комментарии не содержит `ui_select_change` и `b24_api_call`; эндпоинт телеметрии есть только в PHP | `app/composables/useTelemetry.ts` |
+| F2 | `makeSendPullCommandHandler.bind(this)` — `this` в `<script setup>` не определён | `app/pages/handler/uf.demo.client.vue` |
+| F3 | `clearErrorHref` скопирован со страницы пользовательского поля; `isLoading=false` выставляется дважды | `app/pages/handler/placement-crm-deal-detail-tab.client.vue` |
+| F4 | `isSkipB24`: `!toPath.includes('/')` всегда `false`; пропускаются несуществующие `/eula`, `/render` | `app/middleware/01.app.page.or.slider.global.ts` |
+| F5 | `useSeoMeta({ title: page.title })` — строка, а не геттер: заголовок не обновляется | `app/layouts/slider.vue`, `placement.vue` |
+| F6 | Разные адреса бэкенда по умолчанию: `http://api:8000` и `http://api-need_set:8000` | `server/routes/install.post.ts`, `nuxt.config.ts` |
+| F7 | Только `en.json` и `ru.json` содержат все ключи; в 17 локалях нет новых ключей | `i18n/locales/` |
+| F8 | Страница телеметрии: сырой `<input>`, цвета `text-gray-*` вместо B24-компонентов и `--ui-*`, захардкоженная русская строка | `app/pages/telemetry-test.client.vue` |
+| F9 | `reinitToken` логирует через `console.error` вместо логгера | `app/stores/api.ts` |
+| F10 | `reloadData` до инициализации молча ничего не делает (optional chaining по `b24Helper`) | `app/composables/useAppInit.ts` |
+| F11 | В `user` нет поля `name`: полное имя хранится в `login`, по умолчанию `' '` | `app/stores/user.ts` |
+
 Проблемы безопасности в эту таблицу не вносятся — они передаются мейнтейнерам по [SECURITY.md](../../SECURITY.md).

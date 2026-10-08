@@ -1,5 +1,7 @@
 # B24Accordion: Раскрывающийся список объектов
 
+> **Встраивание в проект.** Примеры ниже — фрагменты. Готовую страницу кладите в `frontend/app/pages/<name>.client.vue` и стройте по «Шаблону страницы» из [knowledge.md](./knowledge.md): `useAppInit('Name')` → `$initializeB24Frame()` → `initApp($b24, localesI18n, setLocale)` в `onMounted` с `try/catch` + `processErrorGlobal`, данные — через `$b24.actions.v2.*.make()` или методы `useApiStore()` (не `fetch`/`$fetch`), логи — `$logger`. **Не оборачивайте** разметку в `<B24App>` / `<B24SidebarLayout>` — они уже есть в `app/app.vue` и `layouts/`. Строки интерфейса выносите в `frontend/i18n/locales/*.json` и выводите через `$t('…')` (здесь они оставлены по-русски для краткости). `vue`-API, сторы и composables импортируются автоматически.
+
 > **⚠️ ВАЖНО ДЛЯ ИИ АГЕНТОВ**: Используйте компонент **B24Accordion** из Bitrix24 UI Kit, а НЕ UAccordion из Nuxt UI!
 
 ## 📋 Описание
@@ -24,7 +26,7 @@
   <B24Accordion :items="items" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 const items = ref([
   {
     label: 'Объект 1',
@@ -44,11 +46,10 @@ const items = ref([
 
 ```vue
 <template>
-  <B24App>
     <B24Container class="py-8">
       <!-- Заголовок -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold">📚 Список объектов</h1>
+        <ProseH1 class="text-3xl font-bold">📚 Список объектов</ProseH1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
           Раскрывающийся список с детальной информацией
         </p>
@@ -202,18 +203,17 @@ const items = ref([
       <!-- Пусто -->
       <B24Card v-if="!loading && filteredItems.length === 0" class="text-center py-8">
         <InboxIcon class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <h3 class="text-lg font-semibold mb-2">Нет объектов</h3>
+        <ProseH3 class="text-lg font-semibold mb-2">Нет объектов</ProseH3>
         <p class="text-gray-600 mb-4">Создайте первый объект</p>
         <B24Button :icon="PlusIcon" color="air-primary" @click="addItem">
           Создать
         </B24Button>
       </B24Card>
     </B24Container>
-  </B24App>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import type { B24Frame } from '@bitrix24/b24jssdk'
 import PlusIcon from '@bitrix24/b24icons-vue/button/PlusIcon'
 import RefreshIcon from '@bitrix24/b24icons-vue/main/RefreshIcon'
 import SearchIcon from '@bitrix24/b24icons-vue/outline/SearchIcon'
@@ -234,6 +234,13 @@ interface Item {
   updatedAt: string
 }
 
+const { locales: localesI18n, setLocale } = useI18n()
+const { $logger, initApp, processErrorGlobal } = useAppInit('AccordionPage')
+const { $initializeB24Frame } = useNuxtApp()
+let $b24: null | B24Frame = null
+const apiStore = useApiStore()
+const toast = useToast()
+
 // State
 const items = ref<Item[]>([])
 const searchQuery = ref('')
@@ -242,16 +249,15 @@ const loading = ref(false)
 // Загрузка данных
 const loadItems = async () => {
   loading.value = true
-  
+
   try {
-    // Замените на ваш API endpoint
-    const response = await fetch('/api/items')
-    const data = await response.json()
-    
-    items.value = data.items || []
+    // Метод своего бэкенда: добавьте getItems(): Promise<Item[]> в app/stores/api.ts
+    // (по образцу getList, с headers: authHeaders()). Либо читайте данные Bitrix24
+    // через $b24.actions.v2.call.make({ method: '...' }).
+    items.value = await apiStore.getItems()
   } catch (error) {
-    console.error('Error loading items:', error)
-    useToast().add({
+    $logger.error('Error loading items', { error })
+    toast.add({
       title: 'Ошибка',
       description: 'Не удалось загрузить данные',
       color: 'air-primary-alert'
@@ -305,7 +311,7 @@ const getStatusColor = (status: string) => {
 }
 
 const getStatusIcon = (status: string) => {
-  const icons: Record<string, any> = {
+  const icons: Record<string, typeof InboxIcon> = {
     'ACTIVE': CheckIcon,
     'PENDING': LoadingIcon,
     'INACTIVE': InboxIcon,
@@ -320,12 +326,12 @@ const refreshItems = () => {
 }
 
 const addItem = () => {
-  console.log('Add item')
+  $logger.debug('Add item')
   // Реализуйте создание нового объекта
 }
 
 const editItem = (item: Item) => {
-  console.log('Edit item:', item)
+  $logger.debug('Edit item', { item })
   // Реализуйте редактирование
 }
 
@@ -333,11 +339,9 @@ const deleteItem = async (item: Item) => {
   if (!confirm(`Удалить объект "${item.name}"?`)) return
   
   try {
-    await fetch(`/api/items/${item.id}`, {
-      method: 'DELETE'
-    })
-    
-    useToast().add({
+    await apiStore.deleteItem(item.id) // метод бэкенда в app/stores/api.ts
+
+    toast.add({
       title: 'Удалено',
       description: `Объект "${item.name}" удалён`,
       color: 'air-primary-success'
@@ -345,7 +349,8 @@ const deleteItem = async (item: Item) => {
     
     await loadItems()
   } catch (error) {
-    useToast().add({
+    $logger.error('Error deleting item', { error })
+    toast.add({
       title: 'Ошибка',
       description: 'Не удалось удалить объект',
       color: 'air-primary-alert'
@@ -354,13 +359,20 @@ const deleteItem = async (item: Item) => {
 }
 
 const duplicateItem = (item: Item) => {
-  console.log('Duplicate item:', item)
+  $logger.debug('Duplicate item', { item })
   // Реализуйте дублирование
 }
 
 // Lifecycle
-onMounted(() => {
-  loadItems()
+onMounted(async () => {
+  try {
+    $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    await $b24.parent.setTitle('Список объектов')
+    await loadItems()
+  } catch (error) {
+    processErrorGlobal(error)
+  }
 })
 </script>
 ```
@@ -381,7 +393,7 @@ onMounted(() => {
 ### Кастомные иконки
 
 ```vue
-<script setup>
+<script setup lang="ts">
 import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
 import StarIcon from '@bitrix24/b24icons-vue/outline/FavoriteIcon'
 
@@ -399,7 +411,7 @@ const items = ref([
 ### Отключенные элементы
 
 ```vue
-<script setup>
+<script setup lang="ts">
 const items = ref([
   {
     label: 'Активный',
@@ -425,7 +437,7 @@ const items = ref([
   <B24Accordion :items="faqItems" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 const faqItems = ref([
   {
     label: 'Как начать работу с Bitrix24?',
@@ -459,36 +471,24 @@ const faqItems = ref([
 
 ## 🔗 Интеграция с Backend
 
-### Универсальная загрузка данных
+### Загрузка данных
 
-```vue
-<script setup>
-const loadItems = async () => {
-  loading.value = true
-  
-  try {
-    // Вариант 1: REST API Bitrix24
-    const response = await fetch('https://your-domain.bitrix24.com/rest/method', {
-      method: 'POST',
-      body: JSON.stringify({ /* params */ })
-    })
-    
-    // Вариант 2: Кастомный API
-    const response = await fetch('/api/items')
-    
-    // Вариант 3: Через SDK endpoint
-    const response = await fetch('/api/deals.php?category=1')
-    
-    const data = await response.json()
-    items.value = data.items || data.result || []
-  } catch (error) {
-    console.error('Error:', error)
-  } finally {
-    loading.value = false
-  }
+```typescript
+// Вариант 1: REST API Bitrix24 через JS SDK (из браузера, авторизация берётся из фрейма)
+const response = await $b24.actions.v2.call.make({
+  method: 'crm.deal.list',
+  params: { select: ['ID', 'TITLE'] }
+})
+if (!response.isSuccess) {
+  throw new Error(response.getErrorMessages().join('; '))
 }
-</script>
+const deals = response.getData()?.result ?? []
+
+// Вариант 2: свой бэкенд — метод в app/stores/api.ts (JWT добавляется через authHeaders())
+const apiItems = await useApiStore().getList()
 ```
+
+Прямые `fetch('https://<portal>/rest/...')` и `fetch('/api/...')` из страниц не используйте.
 
 ---
 
