@@ -28,9 +28,8 @@ def root(request: AuthorizedRequest):
 
 @xframe_options_exempt
 @require_GET
-@auth_required
-def health(request: AuthorizedRequest):
-    """Return authenticated health data for the Python backend."""
+def health(request):
+    """Public liveness probe (same in every backend): no auth, no sensitive data."""
     return JsonResponse({
         "status": "healthy",
         "backend": "python",

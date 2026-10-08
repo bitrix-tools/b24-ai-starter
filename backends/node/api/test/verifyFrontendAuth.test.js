@@ -57,7 +57,7 @@ test('asks the configured server first, then the other region', async () => {
   };
   const result = await verifyFrontendAuth(payload(), options(fetchImpl));
 
-  assert.deepEqual(result, { domain: 'example.bitrix24.ru', memberId: 'member-1' });
+  assert.deepEqual({ domain: result.domain, memberId: result.memberId }, { domain: 'example.bitrix24.ru', memberId: 'member-1' });
   assert.equal(urls.length, 2);
   assert.notEqual(new URL(urls[0]).host, new URL(urls[1]).host);
 });
@@ -83,5 +83,5 @@ test('reports 503, not 401, when no OAuth server can be reached', async () => {
 
 test('accepts a token the OAuth server confirms for this app and portal', async () => {
   const result = await verifyFrontendAuth(payload({ DOMAIN: 'https://Example.Bitrix24.ru/' }), options(answering({ result: appInfo() })));
-  assert.deepEqual(result, { domain: 'example.bitrix24.ru', memberId: 'member-1' });
+  assert.deepEqual({ domain: result.domain, memberId: result.memberId }, { domain: 'example.bitrix24.ru', memberId: 'member-1' });
 });

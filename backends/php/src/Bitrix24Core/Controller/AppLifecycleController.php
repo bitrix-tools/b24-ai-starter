@@ -27,6 +27,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -160,7 +161,7 @@ class AppLifecycleController extends AbstractController
                 'registration.events_count' => '2',
             ]);
 
-            $response = new Response('OK', 200);
+            $response = new JsonResponse(['message' => 'Installation successful'], 200);
             $this->logger->debug('AppLifecycleController.install.finish', [
                 'response' => $response->getContent(),
                 'statusCode' => $response->getStatusCode(),

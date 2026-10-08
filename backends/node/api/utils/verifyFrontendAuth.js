@@ -40,18 +40,14 @@ export function oauthServers(configured = process.env.B24_OAUTH_SERVER_URL) {
 }
 
 /**
- * @param {Record<string, unknown>} payload body of /api/getToken
- * @param {{ clientId: string, fetchImpl?: typeof fetch, timeoutMs?: number, servers?: string[] }} options
- * @returns {Promise<{ domain: string, memberId: string }>}
+ * Check an access token on the Bitrix24 OAuth server and return its `app.info`
+ * result if it belongs to OUR app, installed on `domain` with `memberId`.
+ *
+ * @param {string} accessToken
+ * @param {{ domain: string, memberId: string, clientId: string, fetchImpl?: typeof fetch, timeoutMs?: number, servers?: string[] }} options
+ * @returns {Promise<Record<string, any>>} app.info `result` (client_id, user_id, install.client_endpoint, …)
  */
-export async function verifyFrontendAuth(payload, { clientId, fetchImpl = fetch, timeoutMs = 5000, servers = oauthServers() }) {
-  const domain = normalizeDomain(payload?.DOMAIN);
-  const memberId = str(payload?.member_id);
-  const accessToken = str(payload?.AUTH_ID);
-
-  if (!domain || !memberId || !accessToken) {
-    throw new FrontendAuthError('Missing required parameters: DOMAIN, member_id, AUTH_ID', 400);
-  }
+export async function confirmAccessToken(accessToken, { domain, memberId, clientId, fetchImpl = fetch, timeoutMs = 5000, servers = oauthServers() }) {
   if (!clientId) {
     throw new FrontendAuthError('CLIENT_ID is not configured on the backend', 500);
   }
@@ -60,14 +56,33 @@ export async function verifyFrontendAuth(payload, { clientId, fetchImpl = fetch,
 
   if (
     appInfo.client_id !== clientId
-    || normalizeDomain(appInfo.install?.domain) !== domain
+    || normalizeDomain(appInfo.install?.domain) !== normalizeDomain(domain)
     || appInfo.install?.member_id !== memberId
     || appInfo.install?.installed !== true
   ) {
     throw new FrontendAuthError('Invalid Bitrix24 credentials', 401);
   }
 
-  return { domain, memberId };
+  return appInfo;
+}
+
+/**
+ * @param {Record<string, unknown>} payload body of /api/getToken or /api/install
+ * @param {{ clientId: string, fetchImpl?: typeof fetch, timeoutMs?: number, servers?: string[] }} options
+ * @returns {Promise<{ domain: string, memberId: string, appInfo: Record<string, any> }>}
+ */
+export async function verifyFrontendAuth(payload, options) {
+  const domain = normalizeDomain(payload?.DOMAIN);
+  const memberId = str(payload?.member_id);
+  const accessToken = str(payload?.AUTH_ID);
+
+  if (!domain || !memberId || !accessToken) {
+    throw new FrontendAuthError('Missing required parameters: DOMAIN, member_id, AUTH_ID', 400);
+  }
+
+  const appInfo = await confirmAccessToken(accessToken, { ...options, domain, memberId });
+
+  return { domain, memberId, appInfo };
 }
 
 async function fetchAppInfo(accessToken, { fetchImpl, timeoutMs, servers }) {
