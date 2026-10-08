@@ -11,9 +11,10 @@ useHead({
 const slots = defineSlots()
 
 const page = usePageStore()
+// getters, not values: pages set page.title after the layout is created
 useSeoMeta({
-  title: page.title,
-  description: page.description
+  title: () => page.title,
+  description: () => page.description
 })
 // endregion ////
 </script>

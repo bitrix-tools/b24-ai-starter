@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace App\Bitrix24Core\Controller;
 
+use App\Service\LogRedactor;
 use App\Service\Telemetry\TelemetryInterface;
 use Bitrix24\Lib\ApplicationInstallations;
 use Bitrix24\Lib\Bitrix24Accounts\ValueObjects\Domain;
@@ -40,7 +41,7 @@ final readonly class AppLifecycleEventController
     public function process(Request $incomingRequest): Response
     {
         $this->logger->debug('AppLifecycleEventController.process.start', [
-            'request' => $incomingRequest->request->all(),
+            'request' => LogRedactor::redact($incomingRequest->request->all()),
             'baseUrl' => $incomingRequest->getBaseUrl(),
         ]);
 
@@ -48,7 +49,7 @@ final readonly class AppLifecycleEventController
             // check is this request are valid bitrix24 event request?
             if (!RemoteEventsFactory::isCanProcess($incomingRequest)) {
                 $this->logger->error('AppLifecycleEventController.process.unknownRequest', [
-                    'request' => $incomingRequest->request->all(),
+                    'request' => LogRedactor::redact($incomingRequest->request->all()),
                 ]);
 
                 throw new InvalidArgumentException('AppLifecycleEventController controller can process only install or uninstall event requests from bitrix24');

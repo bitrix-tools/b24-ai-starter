@@ -11,6 +11,54 @@
       "message": {
         "title": "Olá!",
         "line1": "Vamos testar o funcionamento do aplicativo no Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Teste de telemetria"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Teste de telemetria"
+      },
+      "title": "Teste de telemetria",
+      "description": "Verificação visual de todos os canais de telemetria: eventos do backend, eventos do frontend, chamadas da API do Bitrix24.",
+      "section": {
+        "backend": "Eventos do backend (PHP)",
+        "backend_desc": "Clique no botão — o backend PHP enviará 7 eventos diferentes ao OTel Collector.",
+        "frontend": "Eventos do frontend",
+        "frontend_desc": "Cada botão / campo / formulário envia o evento correspondente via useTelemetry.",
+        "b24api": "Chamadas da API do Bitrix24",
+        "b24api_desc": "Chamadas diretas do JS SDK com rastreamento b24_api_call."
+      },
+      "action": {
+        "run_backend": "Disparar eventos do backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (leve)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Voltar"
+      },
+      "label": {
+        "select": "Seleção (ui_select_change)",
+        "form_field": "Campo do formulário",
+        "form_placeholder": "valor de teste"
+      },
+      "status": {
+        "idle": "Aguardando",
+        "ok": "✓ Enviado",
+        "error": "✗ Erro",
+        "result": "Resultado"
+      },
+      "result": {
+        "backend_fired": "{count} eventos enviados: {events}",
+        "sent": "{event} enviado",
+        "select_sent": "{event} enviado (selecionados: {values})",
+        "error_sent": "{event} enviado (leve, sem exceção real)",
+        "b24_user": "{method} → ID: {id}, nome: {name}",
+        "b24_status": "{method} → {count} status",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

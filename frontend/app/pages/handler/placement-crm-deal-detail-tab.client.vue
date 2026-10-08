@@ -68,7 +68,6 @@ async function makeSomeRandom(timeout: number = 1000) {
     isLoading.value = true
     await sleepAction(timeout)
     dataList.value = [...dataList.value].sort(() => Math.random() - 0.5)
-    isLoading.value = false
   } catch (error) {
     processErrorGlobal(error)
   } finally {
@@ -103,7 +102,7 @@ onMounted(async () => {
     processErrorGlobal(error, {
       homePageIsHide: true,
       isShowClearError: true,
-      clearErrorHref: '/handler/uf.demo.html'
+      clearErrorHref: '/handler/placement-crm-deal-detail-tab'
     })
   } finally {
     isLoading.value = false

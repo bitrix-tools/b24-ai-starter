@@ -19,6 +19,20 @@
 
 ---
 
+## Как SDK используется в этом проекте (читать первым)
+
+Примеры ниже описывают SDK в целом. В `frontend/` действуют свои соглашения — следуйте им:
+
+- **B24Frame** создаёт модуль `@bitrix24/b24jssdk-nuxt`: `const { $initializeB24Frame } = useNuxtApp(); const $b24 = await $initializeB24Frame()`. Фрейм один на всё приложение (его же использует глобальный middleware `01.app.page.or.slider.global.ts`), поэтому **не вызывайте `$b24.destroy()`** в страницах и не импортируйте `initializeB24Frame` напрямую.
+- **Инициализация страницы** — через `useAppInit('PageName')` → `{ $logger, initApp, processErrorGlobal, b24Helper, destroyB24Helper, … }`; `await initApp($b24, localesI18n, setLocale)` выставляет язык, вызывает `initB24Helper` (`App`, `AppOptions`, `UserOptions`, `Currency`, `Profile`), заполняет сторы и получает JWT (`apiStore.init`). В `onUnmounted` — `destroyB24Helper()` (если `b24Helper.value`). Полный шаблон — в `knowledge.md` («Шаблон страницы»).
+- **useB24Helper / Pull** — не вызывайте `useB24Helper()` в страницах: берите `usePullClient`, `useSubscribePullClient(handler, moduleId)`, `startPullClient`, `reloadData` из `useAppInit()` (пример — `pages/handler/uf.demo.client.vue`, отправка — `pull.application.event.add` в `slider/app-options.client.vue`).
+- **Настройки приложения/пользователя** — `useAppSettingsStore()` / `useUserSettingsStore()`: `configSettings` + `saveSettings()` (`app.option.set` / `user.option.set`), а не прямые `$b24.options.*`.
+- **Логирование** — `$logger` из `useAppInit`, вне страниц `LoggerFactory.createForBrowser('Name', import.meta.dev)`; вызовы `$logger.debug|info|warning|error(message, { context })`.
+- **Ошибки** — `try/catch`; фатальные → `processErrorGlobal(error)` (понимает `AjaxError`), восстановимые → `useToast()`.
+- **Вызовы своего бэкенда** — только через `useApiStore()`, не через SDK и не через `$fetch`.
+
+---
+
 ## Установка
 
 ### Node.js / Frontend (ESM)
@@ -69,7 +83,7 @@ $b24 = await initializeB24Frame() // Всегда await перед исполь�
 // Вызов REST API
 const result = await $b24.actions.v2.call.make({ method: 'crm.deal.list', params: { select: ['ID', 'TITLE'] } })
 
-// Очистка при размонтировании
+// Очистка при размонтировании (вне этого проекта; в frontend/ фрейм общий — не уничтожайте его)
 $b24.destroy()
 ```
 
@@ -351,7 +365,7 @@ const num = Text.numberFormat(12345.67, 2, '.', ' ') // "12 345.67"
 
 // Logger
 const logger = LoggerFactory.createForBrowser('MyApp', true) // isDev = true
-// Сигнатура: (message: string, context?: Record<string, any>)
+// Сигнатура: (message, context?) — context — объект, например { data }
 // Методы: debug, info, notice, warning, error, critical, alert, emergency
 logger.info('message', { data })
 logger.error('error', { error })
@@ -527,6 +541,9 @@ await $b24.setRestrictionManagerParams(ParamsFactory.getEnterprise())
 ### Паттерны инициализации
 
 #### Фронтенд (B24Frame)
+
+Общий паттерн SDK (в этом проекте его уже реализуют `$initializeB24Frame` + `useAppInit().initApp` — см. раздел «Как SDK используется в этом проекте»):
+
 ```typescript
 import { initializeB24Frame, B24Frame, useB24Helper, LoadDataType } from '@bitrix24/b24jssdk'
 
@@ -579,7 +596,7 @@ async function getData() {
 
 ✅ **Всегда:**
 - Использовать `await initializeB24Frame()` перед работой с B24Frame
-- Вызывать `$b24.destroy()` при размонтировании компонента
+- В этом проекте: при размонтировании страницы вызывать `destroyB24Helper()` из `useAppInit` (сам `$b24` общий — `destroy()` не вызывать)
 - Использовать `try-catch` для обработки `AjaxError`
 - Для больших списков (>1000) использовать `actions.v2.fetchList.make()` вместо `actions.v2.callList.make()`
 - Проверять `response.isSuccess` перед обработкой данных
@@ -591,7 +608,7 @@ async function getData() {
 - Не забывать `await` перед асинхронными вызовами
 - Не игнорировать ошибки (всегда обрабатывать через `catch`)
 - Не использовать удалённые в v3 методы (`callMethod`, `callBatch`, `callListMethod`, `fetchListMethod`, `LoggerBrowser`)
-- Не забывать вызывать `destroy()` при очистке
+- Не создавать собственные экземпляры `B24Frame` / `useB24Helper()` в страницах — использовать `$initializeB24Frame` и `useAppInit`
 - Не превышать лимиты batch (по умолчанию 50 команд)
 
 🔍 **При ошибках:**
@@ -606,7 +623,7 @@ async function getData() {
 1. **Batch запросы** — группировать связанные запросы
 2. **actions.v2.fetchList.make** — для больших данных использовать потоковую загрузку
 3. **RestrictionManager** — автоматически управляет throttling
-4. **Кэширование** — сохранять результаты через `options.appSet/userSet`
+4. **Настройки** — хранить через `useAppSettingsStore` / `useUserSettingsStore` (`app.option.set` / `user.option.set`)
 
 ---
 

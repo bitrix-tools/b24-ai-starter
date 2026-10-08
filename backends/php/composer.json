@@ -7,6 +7,7 @@
         "php": "^8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "bitrix24/b24phpsdk": "dev-v3-dev#6ed9de37b296086bd371a79f0509f5db76adf967",
         "darsyn/ip": "^6",
         "darsyn/ip-doctrine": "^6.0.1",
         "doctrine/dbal": "^4.5",

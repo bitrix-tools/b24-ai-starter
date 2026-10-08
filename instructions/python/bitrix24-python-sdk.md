@@ -1,6 +1,6 @@
 # Промпт для ИИ агента: Bitrix24 Starter Kit
 
-Ты - эксперт-разработчик, помогающий создавать приложения для Bitrix24 на основе готового стартер-кита. Твой проект находится в репозитории: `https://github.com/bitrix-tools/ai-hackathon-starter-full`
+Ты - эксперт-разработчик, помогающий создавать приложения для Bitrix24 на основе готового стартер-кита. Твой проект находится в репозитории: `https://github.com/bitrix-tools/b24-ai-starter`
 
 ## 📋 Описание приложения пользователя
 
@@ -50,9 +50,9 @@ starter-kit/
 - TailwindCSS
 
 **Backend (на выбор):**
-- **PHP**: Symfony 7, Doctrine ORM, PHP SDK для Bitrix24
-- **Python**: Django, b24pysdk
-- **Node.js**: Express, PostgreSQL/MySQL, JWT
+- **PHP**: Symfony 7.4 LTS, Doctrine ORM 3, PHP SDK для Bitrix24, OpenTelemetry
+- **Python**: Django 6.1, b24pysdk 1.3, Celery
+- **Node.js**: Node 24, Express 5, PostgreSQL/MySQL, JWT
 
 **Infrastructure:**
 - Docker & Docker Compose
@@ -75,7 +75,7 @@ make dev-python
 make dev-node
 ```
 
-**На macOS**: В `docker-compose.yml` для сервиса `cloudpub` используется `platform: linux/amd64` для эмуляции на ARM64.
+**На macOS**: платформа образа `cloudpub` задаётся переменной `CLOUDPUB_PLATFORM` в `.env` (по умолчанию `linux/amd64`, эмуляция на ARM64).
 
 ## 🚀 Пошаговая инструкция по развертыванию
 
@@ -87,8 +87,8 @@ make dev-node
 
 2. **Клонируйте репозиторий** (если еще не сделано)
    ```bash
-   git clone https://github.com/bitrix-tools/ai-hackathon-starter-full.git
-   cd ai-hackathon-starter-full
+   git clone https://github.com/bitrix-tools/b24-ai-starter.git
+   cd b24-ai-starter
    ```
 
 ### Шаг 2: Настройка переменных окружения
@@ -196,7 +196,7 @@ CLOUDPUB_PLATFORM=linux/arm64
    
    Пример вывода:
    ```
-   cloudpubApiPhp  | http://frontend:3000 -> https://inanely-muscular-wagtail.cloudpub.com:443
+   cloudpubFront  | http://frontend:3000 -> https://inanely-muscular-wagtail.cloudpub.com:443
    ```
 
 2. **Скопируйте полученный URL** (например: `https://inanely-muscular-wagtail.cloudpub.com`)
@@ -217,10 +217,12 @@ CLOUDPUB_PLATFORM=linux/arm64
 Для PHP бэкенда необходимо применить миграции:
 
 ```bash
-make dev-php-init-database
+make dev-php-init-database   # ВНИМАНИЕ: удаляет и пересоздаёт БД, только для нового проекта
+# или, для существующей БД:
+make dev-php-db-migrate
 ```
 
-Для Python и Node.js база данных инициализируется автоматически при первом запуске.
+Для Python миграции применяются автоматически при старте контейнера; для Node.js схема создаётся SQL-скриптами `infrastructure/database/init*.sql` при первом запуске БД.
 
 ### Шаг 6: Регистрация приложения в Bitrix24
 
@@ -246,16 +248,16 @@ make dev-php-init-database
    - `Application ID (client_id)` — например: `local.6901c_xxxxxxx`
    - `Application key (client_secret)` — например: `vXpv64o_xxxxxxx`
 
-6. **Обновите `.env` файл** (для PHP):
+6. **Обновите `.env` файл** (используют PHP и Python):
    ```env
    CLIENT_ID=local.6901c_xxxxxxx
    CLIENT_SECRET=vXpv64o_xxxxxxx
    ```
 
-7. **Перезапустите контейнеры** (для PHP):
+7. **Перезапустите контейнеры**:
    ```bash
    make down
-   make dev-php
+   make dev-php  # или dev-python, dev-node
    ```
 
 ### Шаг 7: Установка приложения в Bitrix24
@@ -271,7 +273,7 @@ make dev-php-init-database
 
 ### Шаг 8: Проверка работы
 
-1. **Проверьте health endpoint:**
+1. **Проверьте health endpoint** (публичный во всех бэкендах, JWT не нужен):
    ```bash
    curl http://localhost:8000/api/health
    ```
@@ -366,7 +368,7 @@ make prod-node
 
 ### JWT токены
 
-Все API endpoints (кроме `/api/install`, `/api/getToken` и `/api/app-events/`) требуют JWT токен в заголовке:
+Все API endpoints (кроме `/api/health`, `/api/install`, `/api/getToken` и `/api/app-events/`; в PHP публичен также `/api/custom-b24-events/`) требуют JWT токен в заголовке:
 
 ```javascript
 Authorization: `Bearer ${tokenJWT}`
@@ -377,6 +379,7 @@ Authorization: `Bearer ${tokenJWT}`
 1. **Установка приложения** (`/api/install`):
    - Получает данные из Bitrix24 (`DOMAIN`, `AUTH_ID`, `REFRESH_TOKEN`, `member_id`, `user_id`, и т.д.)
    - Сохраняет данные установки в БД
+   - Отвечает JSON `{"message": "Installation successful"}` во всех бэкендах
    - **НЕ требует JWT**
 
 2. **Получение токена** (`/api/getToken`):
@@ -387,7 +390,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 3. **События Bitrix24** (`/api/app-events/`):
    - Принимает lifecycle-события приложения от Bitrix24
-   - Передает обработку в Celery worker
+   - Python передаёт обработку в Celery worker; Node.js обрабатывает синхронно (`ONAPPINSTALL` → `active`, `ONAPPUNINSTALL` → `deleted` только с сохранённым `application_token`); PHP пока только логирует `ONAPPUNINSTALL`
    - **НЕ требует JWT**
 
 4. **Защищенные endpoints**:
@@ -400,7 +403,7 @@ Authorization: `Bearer ${tokenJWT}`
 ### Базовые endpoints (реализованы во всех бэкендах)
 
 #### `/api/health` (GET)
-Проверка состояния бэкенда.
+Проверка состояния бэкенда. Публичный во всех бэкендах (JWT не нужен).
 
 **Ответ:**
 ```json
@@ -447,7 +450,7 @@ Authorization: `Bearer ${tokenJWT}`
 }
 ```
 
-**Ответ:**
+**Ответ** (одинаковый в Python, Node.js и PHP):
 ```json
 {
   "message": "Installation successful"
@@ -514,8 +517,8 @@ def my_endpoint(request: AuthorizedRequest):
 **Node.js (Express):**
 ```javascript
 app.get('/api/my-endpoint', verifyToken, async (req, res) => {
-  // JWT payload доступен через:
-  const jwtPayload = req.jwtPayload;
+  // JWT payload кладёт verifyToken:
+  const jwtPayload = req.user;
   
   // Bitrix24 API вызовы...
   
@@ -574,7 +577,7 @@ const result = await $b24.actions.v2.call.make({ method: 'method.name', params: 
 const authData = $b24.auth.getAuthData()
 
 // Открытие слайдеров
-await $b24.slider.openPath('/path/to/page')
+await $b24.slider.openPath($b24.slider.getUrl('/path/to/page'))
 ```
 
 ### Работа с API store
@@ -654,7 +657,7 @@ DB_NAME=appdb
 DB_USER=appuser
 DB_PASSWORD=apppass
 
-# PHP specific
+# PHP / Python
 CLIENT_ID=local.xxx
 CLIENT_SECRET=xxx
 SCOPE=crm,user_brief,pull,placement,userfieldconfig
@@ -681,105 +684,41 @@ DJANGO_SUPERUSER_PASSWORD=admin123
 
 ### Bitrix24 JS SDK
 - Используется через `@bitrix24/b24jssdk-nuxt`
-- Документация: см. `AI-AGENT-GUIDE-JSSDK.md` в проекте
+- Документация: `instructions/front/bitrix24-js-sdk.md`, <https://bitrix24.github.io/b24jssdk/>
 
 ### Bitrix24 UI Kit
 - Компоненты через `@bitrix24/b24ui-nuxt`
-- Документация: см. `AI-AGENT-GUIDE-UIKIT.md` и `BITRIX24_UIKIT_*.md` в проекте
+- Документация: `instructions/front/knowledge.md` и рецепты в `instructions/front/`
 
 ### PHP SDK
 - Используется в `backends/php/`
-- Документация: см. `AI-AGENT-GUIDE-PHPSDK.md` в проекте
+- Документация: `instructions/php/bitrix24-php-sdk.md`
 
 ### Python SDK (b24pysdk)
-- Используется в `backends/python/`
-- Документация: см. `AI_AGENT_GUIDE_PYSDK.md` в проекте
+- Используется в `backends/python/django/`
+- Документация: `instructions/python/knowledge.md` и этот файл
 
 ## 📖 Дополнительные инструкции и примеры
 
-В репозитории проекта находятся подробные инструкции и примеры использования различных компонентов. При работе над задачей обязательно обращайся к ним для понимания правильных паттернов и лучших практик.
+Подробные инструкции лежат в `./instructions/` в корне репозитория ([GitHub](https://github.com/bitrix-tools/b24-ai-starter/tree/master/instructions)). При работе над задачей обращайся к ним для понимания правильных паттернов.
 
-📁 **Расположение инструкций:**
-- **В репозитории GitHub:** [https://github.com/bitrix-tools/ai-hackathon-starter-full/tree/main/instructions](https://github.com/bitrix-tools/ai-hackathon-starter-full/tree/main/instructions)
-- **Локально после клонирования:** `./instructions/` в корне проекта
+### SDK и бэкенды
 
-Все инструкции доступны как онлайн, так и локально после клонирования репозитория.
+- **Python (b24pysdk):** `instructions/python/knowledge.md` и этот файл
+- **PHP SDK:** `instructions/php/bitrix24-php-sdk.md`, `instructions/php/knowledge.md`
+- **Node.js:** `instructions/node/knowledge.md`
+- **JS SDK (фронтенд):** `instructions/front/bitrix24-js-sdk.md`
 
-### Примеры использования SDK
+### UI Kit
 
-**Python SDK:**
-- **Онлайн:** [Примеры использования Python SDK (b24pysdk)](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/PYTHON_SDK_EXAMPLES.md)
-- **Локально:** `instructions/PYTHON_SDK_EXAMPLES.md`
-  - Работа с задачами (tasks)
-  - Работа с пользователями (users)
-  - Работа с CRM сущностями
-  - Batch запросы
-  - Обработка ошибок
-
-**PHP SDK:**
-- **Онлайн:** [Примеры использования PHP SDK](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/PHP_SDK_EXAMPLES.md)
-- **Локально:** `instructions/PHP_SDK_EXAMPLES.md`
-  - Работа с Bitrix24ServiceBuilder
-  - Вызовы API методов
-  - Работа с событиями
-  - Batch запросы
-  - Интеграция с Symfony
-
-**Node.js SDK:**
-- **Онлайн:** [Примеры использования Node.js SDK](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/NODE_SDK_EXAMPLES.md)
-- **Локально:** `instructions/NODE_SDK_EXAMPLES.md`
-  - Прямые вызовы REST API
-  - Обработка токенов
-  - Работа с базой данных
-  - Асинхронные операции
-
-### Примеры использования UI Kit
-
-- **Онлайн:** [Примеры компонентов Bitrix24 UI Kit](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/UIKIT_EXAMPLES.md)
-- **Локально:** `instructions/UIKIT_EXAMPLES.md`
-  - Карточки и контейнеры (B24Card, B24Container)
-  - Формы и поля ввода (B24Input, B24Select, B24Textarea)
-  - Кнопки и действия (B24Button, B24ButtonGroup)
-  - Навигация и меню (B24Tabs, B24Menu)
-  - Таблицы и списки (B24Table, B24List)
-  - Уведомления и модальные окна (B24Alert, B24Modal)
-  - Календари и даты (B24Calendar, B24DatePicker)
-  - Аватары и бейджи (B24Avatar, B24Badge)
-  - Настройки приложения (B24SettingsPage)
-  - Placement компоненты
+- `instructions/front/knowledge.md` и рецепты компонентов в `instructions/front/` (`form.md`, `table-and-grid.md`, `calendar.md`, `selector.md`, `accordion.md`, `settings-page.md`)
 
 ### Стандарты кода и проверка качества
 
-**Python:**
-- **Онлайн:** [Инструкции по проверке кода Python](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/PYTHON_CODE_REVIEW_INSTRUCTION.md)
-- **Локально:** `instructions/PYTHON_CODE_REVIEW_INSTRUCTION.md`
-  - Использование black, flake8, pylint
-  - Типизация с помощью mypy
-  - Структура Django проекта
-  - Стиль кода (PEP 8)
-  - Команды для проверки: `make python-lint`, `make python-format`
-
-**PHP:**
-- **Онлайн:** [Инструкции по проверке кода PHP](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/PHP_CODE_REVIEW_INSTRUCTION.md)
-- **Локально:** `instructions/PHP_CODE_REVIEW_INSTRUCTION.md`
-  - Использование PHP CS Fixer, PHPStan
-  - Стиль кода (PSR-12)
-  - Структура Symfony проекта
-  - Команды для проверки: `make php-lint`, `make php-analyze`
-
-**Node.js/TypeScript:**
-- **Онлайн:** [Инструкции по проверке кода Node.js/TypeScript](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/nodejs-code-review-instruction.md
-- **Локально:** `instructions/nodejs-code-review-instruction.md`
-  - Использование ESLint, Prettier
-  - TypeScript strict mode
-  - Структура Express проекта
-  - Команды для проверки: `make node-lint`, `make node-format`
-
-**Frontend (Vue/TypeScript):**
-- Использование ESLint, Prettier
-  - Vue 3 Composition API паттерны
-  - TypeScript типизация
-  - Команды для проверки: `make frontend-lint`, `make frontend-format`
+- **Python:** `instructions/python/code-review.md`. Линтеры в Python-бэкенде не настроены; CI выполняет `python manage.py check` и `python manage.py makemigrations --check --dry-run`.
+- **PHP:** `instructions/php/code-review.md`. Команды: `make php-cli-lint-phpstan`, `make lint-rector`, `make lint-cs-fixer` (и `*-fix` варианты).
+- **Node.js:** `instructions/node/code-review.md`. Линтер не настроен; CI выполняет `node --check`.
+- **Frontend:** в `frontend/` — `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
 
 ### Встройки (Widgets) и события (Events)
 
@@ -791,8 +730,7 @@ DJANGO_SUPERUSER_PASSWORD=admin123
 - Примеры использования различных типов виджетов
 
 **Инструкция по разработке приложения с встройками:**
-- **Онлайн:** [Инструкция по разработке приложения с встройками](https://github.com/bitrix-tools/ai-hackathon-starter-full/blob/main/instructions/ai-instructions-widget-app.md)
-- **Локально:** `instructions/ai-instructions-widget-app.md`
+- **Локально:** `instructions/bitrix24/widget.md` (роботы — `instructions/bitrix24/crm-robot.md`)
 - Подробное руководство по интеграции встроек в приложение
 - Примеры кода и лучшие практики
 
@@ -813,8 +751,10 @@ DJANGO_SUPERUSER_PASSWORD=admin123
 handler_url = f"{config.app_base_url.rstrip('/')}/api/app-events/"
 client = bitrix24_account.get_client()
 
-for event in ("ONAPPINSTALL", "ONAPPUNINSTALL"):
-    client.event.bind(event=event, handler=handler_url).call()
+client.call_batch([
+    client.event.bind(event=event, handler=handler_url)
+    for event in ("ONAPPINSTALL", "ONAPPUNINSTALL")
+]).call()
 ```
 
 **2. Обработка событий на бэкенде:**
@@ -823,13 +763,13 @@ for event in ("ONAPPINSTALL", "ONAPPUNINSTALL"):
 
 **PHP бэкенд:**
 - Контроллер: `backends/php/src/Bitrix24Core/Controller/AppLifecycleEventController.php`
-- Endpoint: `/api/app-events` (POST)
-- Метод уже обрабатывает события `OnApplicationInstall` и `OnApplicationUninstall`
+- Endpoint: `/api/app-events/` (POST)
+- Метод уже обрабатывает события `OnApplicationInstall` и `OnApplicationUninstall` (известный пробел: `OnApplicationUninstall` пока только логируется, аккаунт не помечается удалённым)
 - Route зарегистрирован как публичный (не требует JWT) в `JwtAuthenticationListener`
 
 Пример обработки в PHP:
 ```php
-#[Route('/api/app-events', name: 'b24_events', methods: ['POST'])]
+#[Route('/api/app-events/', name: 'b24_events', methods: ['POST'])]
 public function process(Request $incomingRequest): Response
 {
     // Проверка валидности события Bitrix24
@@ -861,14 +801,7 @@ def app_events(request: EventRequest):
 Актуальная реализация находится в `backends/python/django/bitrix_events/views.py` и `backends/python/django/bitrix_events/event_processor.py`.
 
 **Node.js бэкенд:**
-```javascript
-app.post('/api/app-events/', async (req, res) => {
-  // Обработка события от Bitrix24
-  // Проверка валидности запроса
-  // Обработка OnApplicationInstall / OnApplicationUninstall
-  res.json({ status: 'OK' });
-});
-```
+Endpoint `/api/app-events/` уже реализован в `backends/node/api/app.js` (без `verifyToken`): `ONAPPINSTALL` подтверждает `access_token` на OAuth-сервере Bitrix24, сохраняет `application_token` и переводит аккаунт в `active`; `ONAPPUNINSTALL` принимается только с сохранённым `application_token` и помечает аккаунт `deleted`. Работа с таблицей `bitrix24account` — в `db/accounts.js`. Свои события добавляй новым публичным маршрутом в `createApp()` с аналогичной проверкой.
 
 **3. Важные моменты:**
 
@@ -983,7 +916,7 @@ make logs
 docker logs api --tail 50
 docker logs frontend --tail 50
 
-# Проверка health
+# Проверка health (публичный во всех бэкендах)
 curl http://localhost:8000/api/health
 ```
 
@@ -992,7 +925,7 @@ curl http://localhost:8000/api/health
 1. **Проблемы с JWT:**
    - Проверь, что токен передается в заголовке
    - Проверь срок действия токена (1 час)
-   - Вызови `apiStore.reinitToken()` для обновления
+   - Для обновления токена вызови `apiStore.init($b24)` повторно (`reinitToken` внутренний и не экспортируется)
 
 2. **Проблемы с Bitrix24 API:**
    - Проверь права доступа (scopes) в настройках приложения
@@ -1009,7 +942,7 @@ curl http://localhost:8000/api/health
 - Проект поддерживает hot-reload в development режиме
 - Frontend использует SSR=false (только клиентский рендеринг)
 - Все API запросы проксируются через Nuxt dev proxy
-- База данных инициализируется автоматически при первом запуске
+- База данных: PHP — `make dev-php-db-migrate`, Python — миграции при старте контейнера, Node.js — `infrastructure/database/init*.sql`
 - Cloudpub предоставляет публичный HTTPS URL для разработки
 
 ---

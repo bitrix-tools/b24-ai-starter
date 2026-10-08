@@ -6,6 +6,37 @@
 
 ## [Unreleased]
 
+### Security
+
+- `/api/getToken` (PHP, Node) больше не выдаёт JWT по одним лишь присланным `DOMAIN`/`member_id`: `AUTH_ID` проверяется OAuth-сервером Bitrix24 (`app.info` — должен вернуть `client_id` приложения и те же домен и `member_id`); сначала проверяется, что приложение установлено на портале (локальная БД). Та же проверка, что в Python (b24pysdk).
+- Логи: тела запросов проходят через редактор — PHP `LogRedactor`, Node `redactSensitive()` (одинаковый список ключей, без учёта регистра); OAuth-токены и `application_token` маскируются.
+- PHP: из `backends/php/.env` удалён закоммиченный заголовок авторизации OTEL-экспортёра; значение задаётся в `.env.local`. Токен остаётся в истории git — его владелец должен его отозвать.
+- Python: `/api/install` не принимает JWT и требует администратора портала.
+
+### Fixed
+
+- Бэкенды: `/api/health` публичный во всех бэкендах (раньше в Python и Node требовал JWT) и отвечает `{status, backend, timestamp}`; `/api/install` везде отвечает JSON `{"message": "Installation successful"}` (PHP раньше — текст `OK`, Node — `{"message": "All success"}`).
+- Переустановка (#8) на базе, созданной до исправления: `make db-upgrade` применяет идемпотентные скрипты `infrastructure/database/upgrades/` (PostgreSQL и MySQL), без потери данных.
+- `make prod-*` собирали образы в dev-режиме (передавался неиспользуемый `FRONTEND_TARGET`) и поднимали только бэкенд. Теперь подключается `docker-compose.prod.yml`: стадия `production` образов, без монтирования исходников, тот же набор профилей (фронтенд, БД, очередь), что в `dev-*`.
+- make: выбирает `docker compose` (v2), если он есть, иначе `docker-compose` (v1); `make down` останавливает все профили (включая БД и `python-worker`); `down-all` больше не ссылается на несуществующий `docker-compose.server.yml`; удалена цель `logs-nginxproxy`; `make fix-php` больше не удаляет `composer.lock`.
+- Python: `DEBUG` берётся из `BUILD_TARGET` (был захардкожен `True`, в т.ч. в production); пустой `VIRTUAL_HOST` больше не ломает `ALLOWED_HOSTS`; разрешены внутренние имена `api`/`api-python`.
+- Python: контейнер не выполняет `makemigrations` при старте; ошибка `migrate` больше не маскируется.
+- Python: при `ENABLE_RABBITMQ=0` события `/api/app-events/` обрабатываются сразу (раньше уходили в Celery без брокера и терялись).
+- PHP не запускался после обновления зависимостей: убраны опции `proxy_dir`/`proxy_auto_generate`, которых нет в doctrine-bundle 3; `bitrix24/b24phpsdk` закреплён на коммите, совместимом с `mesilov/bitrix24-php-lib` 0.5.2; добавлен обязательный `OTEL_TELEMETRY_PROFILE=simple-ui`; `.env` снова парсится (значение с пробелом без кавычек).
+- PHP: `phpunit` без параметров падал из-за пересекающихся testsuite и `failOnWarning`; добавлен suite по умолчанию `all` (security + telemetry, 346 тестов) и цели `make test-php`, `make test-php-security`; аннотации тестов переведены на атрибуты PHPUnit.
+- PHP: в образ `php-fpm` добавлено расширение `amqp` (было только в `php-cli`) — Messenger/AMQP из веб-запросов.
+- Фронтенд: страница ошибки учитывает параметры `processErrorGlobal` (`isShowClearError`, `clearErrorHref`, `clearErrorTitle`) — ссылки «очистить ошибку» указывали на несуществующие `.html`-адреса и не показывались; заголовок в layout `slider`/`placement` обновляется реактивно; адрес бэкенда по умолчанию — `http://api:8000` и в dev-прокси, и в `server/routes`; `reinitToken()`/`reloadData()` до инициализации бросают понятную ошибку вместо молчания; мелкие правки (`bind(this)`, двойной сброс `isLoading`, условие пропуска фрейма в middleware).
+- i18n: во всех 19 локалях одинаковый набор ключей (в 17 не хватало строк страницы телеметрии, во `vn.json` была старая структура — вьетнамский интерфейс частично показывался на английском); тест `test/i18n.spec.ts` не даёт разойтись снова.
+- Страница `telemetry-test`: компоненты B24 и токены UI-кита вместо сырых `<input>` и цветов Tailwind, строки вынесены в i18n.
+
+### Changed
+
+- Node: бэкенд больше не заглушка — `app.js` (`createApp()` с внедряемыми зависимостями), `server.js` (пул БД + `listen`), `db/accounts.js` (общая таблица `bitrix24account`, PostgreSQL и MySQL). `/api/install` проверяет `AUTH_ID` OAuth-сервером, сохраняет аккаунт и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL`; добавлен `/api/app-events/` (`ONAPPUNINSTALL` — только с сохранённым `application_token`). Тесты — `pnpm test` (`node --test`).
+- Профили для `dev-*` / `prod-*` вычисляются в одном месте — `scripts/compose-profiles.sh`. Стадия Python-образа переименована `prod` → `production`.
+- frontend: `LoggerBrowser` → `LoggerFactory.createForBrowser()` (JS SDK 3); состояние загрузки — локальный `ref` вместо удалённого `useDashboard().isLoading`; в `useUserStore` поле `login` (хранило полное имя) переименовано в `fullName`.
+- Удалены нерабочий скрипт `translate-ui` и навык `bitrix24-static-local-app` (инструментов статической сборки нет; стартер работает с бэкендом). Навык `Bitrix24 MCP server` переименован в `bitrix24-mcp-server` (`SKILL.md`), чтобы его находили агенты.
+- CI: PHP — `composer install`, `lint:container` (prod) и все тесты; Python — `manage.py test`; Node — `pnpm test`; новая джоба Docker — сборка production-образов и smoke-тест Node + PostgreSQL; repo-lint — actionlint и markdownlint. GitHub Actions закреплены по SHA, добавлен Dependabot.
+
 ### Dependencies
 
 - frontend: `@bitrix24/b24jssdk` / `-nuxt` 3.0, `@bitrix24/b24ui-nuxt` 2.14, Nuxt 4.6, Pinia 4, ESLint 10, Vitest 5, TypeScript 6.0 (TS 7 пока не поддерживается `vue-tsc` и `typescript-eslint`).
@@ -14,12 +45,7 @@
 - php backend: Symfony 7.3 (EOL) → 7.4 LTS, `prefer-stable: true`.
 - Node 20 → 24, pnpm 9 → 12 (Dockerfile и CI).
 
-### Changed
-
-- frontend: `LoggerBrowser` → `LoggerFactory.createForBrowser()` (JS SDK 3); состояние загрузки — локальный `ref` вместо удалённого `useDashboard().isLoading`.
-
 ### Docs
 
-- `instructions/front/*` приведены к b24jssdk 3 и b24ui 2.14 (иконки, цвета `air-*`, таблицы на TanStack-колонках и др.).
-- `AGENTS.md` — единый источник правды для агентов и контрибьюторов; `CLAUDE.md` — ссылка на него.
-- `SECURITY.md`, `.github/contributing/`, Dependabot, пины GitHub Actions по SHA, actionlint и markdownlint в CI.
+- `AGENTS.md` — единый источник правды для агентов и контрибьюторов; `CLAUDE.md` — ссылка на него. Добавлены `SECURITY.md` и `.github/contributing/` (ревью, зависимости, план проверки).
+- README, `instructions/`, `scripts/README.md` и навыки сверены с текущим кодом; `instructions/front/*` приведены к b24jssdk 3 и b24ui 2.14 (иконки, цвета `air-*`, таблицы на TanStack-колонках и др.).

@@ -38,17 +38,27 @@
         "b24_user": "user.current",
         "b24_status": "crm.status.list",
         "b24_placement": "placement.info",
-        "back": "\u2190 Назад"
+        "back": "← Назад"
       },
       "label": {
         "select": "Выбор (ui_select_change)",
-        "form_field": "Поле формы"
+        "form_field": "Поле формы",
+        "form_placeholder": "тестовое значение"
       },
       "status": {
         "idle": "Ожидание",
-        "ok": "\u2713 Отправлено",
-        "error": "\u2717 Ошибка",
+        "ok": "✓ Отправлено",
+        "error": "✗ Ошибка",
         "result": "Результат"
+      },
+      "result": {
+        "backend_fired": "Отправлено событий: {count}: {events}",
+        "sent": "{event} отправлено",
+        "select_sent": "{event} отправлено (выбрано: {values})",
+        "error_sent": "{event} отправлено (мягко, без реального исключения)",
+        "b24_user": "{method} → ID: {id}, имя: {name}",
+        "b24_status": "{method} → статусов: {count}",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

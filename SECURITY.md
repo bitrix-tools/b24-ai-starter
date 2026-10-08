@@ -1,6 +1,6 @@
 # Политика безопасности
 
-<sub>Last reviewed: 2026-10-07.</sub>
+<sub>Last reviewed: 2026-10-08.</sub>
 
 ## Как сообщить об уязвимости
 
@@ -21,8 +21,8 @@
 
 ## Что входит в зону ответственности
 
-- Код этого репозитория: `frontend/`, `backends/*`, `infrastructure/`, `docker-compose.yml`, скрипты.
-- Проверка JWT, обработка OAuth-токенов Bitrix24, обработчики событий `/api/app-events/`.
+- Код этого репозитория: `frontend/`, `backends/*`, `infrastructure/`, `docker-compose.yml`, `docker-compose.prod.yml`, скрипты.
+- Проверка JWT, обработка OAuth-токенов Bitrix24, обработчики событий `/api/app-events/`, проверка `AUTH_ID` в `/api/getToken` и `/api/install`.
 
 Уязвимости в SDK сообщайте в их репозитории:
 [b24jssdk](https://github.com/bitrix24/b24jssdk/security/advisories/new),

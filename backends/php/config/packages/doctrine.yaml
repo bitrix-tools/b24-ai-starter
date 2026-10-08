@@ -41,8 +41,6 @@ when@test:
 when@prod:
     doctrine:
         orm:
-            proxy_auto_generate: 0
-            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
             query_cache_driver:
                 type: pool
                 pool: doctrine.system_cache_pool

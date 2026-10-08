@@ -13,8 +13,7 @@
     "lint:fix": "eslint --fix .",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "translate-ui": "tsx tools/translate.ui.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bitrix24/b24icons-vue": "^2.0.8",

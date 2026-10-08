@@ -11,6 +11,54 @@
       "message": {
         "title": "Halo!",
         "line1": "Mari kita uji cara kerja aplikasi di Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Uji telemetri"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Uji telemetri"
+      },
+      "title": "Uji telemetri",
+      "description": "Verifikasi visual semua saluran telemetri: event backend, event frontend, panggilan API Bitrix24.",
+      "section": {
+        "backend": "Event backend (PHP)",
+        "backend_desc": "Tekan tombol — backend PHP akan mengirim 7 event berbeda ke OTel Collector.",
+        "frontend": "Event frontend",
+        "frontend_desc": "Setiap tombol / bidang / formulir mengirim event terkait melalui useTelemetry.",
+        "b24api": "Panggilan API Bitrix24",
+        "b24api_desc": "Panggilan langsung JS SDK dengan pelacakan b24_api_call."
+      },
+      "action": {
+        "run_backend": "Kirim event backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (ringan)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Kembali"
+      },
+      "label": {
+        "select": "Pilihan (ui_select_change)",
+        "form_field": "Bidang formulir",
+        "form_placeholder": "nilai uji"
+      },
+      "status": {
+        "idle": "Menunggu",
+        "ok": "✓ Terkirim",
+        "error": "✗ Kesalahan",
+        "result": "Hasil"
+      },
+      "result": {
+        "backend_fired": "{count} event terkirim: {events}",
+        "sent": "{event} terkirim",
+        "select_sent": "{event} terkirim (dipilih: {values})",
+        "error_sent": "{event} terkirim (ringan, tanpa pengecualian nyata)",
+        "b24_user": "{method} → ID: {id}, nama: {name}",
+        "b24_status": "{method} → {count} status",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

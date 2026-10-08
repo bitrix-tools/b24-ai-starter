@@ -689,11 +689,13 @@ const result = someVeryLongFunctionName(
 // ✅ Правильно в package.json
 {
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  }
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.9.1"
 }
 ```
+
+В стартере (`backends/node/api/package.json`) уже заданы `engines.node: ">=22"` и `packageManager: "pnpm@12.9.1"`; Docker и CI используют Node 24.
 
 **Критичность:** Важная  
 **Действие при обнаружении:** Предложить добавить поле engines в package.json.
@@ -795,12 +797,11 @@ const __dirname = dirname(__filename);
 // ✅ Правильно
 {
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "jest": "^29.5.0",
-    "eslint": "^8.38.0"
+    "nodemon": "^3.1.14"
   }
 }
 ```
@@ -816,7 +817,7 @@ const __dirname = dirname(__filename);
 - Нет зависимостей с известными уязвимостями
 
 **Критичность:** Важная  
-**Действие при обнаружении:** Предложить проверить зависимости командой `npm audit` и обновить при необходимости.
+**Действие при обнаружении:** Предложить проверить зависимости командой `pnpm audit` (в `backends/node/api`) и обновить; lock-файл `pnpm-lock.yaml` обновлять только через pnpm при необходимости.
 
 ---
 
@@ -824,7 +825,7 @@ const __dirname = dirname(__filename);
 
 ### Шаг 1: Предварительный анализ
 1. Определить тип проекта (API, CLI tool, библиотека)
-2. Проверить наличие package.json, .eslintrc, .prettierrc
+2. Проверить наличие package.json, конфигов линтера/форматтера (в Node-бэкенде стартера их нет; CI выполняет `node --check` и `pnpm test` (`node --test`) в `backends/node/api`)
 3. Определить используемый стиль модулей (CommonJS или ES6)
 
 ### Шаг 2: Анализ кода

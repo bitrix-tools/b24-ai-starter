@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Telemetry\Config;
 
 use App\Service\Telemetry\Config\OtlpConfig;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -200,9 +201,7 @@ class OtlpConfigTest extends TestCase
         );
     }
 
-    /**
-     * @dataProvider validEnvironmentProvider
-     */
+    #[DataProvider('validEnvironmentProvider')]
     public function testValidEnvironments(string $environment): void
     {
         $config = new OtlpConfig(

@@ -11,6 +11,54 @@
       "message": {
         "title": "こんにちは！",
         "line1": "Bitrix24でのアプリケーションの動作をテストしてみましょう。"
+      },
+      "action": {
+        "telemetry_test": "テレメトリーテスト"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "テレメトリーテスト"
+      },
+      "title": "テレメトリーテスト",
+      "description": "すべてのテレメトリーチャネルの目視確認：バックエンドイベント、フロントエンドイベント、Bitrix24 API呼び出し。",
+      "section": {
+        "backend": "バックエンドイベント（PHP）",
+        "backend_desc": "ボタンを押すと、PHPバックエンドがOTel Collectorに7種類のイベントを送信します。",
+        "frontend": "フロントエンドイベント",
+        "frontend_desc": "各ボタン / フィールド / フォームは、useTelemetry経由で対応するイベントを送信します。",
+        "b24api": "Bitrix24 API呼び出し",
+        "b24api_desc": "b24_api_callトラッキング付きのJS SDK直接呼び出し。"
+      },
+      "action": {
+        "run_backend": "バックエンドイベントを送信",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error（ソフト）",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← 戻る"
+      },
+      "label": {
+        "select": "選択（ui_select_change）",
+        "form_field": "フォームフィールド",
+        "form_placeholder": "テスト値"
+      },
+      "status": {
+        "idle": "待機中",
+        "ok": "✓ 送信済み",
+        "error": "✗ エラー",
+        "result": "結果"
+      },
+      "result": {
+        "backend_fired": "{count}件のイベントを送信：{events}",
+        "sent": "{event}を送信しました",
+        "select_sent": "{event}を送信しました（選択：{values}）",
+        "error_sent": "{event}を送信しました（ソフト、実際の例外なし）",
+        "b24_user": "{method} → ID: {id}, 名前: {name}",
+        "b24_status": "{method} → {count}件のステータス",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

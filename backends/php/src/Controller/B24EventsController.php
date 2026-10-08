@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\LogRedactor;
 use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
 use App\Service\Telemetry\TelemetryInterface;
 use Bitrix24\SDK\Application\Contracts\Bitrix24Accounts\Entity\Bitrix24AccountInterface;
@@ -41,7 +42,7 @@ class B24EventsController extends AbstractController
     public function processEvent(Request $request): JsonResponse
     {
         $this->logger->debug('B24EventsController.processEvent.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -59,8 +60,7 @@ class B24EventsController extends AbstractController
             // walidate incoming request
             if (!RemoteEventsFactory::isCanProcess($request)) {
                 $this->logger->error('B24EventsController.processEvent.unknownRequest', [
-                    'request' => $request->request->all(),
-                    'payload' => $request->getContent(),
+                    'request' => LogRedactor::redact($request->request->all()),
                 ]);
             }
 

@@ -22,3 +22,8 @@ phpstan.neon
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+###> symfony/framework-bundle 7.4 ###
+# Generated config reference for IDE autocompletion (cache:clear)
+/config/reference.php
+###< symfony/framework-bundle 7.4 ###

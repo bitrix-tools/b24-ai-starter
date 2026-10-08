@@ -23,13 +23,14 @@ echo "======================================"
 
 # Останавливаем все контейнеры
 print_warning "Останавливаем все контейнеры..."
-docker-compose down 2>/dev/null || true
+make down >/dev/null 2>&1 || true
 
-# Удаляем проблемные файлы
-print_warning "Очищаем vendor и composer.lock..."
-rm -rf backends/php/vendor backends/php/composer.lock
+# Удаляем только vendor: composer.lock — источник версий, entrypoint php-fpm
+# выполнит `composer install` по нему. Обновление версий — `make composer-update`.
+print_warning "Очищаем vendor..."
+rm -rf backends/php/vendor
 
-print_success "Зависимости очищены"
+print_success "vendor очищен"
 
 # Перезапускаем PHP контейнеры
 print_warning "Запускаем PHP контейнеры с исправленными зависимостями..."

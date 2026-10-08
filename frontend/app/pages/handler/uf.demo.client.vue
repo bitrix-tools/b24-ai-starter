@@ -82,7 +82,7 @@ onMounted(async () => {
     }
     usePullClient()
     useSubscribePullClient(
-      makeSendPullCommandHandler.bind( this ),
+      makeSendPullCommandHandler,
       moduleId
     )
     startPullClient()
@@ -98,7 +98,7 @@ onMounted(async () => {
     processErrorGlobal(error, {
       homePageIsHide: true,
       isShowClearError: true,
-      clearErrorHref: '/handler/uf.demo.html'
+      clearErrorHref: '/handler/uf.demo'
     })
   }
 })

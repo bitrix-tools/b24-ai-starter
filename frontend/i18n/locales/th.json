@@ -11,6 +11,54 @@
       "message": {
         "title": "สวัสดี!",
         "line1": "มาทดสอบการทำงานของแอปพลิเคชันใน Bitrix24 กัน"
+      },
+      "action": {
+        "telemetry_test": "ทดสอบเทเลเมทรี"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "ทดสอบเทเลเมทรี"
+      },
+      "title": "ทดสอบเทเลเมทรี",
+      "description": "ตรวจสอบช่องทางเทเลเมทรีทั้งหมดด้วยสายตา: เหตุการณ์แบ็กเอนด์ เหตุการณ์ฟรอนต์เอนด์ การเรียก Bitrix24 API",
+      "section": {
+        "backend": "เหตุการณ์แบ็กเอนด์ (PHP)",
+        "backend_desc": "กดปุ่ม — แบ็กเอนด์ PHP จะส่งเหตุการณ์ 7 แบบไปยัง OTel Collector",
+        "frontend": "เหตุการณ์ฟรอนต์เอนด์",
+        "frontend_desc": "แต่ละปุ่ม / ฟิลด์ / ฟอร์มจะส่งเหตุการณ์ที่เกี่ยวข้องผ่าน useTelemetry",
+        "b24api": "การเรียก Bitrix24 API",
+        "b24api_desc": "การเรียก JS SDK โดยตรงพร้อมการติดตาม b24_api_call"
+      },
+      "action": {
+        "run_backend": "ส่งเหตุการณ์แบ็กเอนด์",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (แบบอ่อน)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← กลับ"
+      },
+      "label": {
+        "select": "การเลือก (ui_select_change)",
+        "form_field": "ฟิลด์ฟอร์ม",
+        "form_placeholder": "ค่าทดสอบ"
+      },
+      "status": {
+        "idle": "รอ",
+        "ok": "✓ ส่งแล้ว",
+        "error": "✗ ข้อผิดพลาด",
+        "result": "ผลลัพธ์"
+      },
+      "result": {
+        "backend_fired": "ส่งเหตุการณ์แล้ว {count} รายการ: {events}",
+        "sent": "ส่ง {event} แล้ว",
+        "select_sent": "ส่ง {event} แล้ว (ที่เลือก: {values})",
+        "error_sent": "ส่ง {event} แล้ว (แบบอ่อน ไม่มีข้อยกเว้นจริง)",
+        "b24_user": "{method} → ID: {id}, ชื่อ: {name}",
+        "b24_status": "{method} → {count} สถานะ",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

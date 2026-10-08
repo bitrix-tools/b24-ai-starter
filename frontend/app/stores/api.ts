@@ -93,8 +93,7 @@ export const useApiStore = defineStore(
 
     const reinitToken = async () => {
       if ($b24 === null) {
-        console.error('B24 non init. Use api.init()')
-        return
+        throw new Error('useApiStore: call init($b24) before reinitToken()')
       }
 
       const authData = $b24.auth.getAuthData()

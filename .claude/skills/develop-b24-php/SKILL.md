@@ -7,13 +7,14 @@ description: Develop backend applications for Bitrix24 using PHP, Symfony, and B
 
 ## Quick Start
 
-The PHP backend is built with **Symfony** and uses **bitrix24/b24phpsdk** for Bitrix24 interaction.
+The PHP backend is built with **Symfony 7.4 LTS** (PHP 8.4, Doctrine ORM 3) and uses **bitrix24/b24phpsdk** for Bitrix24 interaction.
 
 ### Key Directories
 
-* `backends/php/src/Controller/`: API endpoints.
-* `backends/php/src/Service/`: Business logic.
-* `backends/php/src/Bitrix24Core/`: Core integration logic (OAuth, Events).
+* `backends/php/src/Controller/`: API endpoints (`ApiController`: `/api/getToken`, `/api/list`, `/api/enum`, `/api/health`; `B24EventsController`: `/api/custom-b24-events/`; `TelemetryController`).
+* `backends/php/src/Service/`: Business logic (`JwtService`, `Telemetry/`).
+* `backends/php/src/Bitrix24Core/`: Core integration logic (`Controller/AppLifecycleController` for `/api/install`, `Controller/AppLifecycleEventController` for `/api/app-events/`, `Bitrix24ServiceBuilderFactory`, `FrontendAuthVerifier`).
+* `backends/php/src/EventListener/JwtAuthenticationListener.php`: JWT check; public routes are listed in `PUBLIC_ROUTES` (prefix match).
 
 ## Creating API Endpoints
 
@@ -26,7 +27,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Bitrix24\SDK\Services\ServiceBuilder;
 
 class MyController extends AbstractController
 {
@@ -48,7 +48,7 @@ Use `ServiceBuilder` to interact with Bitrix24 API.
 
 ### Initialization
 
-The `ServiceBuilder` is typically available via dependency injection if configured, or you can create it manually for specific contexts (e.g., webhook).
+For the portal that installed the app, inject `App\Bitrix24Core\Bitrix24ServiceBuilderFactory` and use `createFromStoredTokenForDomain()`, `createFromFrontendPayload()` or `createFromIncomingEvent()`. For a webhook, use the SDK factory directly.
 
 ```php
 use Bitrix24\SDK\Services\ServiceBuilderFactory;
@@ -56,8 +56,8 @@ use Bitrix24\SDK\Services\ServiceBuilderFactory;
 // From Webhook
 $serviceBuilder = ServiceBuilderFactory::createServiceBuilderFromWebhook('webhook_url');
 
-// From OAuth (in a service context, often handled by core logic)
-// See Bitrix24ServiceBuilderFactory.php
+// From stored OAuth tokens (inject Bitrix24ServiceBuilderFactory)
+$serviceBuilder = $this->bitrix24ServiceBuilderFactory->createFromStoredTokenForDomain($domainUrl);
 ```
 
 ### Common Operations
@@ -65,24 +65,32 @@ $serviceBuilder = ServiceBuilderFactory::createServiceBuilderFromWebhook('webhoo
 ```php
 // CRM Scope
 $crm = $serviceBuilder->getCRMScope();
-$deals = $crm->deal()->list([], ['ID', 'TITLE']);
+// list(array $order, array $filter, array $select, int $startItem = 0)
+$deals = $crm->deal()->list([], [], ['ID', 'TITLE'])->getDeals();
 
-// Batch Requests
-$batch = $serviceBuilder->getBatchService();
-// ... see SDK docs for batch details
+// Batch: generator over all items, paged automatically
+foreach ($crm->deal()->batch->list([], [], ['ID', 'TITLE']) as $deal) {
+    // ...
+}
 ```
 
 ## Authentication Flow
 
-1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data.
-2. **Token Issue**: `/api/getToken` issues a JWT for the frontend.
-3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload` in request attributes.
+1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data and responds `{"message": "Installation successful"}`. Lifecycle events go to `/api/app-events/`; known gap: `ONAPPUNINSTALL` is only logged, the account is not marked deleted.
+2. **Token Issue**: `/api/getToken` (`ApiController`) calls `App\Bitrix24Core\FrontendAuthVerifier`: first the portal must have an installed account here (`member_id` + `DOMAIN`, status `new`/`active`) — checked locally, no network call; then the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/`; the SDK's `DefaultOAuthServerUrl` first, then the other region — fixed trusted hosts, never the portal from the request). It must return our `client_id`, the same `DOMAIN`/`member_id` and `install.installed: true`. Errors: 400 / 401 / 503 (OAuth server unreachable). The refresh token is never sent, so verification cannot renew the stored tokens. Only then a JWT is issued. Never log request bodies directly — wrap them in `App\Service\LogRedactor::redact()`. Tests: `tests/Security/`.
+3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload`, `jwt_domain`, `jwt_member_id` in request attributes. Public routes: `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/` (same as other backends) plus PHP-only `/api/custom-b24-events/`; `/api/enum`, `/api/list`, `/api/telemetry/*` need JWT.
 
 ## Database
 
 * **ORM**: Doctrine.
-* **Migrations**: `php bin/console doctrine:migrations:migrate`.
-* **Entities**: Located in `src/Entity/` (if any custom entities are added).
+* **Migrations**: `backends/php/migrations/`; run `make dev-php-db-migrate` (or `php bin/console doctrine:migrations:migrate` inside the container).
+* **Entities**: Bitrix24 account/installation entities come from `mesilov/bitrix24-php-lib` (mapping in `config/doctrine/`); there is no `src/Entity/` yet — create it for custom entities.
+
+## Tests
+
+* `make test-php` runs every PHPUnit test (`phpunit.xml.dist` default suite `all` = `tests/Security` + `tests/Telemetry`, E2E excluded); `make test-php-security`, `make test-telemetry-*` run single suites.
+* The named suites overlap on purpose; with `failOnWarning` you must run one suite at a time (`--testsuite`), never all of them together.
+* Use PHPUnit attributes (`#[Test]`, `#[DataProvider]`, `#[CoversClass]`) — doc-comment annotations are deprecated in PHPUnit 11 and removed in 12.
 
 ## Best Practices
 

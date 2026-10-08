@@ -1,5 +1,5 @@
 ---
-name: Bitrix24 MCP server
+name: bitrix24-mcp-server
 description: Используй MCP сервер Bitrix24 для поиска методов REST API, параметров и примеров; при отсутствии предложи подключение.
 ---
 

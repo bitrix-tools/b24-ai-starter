@@ -84,17 +84,9 @@ export default defineNuxtConfig({
 
 ## Основные требования
 
-### 1. Обязательное использование B24App
+### 1. B24App уже подключён — не добавляйте его повторно
 
-Оборачивайте приложение в `<B24App>` для корректной работы Toast, Tooltip, Modal и программных оверлеев:
-
-```vue
-<template>
-  <B24App>
-    <!-- ваш контент -->
-  </B24App>
-</template>
-```
+`<B24App>` (провайдер Toast, Tooltip, Modal и программных оверлеев) и `<B24DashboardGroup>` уже стоят в `app/app.vue` и оборачивают всё приложение. **Не оборачивайте** страницы, layouts и компоненты в `<B24App>` — вложенный `B24App` является ошибкой. Точно так же `<B24SidebarLayout>` уже находится в `layouts/*.vue`: страница рендерит только свой контент.
 
 📖 [Компонент B24App](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/App.vue)
 
@@ -102,13 +94,14 @@ export default defineNuxtConfig({
 
 Все компоненты используют префикс `B24`:
 - `<B24Button>`, `<B24Input>`, `<B24Modal>`, `<B24Form>` и т.д.
+- Для типографики используйте `Prose*` (`<ProseH2>`, `<ProseP>`, `<ProsePre>`), а не голые `<h1>`/`<p>` — так сделано во всех страницах проекта.
 
 ### 3. Работа с иконками
 
 Иконки импортируются из `@bitrix24/b24icons-vue`:
 
 ```vue
-<script setup>
+<script setup lang="ts">
 import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
 </script>
 
@@ -130,15 +123,108 @@ import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
 - slider/app-options.client.vue — страница настроек приложения в слайдере
 - handler/placement-crm-deal-detail-tab.client.vue — пример страницы для встройки в карточку сделки
 - handler/uf.demo.client.vue — пример страницы для встройки пользовательского типа поля
-- handler/background-some-problem-client.vue - пример страницы об ошибке
+- handler/background-some-problem.client.vue — страница `errorHandlerUrl` для встройки (показывается Bitrix24 при ошибке обработчика)
+- telemetry-test.client.vue — демо телеметрии (кнопка на главной при `NUXT_PUBLIC_TELEMETRY_ENABLED=true`)
 
 Важно: все страницы выполняются ТОЛЬКО на клиенте, поскольку frontend будет собираться в виде статики для показа внутри фрейма Bitrix24. Поэтому все файлы страниц имеют суффикс `.client.vue`.
 
-При создании новых страниц подбирай подходящий шаблон из `layouts/` для консистентного внешнего вида. Обычно используется `default.vue`, который уже содержит `B24SidebarLayout`. 
+При создании новых страниц подбирай подходящий шаблон из `layouts/` для консистентного внешнего вида. Все шаблоны уже содержат `B24SidebarLayout`.
 
-- placement.vue — для страниц реализующих виджеты;
-- slider.vue - для страниц реализующих слайдеры, открывающиеся вне текущего iframe интерфейса приложения;
-- uf-placement.vue - для страниц реализующих встройку пользовательских типов полей. [Подробности про этот тип встройки виджетов](https://github.com/bitrix-tools/b24-rest-docs/blob/main//api-reference/widgets/user-field/index.md?plain=1).
+| Layout | Для чего | Как выбрать |
+| --- | --- | --- |
+| `default.vue` | обычные страницы приложения (`index`, `telemetry-test`, `install`) | ничего не указывать |
+| `placement.vue` | виджеты-встройки (`handler/placement-crm-deal-detail-tab`) | `definePageMeta({ layout: 'placement' })` |
+| `uf-placement.vue` | пользовательские типы полей (`handler/uf.demo`). [Подробности про этот тип встройки](https://github.com/bitrix-tools/b24-rest-docs/blob/main/api-reference/widgets/user-field/index.md?plain=1) | `definePageMeta({ layout: 'uf-placement' })` |
+| `slider.vue` | слайдеры, открывающиеся вне iframe приложения (`slider/app-options`): заголовок/описание из `usePageStore()`, кнопки в слоте `#footer` | `definePageMeta({ layout: false })` и `<NuxtLayout name="slider">…</NuxtLayout>` в шаблоне страницы (чтобы заполнять именованные слоты) |
+
+#### Шаблон страницы (как в `app/pages/*`)
+
+```vue
+<script setup lang="ts">
+import type { B24Frame } from '@bitrix24/b24jssdk'
+
+definePageMeta({ layout: 'placement' }) // не указывать для default
+
+const { t, locales: localesI18n, setLocale } = useI18n()
+
+// region Init ////
+const { $logger, initApp, processErrorGlobal, b24Helper, destroyB24Helper } = useAppInit('MyPage')
+const { $initializeB24Frame } = useNuxtApp()
+let $b24: null | B24Frame = null
+
+const apiStore = useApiStore()
+const { track } = useTelemetry()
+// endregion ////
+
+const isLoading = ref(false)
+const isInit = ref(false)
+const items = ref<string[]>([])
+
+async function reload() {
+  track('ui_button_click', { 'ui.button_id': 'my_page_reload' })
+  items.value = await apiStore.getList()
+}
+
+onMounted(async () => {
+  try {
+    isLoading.value = true
+    $b24 = await $initializeB24Frame()
+    // язык из $b24.getLang(), B24 helper (app/user options, profile), сторы, JWT через apiStore.init($b24)
+    await initApp($b24, localesI18n, setLocale)
+    await $b24.parent.setTitle(t('page.myPage.seo.title'))
+
+    items.value = await apiStore.getList()
+    $logger.info('Hi from my page')
+    isInit.value = true
+  } catch (error) {
+    processErrorGlobal(error) // логирует и вызывает showError() -> app/error.vue
+  } finally {
+    isLoading.value = false
+  }
+})
+
+onUnmounted(() => {
+  if (b24Helper.value) {
+    destroyB24Helper()
+  }
+})
+</script>
+
+<template>
+  <B24Card v-if="isInit">
+    <B24Button :label="$t('page.myPage.action.reload')" loading-auto @click="reload" />
+    <B24Table :data="items.map(name => ({ name }))" :loading="isLoading" />
+  </B24Card>
+</template>
+```
+
+Правила:
+
+- `$b24` доступен только после `await $initializeB24Frame()` (в `onMounted`; `install.client.vue` использует top-level `await`).
+- `install.client.vue` вызывает только `initLang` (JWT до установки нет) и по шагам выполняет: batch `app.info`/`profile`/`userfieldtype.list`/`placement.get` → `placement.bind` (`CRM_DEAL_DETAIL_TAB`, handler `${appUrl}/handler/placement-crm-deal-detail-tab`) → `userfieldtype.add|update` → `apiStore.postInstall()` → `$b24.installFinish()`. Новые встройки регистрируйте новым шагом там же, а страницу-обработчик кладите в `pages/handler/`.
+- Глобальный middleware `middleware/01.app.page.or.slider.global.ts` инициализирует фрейм на каждой навигации и при `$b24.placement.options.place === 'app-options'` перенаправляет на `/slider/app-options`. Новые слайдеры: добавьте соответствие `place` → маршрут там и открывайте их через `$b24.slider.openSliderAppPage({ place: '…', bx24_width: 650 })`.
+- Фатальные ошибки инициализации — `processErrorGlobal(error)`; восстановимые (неудачное сохранение) — `useToast().add({ title, description, color: 'air-primary-alert' })` + `$logger.error('…', { error })`.
+- Встройки подгоняют высоту фрейма: `$b24.parent.fitWindow()` / `$b24.parent.resizeWindowAuto()`.
+
+#### Бэкенд, телеметрия, сторы
+
+- Вызовы бэкенда — только через `useApiStore()` (не `$fetch` в страницах). `initApp()` вызывает `apiStore.init($b24)`, который получает JWT через `POST /api/getToken`. Новый эндпоинт добавляйте методом в `app/stores/api.ts` по образцу `getList` (`$api('/api/…', { headers: authHeaders() })`) и возвращайте его из стора.
+- Телеметрия: `const { track } = useTelemetry()`; `track('ui_button_click', { 'ui.button_id': 'save' })`. Значения атрибутов — строки; разрешённые имена событий (whitelist PHP-бэкенда): `page_view`, `ui_button_click`, `ui_select_change`, `ui_form_submit`, `ui_error`, `app_frame_loaded`, `b24_api_call`. `plugins/telemetry.client.ts` уже шлёт `app_frame_loaded`, `page_view`, `ui_error`.
+- Настройки: `useAppSettingsStore()` / `useUserSettingsStore()` — `configSettings` + `saveSettings()` (`app.option.set` / `user.option.set`); `useUserStore()` — `id`, `fullName`, `isAdmin`; `usePageStore()` — `title`/`description` для layout `slider`.
+
+#### i18n
+
+- Все строки интерфейса — через `t('…')` / `$t('…')`; ключи в `frontend/i18n/locales/<code>.json` (`page.<name>.*`, `components.<name>.*`).
+- Список локалей — `frontend/i18n/i18n.map.ts` (19 штук: en, de, la, br, fr, it, pl, ru, ua, tr, sc, tc, ja, vn, id, ms, th, ar, kz). Источник истины и fallback — `en.json`.
+- Все 19 локалей обязаны содержать ровно ключи `en.json` — это проверяет тест `frontend/test/i18n.spec.ts` (`pnpm test`, CI). Новый ключ добавляйте во все файлы `frontend/i18n/locales/` с переводом.
+- Строки на русском в рецептах ниже оставлены для краткости; в коде проекта выносите их в локали.
+
+#### Структура кода, линтер, тесты
+
+- Код приложения — в `frontend/app/`; алиас `~/` = `app/` (`~/stores/page`, `~/utils/sleep`), общие типы — `#shared/types/...`. Компоненты, composables, stores, `app/utils/*` и API `vue` импортируются автоматически.
+- ESLint (`@nuxt/eslint`, `frontend/eslint.config.mjs`): `@typescript-eslint/no-explicit-any` — ошибка (кроме нескольких старых файлов), используйте `unknown`/конкретные типы; имена компонентов — из нескольких слов.
+- Unit-тесты: Vitest в Node-окружении (`frontend/vitest.config.ts`, файлы `frontend/test/**/*.{test,spec}.ts`, пример `test/units.spec.ts`). Тестируются чистые функции из `app/utils/` (импорт по относительному пути); тестов компонентов/сторов с Nuxt-рантаймом нет.
+- Перед коммитом в `frontend/`: `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
 
 ### 5. Стилизация через b24ui и class
 
@@ -519,7 +605,7 @@ confetti.fire()
 - `@bitrix24/b24ui-nuxt` установлен
 - Модуль добавлен в `nuxt.config.ts`
 - CSS импортирован
-- Приложение обернуто в `<B24App>`
+- `<B24App>` есть в `app/app.vue` (и только там — без вложенных `B24App`)
 
 ### 2. Проверьте правильность использования компонента
 
@@ -555,10 +641,10 @@ confetti.fire()
 ### 4. Типичные проблемы и решения
 
 **Проблема:** Компоненты не рендерятся  
-**Решение:** Проверьте наличие `<B24App>` в корне приложения
+**Решение:** Проверьте, что компонент используется с префиксом `B24` и модуль `@bitrix24/b24ui-nuxt` подключён в `nuxt.config.ts`
 
 **Проблема:** Toast/Tooltip/Modal не работают  
-**Решение:** Убедитесь, что используется `<B24App>` (предоставляет `OverlayProvider`)
+**Решение:** `<B24App>` (предоставляет `OverlayProvider` и Toaster) уже в `app/app.vue`; убедитесь, что его не удалили и не продублировали во вложенных страницах/компонентах
 
 **Проблема:** Иконки не отображаются  
 **Решение:** Проверьте правильность импорта из `@bitrix24/b24icons-vue/category/IconName`
@@ -590,7 +676,7 @@ confetti.fire()
 ## Принципы работы с UI Kit
 
 1. **Всегда используйте B24 префикс** — это компоненты Bitrix24 UI, а не Nuxt UI
-2. **Оборачивайте в B24App** — обязательно для работы оверлеев и уведомлений
+2. **Не дублируйте B24App** — он уже в `app/app.vue` и обеспечивает работу оверлеев и уведомлений
 3. **Используйте b24ui prop** — для точной кастомизации слотов компонента
 4. **Следуйте дизайн-системе** — используйте предустановленные цвета (`air-*`) и размеры
 5. **Проверяйте theme** — для понимания доступных вариантов и слотов
@@ -600,110 +686,81 @@ confetti.fire()
 
 ## 💾 Управление состоянием
 
-### 1. Pinia Store (рекомендуется для Vue/Nuxt)
+### 1. Pinia Store
 
-В проекте используется Pinia для управления состоянием. Создавайте stores в папке `composables/` или `stores/` используя Composition API:
-
-```typescript
-// composables/useDeals.ts
-export const useDealsStore = defineStore('deals', () => {
-  // Состояние
-  const deals = ref<Deal[]>([]);
-  const currentDeal = ref<Deal | null>(null);
-  const isLoading = ref(false);
-  const error = ref<string | null>(null);
-  
-  // Фильтры
-  const filters = ref<DealFilters>({
-    stage: null,
-    search: '',
-    dateFrom: null,
-    dateTo: null
-  });
-
-  // Геттеры
-  const filteredDeals = computed(() => {
-    let result = deals.value;
-    
-    if (filters.value.stage) {
-      result = result.filter(deal => deal.stageId === filters.value.stage);
-    }
-    
-    if (filters.value.search) {
-      const search = filters.value.search.toLowerCase();
-      result = result.filter(deal => 
-        deal.title.toLowerCase().includes(search)
-      );
-    }
-    
-    return result;
-  });
-
-  // Действия
-  async function fetchDeals() {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      const { data } = await $fetch<{data: Deal[]}>('/api/deals');
-      deals.value = data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch deals';
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  return {
-    // State
-    deals: readonly(deals),
-    currentDeal: readonly(currentDeal),
-    isLoading: readonly(isLoading),
-    error: readonly(error),
-    filters,
-    
-    // Getters
-    filteredDeals,
-    
-    // Actions
-    fetchDeals
-  };
-});
-```
-
-### 2. Composables для переиспользования логики
+В проекте используется Pinia (setup stores). Сторы лежат в `frontend/app/stores/` и импортируются автоматически (`useApiStore`, `useAppSettingsStore`, `useUserSettingsStore`, `useUserStore`, `usePageStore`). Новые сторы создавайте там же, в том же стиле:
 
 ```typescript
-// composables/useApi.ts
-export function useApi() {
-  const isLoading = ref(false);
-  const error = ref<string | null>(null);
+// app/stores/deals.ts
+import type { B24Frame } from '@bitrix24/b24jssdk'
 
-  async function apiCall<T>(
-    url: string, 
-    options?: RequestInit
-  ): Promise<T | null> {
-    isLoading.value = true;
-    error.value = null;
-    
-    try {
-      const response = await $fetch<T>(url, options);
-      return response;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'API call failed';
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  return {
-    isLoading: readonly(isLoading),
-    error: readonly(error),
-    apiCall
-  };
+export interface Deal {
+  ID: string
+  TITLE: string
+  STAGE_ID: string
 }
+
+export const useDealsStore = defineStore(
+  'deals',
+  () => {
+    let $b24: null | B24Frame = null
+
+    // region State ////
+    const deals = ref<Deal[]>([])
+    const search = ref('')
+    // endregion ////
+
+    // region Getters ////
+    const filteredDeals = computed(() => {
+      const q = search.value.toLowerCase()
+      return q ? deals.value.filter(deal => deal.TITLE.toLowerCase().includes(q)) : deals.value
+    })
+    // endregion ////
+
+    // region Actions ////
+    function setB24(b24: B24Frame) {
+      $b24 = b24
+    }
+
+    async function fetchDeals() {
+      if ($b24 === null) {
+        throw new Error('B24 non init. Use deals.setB24()')
+      }
+
+      const response = await $b24.actions.v2.call.make<Deal[]>({
+        method: 'crm.deal.list',
+        params: { select: ['ID', 'TITLE', 'STAGE_ID'] }
+      })
+      if (!response.isSuccess) {
+        throw new Error(response.getErrorMessages().join('; '))
+      }
+      deals.value = response.getData()?.result ?? []
+    }
+    // endregion ////
+
+    return { deals, search, filteredDeals, setB24, fetchDeals }
+  }
+)
 ```
+
+Состояние загрузки держите в странице (`const isLoading = ref(false)`), ошибки — `try/catch` + `processErrorGlobal` или toast (см. «Шаблон страницы»).
+
+### 2. Запросы к своему бэкенду
+
+Не пишите отдельных обёрток над `$fetch` (`useApi` и т.п.). Все запросы к бэкенду идут через `useApiStore()` (`frontend/app/stores/api.ts`): он хранит JWT, полученный в `apiStore.init($b24)` (вызывается из `initApp`), и добавляет `Authorization: Bearer …` через `authHeaders()`. Новый эндпоинт:
+
+```typescript
+// app/stores/api.ts — внутри defineStore('api', () => { ... })
+const getDeals = async (): Promise<{ id: number, title: string }[]> => {
+  return await $api('/api/deals', {
+    headers: authHeaders()
+  })
+}
+
+// ...и добавьте getDeals в объект, который возвращает стор
+```
+
+В странице: `const deals = await useApiStore().getDeals()`. Composable `useBackend()` — пример обёртки над стором (health-check для `BackendStatus.vue`).
 
 ---
 
@@ -776,7 +833,7 @@ export default defineNuxtConfig({
 > Цвета задаются через систему `air-*`, а не через `variant="ghost"` / `color="red"`.
 
 ```vue
-<!-- components/MobileNavigation.vue -->
+<!-- app/components/MobileNavigation.vue (navigation — массив { to, label } из props) -->
 <script setup lang="ts">
 import BurgerMenuIcon from '@bitrix24/b24icons-vue/outline/HamburgerMenuIcon'
 
@@ -819,38 +876,37 @@ const isOpen = ref(false)
 ### 1. Ленивая загрузка компонентов
 
 ```vue
-<script setup>
-// Ленивая загрузка тяжелых компонентов
-const LazyChart = defineAsyncComponent(() => import('~/components/Chart.vue'));
-const LazyDataTable = defineAsyncComponent(() => import('~/components/DataTable.vue'));
-
-const showChart = ref(false);
+<script setup lang="ts">
+// Nuxt автоматически создаёт ленивую версию любого компонента из app/components
+// с префиксом Lazy: app/components/DealsChart.vue -> <LazyDealsChart>
+const showChart = ref(false)
+const chartData = ref<number[]>([])
 </script>
 
 <template>
   <div>
     <!-- Основной контент загружается сразу -->
     <B24Card class="mb-4">
-      <B24Button @click="showChart = true" v-if="!showChart">
-        Показать график
-      </B24Button>
+      <B24Button v-if="!showChart" :label="$t('page.deals.action.showChart')" @click="showChart = true" />
     </B24Card>
     
     <!-- Тяжелые компоненты загружаются по требованию -->
-    <LazyChart v-if="showChart" :data="chartData" />
+    <LazyDealsChart v-if="showChart" :data="chartData" />
   </div>
 </template>
 ```
 
 ### 2. Паттерны списков с B24UI
 
+Фрагмент шаблона: `filters`, `filteredDeals`, `columns`, `isLoading`, обработчики и иконка `SearchIcon` объявляются в `<script setup lang="ts">` по «Шаблону страницы» выше (данные — из стора или `useApiStore`).
+
 ```vue
-<!-- components/DealList.vue -->
+<!-- app/components/DealList.vue -->
 <template>
   <B24Container class="py-8">
     <!-- Заголовок и действия -->
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Сделки</h1>
+      <ProseH1 class="mb-0">Сделки</ProseH1>
       <B24Button @click="openCreateModal">
         Создать сделку
       </B24Button>
@@ -917,7 +973,7 @@ const showChart = ref(false);
 ### Форматтеры данных
 
 ```typescript
-// utils/formatters.ts
+// app/utils/formatters.ts — авто-импорт; локаль берите из useI18n().locale, а не хардкодьте
 export const formatters = {
   // Форматирование валюты
   currency(amount: number, currency: string = 'RUB'): string {
@@ -978,7 +1034,7 @@ export const formatters = {
 
 ### 1. Компонентная архитектура
 
-- **Используйте B24 компоненты** вместо нативных HTML элементов
+- **Используйте B24 компоненты** (и `Prose*` для текста) вместо нативных HTML элементов
 - **Разделяйте** презентационные и контейнерные компоненты  
 - **Создавайте** переиспользуемые композиции из B24UI компонентов
 - **Документируйте** API компонентов через props и emits
@@ -987,7 +1043,7 @@ export const formatters = {
 
 - **Локальное состояние** для UI логики компонента
 - **Pinia Store** для глобального состояния приложения
-- **Composables** для переиспользуемой логики
+- **Composables** (`app/composables/`) для переиспользуемой логики; запросы к бэкенду — через `useApiStore`
 - **Избегайте** prop drilling, используйте provide/inject
 
 ### 3. Производительность

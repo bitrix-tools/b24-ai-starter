@@ -12,28 +12,31 @@
 
 #### Bitrix24 PHP SDK
 - **Библиотека**: `bitrix24/b24phpsdk` 
-- **Версия**: 1.7.* (стабильная)
-- **Требования**: PHP 8.2+, ext-json, ext-curl, ext-intl
+- **Версия в стартере**: `dev-v3-dev` (ветка v3, через `mesilov/bitrix24-php-lib` 0.5.2)
+- **Требования стартера**: PHP 8.4, Symfony 7.4 LTS, Doctrine ORM 3
 - **Лицензия**: MIT
 
 #### Composer пакеты (типичные зависимости)
 ```json
 {
   "require": {
-    "bitrix24/b24phpsdk": "^1.7",
-    "symfony/http-client": "^6.0|^7.0",
-    "psr/log": "^3.0",
-    "monolog/monolog": "^3.0"
+    "mesilov/bitrix24-php-lib": "^0.5.2",
+    "symfony/framework-bundle": "7.4.*",
+    "doctrine/orm": "^3.7.4",
+    "symfony/monolog-bundle": "^3.11.2"
   },
   "require-dev": {
-    "phpstan/phpstan": "^1.10",
-    "squizlabs/php_codesniffer": "^3.7",
-    "phpunit/phpunit": "^10.0"
+    "phpstan/phpstan": "^1.12.34",
+    "rector/rector": "^1.2.10",
+    "friendsofphp/php-cs-fixer": "^3.95.27",
+    "phpunit/phpunit": "^11.5.57"
   }
 }
 ```
 
 ### Типичная архитектура PHP-проекта
+
+> Фактическая структура стартера: `backends/php/src/{Controller,Service,Bitrix24Core,EventListener,EventSubscriber,DTO,Infrastructure}`, конфиги в `config/`, миграции в `migrations/`. Ниже — обобщённая схема.
 
 ```
 project/
@@ -67,39 +70,41 @@ $serviceBuilder = ServiceBuilderFactory::createServiceBuilderFromWebhook(
 ```
 
 #### OAuth приложение (полноценные приложения)
+
+В стартере `ServiceBuilder` для OAuth собирает `App\Bitrix24Core\Bitrix24ServiceBuilderFactory` (внедряется через DI):
+
 ```php
 <?php
-use Bitrix24\SDK\Services\ServiceBuilderFactory;
+use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
 
-$serviceBuilder = ServiceBuilderFactory::createServiceBuilderFromArray([
-    'BITRIX24_PHP_SDK_ACCESS_TOKEN' => $accessToken,
-    'BITRIX24_PHP_SDK_REFRESH_TOKEN' => $refreshToken,
-    'BITRIX24_PHP_SDK_DOMAIN' => $domain,
-    'BITRIX24_PHP_SDK_CLIENT_ID' => $clientId,
-    'BITRIX24_PHP_SDK_CLIENT_SECRET' => $clientSecret,
-]);
+// токены портала берутся из сохранённого Bitrix24Account
+$serviceBuilder = $this->bitrix24ServiceBuilderFactory->createFromStoredTokenForDomain($domainUrl);
+
+// также: createFromFrontendPayload(FrontendPayload) и createFromIncomingEvent(EventInterface)
 ```
+
+Внутри используется `(new ServiceBuilderFactory($eventDispatcher, $logger))->init(...)` / `initFromAccount(...)` из SDK.
 
 ### 2. Работа с данными CRM
 
 #### Типичный CRUD для сделок
 ```php
 // Получение списка
-$dealsResult = $serviceBuilder->getCRMScope()->deal()->list(
+$deals = $serviceBuilder->getCRMScope()->deal()->list(
     order: ['ID' => 'DESC'],
     filter: ['STAGE_ID' => 'NEW'],
     select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID']
-);
+)->getDeals();
 
 // Получение одной записи
-$deal = $serviceBuilder->getCRMScope()->deal()->get(123);
+$deal = $serviceBuilder->getCRMScope()->deal()->get(123)->deal();
 
 // Создание
 $newDealId = $serviceBuilder->getCRMScope()->deal()->add([
     'TITLE' => 'Новая сделка',
     'OPPORTUNITY' => 100000,
     'CURRENCY_ID' => 'RUB'
-]);
+])->getId();
 
 // Обновление
 $serviceBuilder->getCRMScope()->deal()->update(
@@ -110,20 +115,23 @@ $serviceBuilder->getCRMScope()->deal()->update(
 
 ### 3. Batch-запросы (оптимизация)
 
+У сервисов сущностей есть свойство `batch` — генераторы, которые сами разбивают работу на batch-запросы по 50 команд:
+
 ```php
-use Bitrix24\SDK\Core\Batch\BatchPool;
+$dealBatch = $serviceBuilder->getCRMScope()->deal()->batch;
 
-$batchPool = new BatchPool($serviceBuilder->getBatchService());
-
-// Добавляем запросы в пул
-for ($i = 1; $i <= 50; $i++) {
-    $batchPool->addRequest(
-        $serviceBuilder->getCRMScope()->deal()->countByFilter(['ID' => $i])
-    );
+// Чтение всех сделок без ручной пагинации
+foreach ($dealBatch->list(['ID' => 'ASC'], ['STAGE_ID' => 'NEW'], ['ID', 'TITLE']) as $deal) {
+    // $deal — DealItemResult
 }
 
-// Выполняем все запросы одним batch-ом
-$results = $batchPool->getResponses();
+// Массовое создание
+foreach ($dealBatch->add([
+    ['TITLE' => 'Сделка 1'],
+    ['TITLE' => 'Сделка 2'],
+]) as $addedItemResult) {
+    $id = $addedItemResult->getId();
+}
 ```
 
 ### 4. Обработка ошибок
@@ -185,6 +193,7 @@ class DealService
     public function getActiveDeals(): array 
     {
         $result = $this->b24Service->getCRMScope()->deal()->list(
+            order: [],
             filter: ['STAGE_ID' => ['NEW', 'PREPARATION', 'PROPOSAL']],
             select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID']
         );
@@ -192,7 +201,7 @@ class DealService
         return $this->formatDealsForFrontend($result->getDeals());
     }
     
-    private function formatDealsForFrontend(array $deals): array 
+    public function formatDealsForFrontend(array $deals): array 
     {
         // Форматирование данных для фронтенда
         return array_map(function($deal) {
@@ -229,7 +238,7 @@ class Bitrix24DealRepository implements DealRepositoryInterface
     public function findById(int $id): ?Deal 
     {
         try {
-            $dealData = $this->serviceBuilder->getCRMScope()->deal()->get($id);
+            $dealData = $this->serviceBuilder->getCRMScope()->deal()->get($id)->deal();
             return Deal::fromBitrix24Data($dealData);
         } catch (BaseException) {
             return null;
@@ -239,7 +248,9 @@ class Bitrix24DealRepository implements DealRepositoryInterface
     public function findByStage(string $stage): array 
     {
         $result = $this->serviceBuilder->getCRMScope()->deal()->list(
-            filter: ['STAGE_ID' => $stage]
+            order: [],
+            filter: ['STAGE_ID' => $stage],
+            select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID']
         );
         
         return array_map(
@@ -396,12 +407,12 @@ class Bitrix24IntegrationTest extends TestCase
         $dealId = $serviceBuilder->getCRMScope()->deal()->add([
             'TITLE' => 'Test Deal ' . time(),
             'OPPORTUNITY' => 1000
-        ]);
+        ])->getId();
         
         $this->assertIsInt($dealId);
         
         // Получаем созданную сделку
-        $deal = $serviceBuilder->getCRMScope()->deal()->get($dealId);
+        $deal = $serviceBuilder->getCRMScope()->deal()->get($dealId)->deal();
         $this->assertEquals('1000', $deal->OPPORTUNITY);
         
         // Удаляем тестовую сделку
@@ -471,10 +482,12 @@ class RateLimitedB24Service
 
 ### Symfony
 
-```php
-// services.yaml
+В стартере `ServiceBuilder` по вебхуку не регистрируется; для OAuth используется `App\Bitrix24Core\Bitrix24ServiceBuilderFactory`. Пример для вебхука:
+
+```yaml
+# config/services.yaml
 services:
-  App\Services\Bitrix24ServiceBuilder:
+  Bitrix24\SDK\Services\ServiceBuilder:
     factory: ['Bitrix24\SDK\Services\ServiceBuilderFactory', 'createServiceBuilderFromWebhook']
     arguments:
       - '%env(BITRIX24_WEBHOOK_URL)%'
@@ -530,5 +543,5 @@ public function register(): void
 
 ---
 
-*Обновлено: 25 ноября 2025*
+*Обновлено: 7 октября 2026*
 *Версия: 2.0 - Модульная архитектура знаний*

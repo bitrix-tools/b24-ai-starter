@@ -24,7 +24,7 @@ await $b24.actions.v2.call.make({ method: 'placement.bind', params: {
 
 ### Handling
 
-* **Frontend**: Create a page (e.g., `pages/handler/my-widget.client.vue`) that renders the widget content.
+* **Frontend**: Create a page (e.g., `frontend/app/pages/handler/my-widget.client.vue`) that renders the widget content. Working example: `frontend/app/pages/handler/placement-crm-deal-detail-tab.client.vue`.
 * **Backend**: Ensure the handler URL points to this page (or a backend endpoint that serves it).
 * **Context**: Bitrix24 sends `PLACEMENT_OPTIONS` (e.g., `ID` of the deal) in the POST request.
 
@@ -71,16 +71,20 @@ await $b24.actions.v2.call.make({ method: 'event.bind', params: {
 ### Handling
 
 * **Backend**: Create a public endpoint (e.g., `/api/events`) to receive event data.
-* **Verification**: Verify the request comes from Bitrix24 (check `auth` tokens).
+  * PHP: example `B24EventsController` at `/api/custom-b24-events/` (validates with `RemoteEventsFactory`); app lifecycle events go to `/api/app-events/` (`AppLifecycleEventController`). New public routes must be added to `PUBLIC_ROUTES` in `JwtAuthenticationListener`.
+  * Python: lifecycle events at `/api/app-events/` (`bitrix_events/`), queued via Celery with `ENABLE_RABBITMQ=1`, otherwise processed inline.
+  * Node.js: lifecycle events at `/api/app-events/` in `app.js` (`ONAPPINSTALL` → `active`, `ONAPPUNINSTALL` → `deleted` only with the stored `application_token`). Add custom event routes in `createApp()` without `verifyToken`.
+  * PHP known gap: `ONAPPUNINSTALL` is only logged, the account is not marked deleted.
+* **Verification**: Verify the request comes from Bitrix24 (check `auth.application_token` against the value stored at install).
 
 ## Queues (RabbitMQ)
 
 Use queues for background processing (long-running tasks).
 
-* **Configuration**: `ENABLE_RABBITMQ=1` in `.env`.
-* **PHP**: Use Symfony Messenger (`instructions/queues/php.md`).
-* **Python**: Use Celery (`instructions/queues/python.md`).
-* **Node.js**: Use `amqplib` (`instructions/queues/node.md`).
+* **Configuration**: `ENABLE_RABBITMQ=1` in `.env` (`make dev-*` then adds the `queue` profile; `make queue-up` / `make queue-down` manage RabbitMQ separately).
+* **PHP**: Use Symfony Messenger — not installed by default (`instructions/queues/php.md`).
+* **Python**: Use Celery — already wired (`celery_app.py`, `python-worker` service; `instructions/queues/python.md`).
+* **Node.js**: Use `amqplib` — not installed by default (`instructions/queues/node.md`).
 
 ## Best Practices
 

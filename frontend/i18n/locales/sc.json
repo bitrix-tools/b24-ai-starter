@@ -11,6 +11,54 @@
       "message": {
         "title": "你好！",
         "line1": "让我们测试一下Bitrix24中的应用程序运行情况。"
+      },
+      "action": {
+        "telemetry_test": "遥测测试"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "遥测测试"
+      },
+      "title": "遥测测试",
+      "description": "可视化检查所有遥测通道：后端事件、前端事件、Bitrix24 API 调用。",
+      "section": {
+        "backend": "后端事件（PHP）",
+        "backend_desc": "点击按钮 — PHP 后端将向 OTel Collector 发送 7 个不同的事件。",
+        "frontend": "前端事件",
+        "frontend_desc": "每个按钮 / 字段 / 表单都会通过 useTelemetry 发送相应的事件。",
+        "b24api": "Bitrix24 API 调用",
+        "b24api_desc": "带有 b24_api_call 跟踪的 JS SDK 直接调用。"
+      },
+      "action": {
+        "run_backend": "触发后端事件",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error（软）",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← 返回"
+      },
+      "label": {
+        "select": "选择（ui_select_change）",
+        "form_field": "表单字段",
+        "form_placeholder": "测试值"
+      },
+      "status": {
+        "idle": "等待中",
+        "ok": "✓ 已发送",
+        "error": "✗ 错误",
+        "result": "结果"
+      },
+      "result": {
+        "backend_fired": "已发送 {count} 个事件：{events}",
+        "sent": "{event} 已发送",
+        "select_sent": "{event} 已发送（已选：{values}）",
+        "error_sent": "{event} 已发送（软错误，无实际异常）",
+        "b24_user": "{method} → ID: {id}, 姓名: {name}",
+        "b24_status": "{method} → {count} 个状态",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

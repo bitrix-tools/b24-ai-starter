@@ -34,6 +34,9 @@ class Config:
     # VIRTUAL_HOST
     app_base_url: str
 
+    # ENABLE_RABBITMQ=1: lifecycle events go through Celery (python-worker), else inline
+    queue_enabled: bool
+
 
 def load_config() -> Config:
     build_target = env.str("BUILD_TARGET", "dev")  # dev or production
@@ -58,7 +61,8 @@ def load_config() -> Config:
         client_id=client_id,
         client_secret=client_secret,
         bitrix_app=BitrixApp(client_id=client_id, client_secret=client_secret),
-        app_base_url=env.str("VIRTUAL_HOST", "app_base_url"),
+        app_base_url=env.str("VIRTUAL_HOST", ""),
+        queue_enabled=env.bool("ENABLE_RABBITMQ", False),
     )
 
 

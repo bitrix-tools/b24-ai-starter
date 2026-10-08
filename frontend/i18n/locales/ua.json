@@ -11,6 +11,54 @@
       "message": {
         "title": "Привіт!",
         "line1": "Давайте протестуємо роботу додатка в Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Тест телеметрії"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Тест телеметрії"
+      },
+      "title": "Тест телеметрії",
+      "description": "Візуальна перевірка всіх каналів телеметрії: бекенд-події, фронтенд-події, виклики API Bitrix24.",
+      "section": {
+        "backend": "Бекенд-події (PHP)",
+        "backend_desc": "Натисніть кнопку — PHP-бекенд надішле 7 різних подій до OTel Collector.",
+        "frontend": "Фронтенд-події",
+        "frontend_desc": "Кожна кнопка / поле / форма надсилає відповідну подію через useTelemetry.",
+        "b24api": "Виклики Bitrix24 API",
+        "b24api_desc": "Прямі виклики JS SDK з трекінгом b24_api_call."
+      },
+      "action": {
+        "run_backend": "Запустити бекенд-події",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (м'який)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Назад"
+      },
+      "label": {
+        "select": "Вибір (ui_select_change)",
+        "form_field": "Поле форми",
+        "form_placeholder": "тестове значення"
+      },
+      "status": {
+        "idle": "Очікування",
+        "ok": "✓ Надіслано",
+        "error": "✗ Помилка",
+        "result": "Результат"
+      },
+      "result": {
+        "backend_fired": "Надіслано подій: {count}: {events}",
+        "sent": "{event} надіслано",
+        "select_sent": "{event} надіслано (вибрано: {values})",
+        "error_sent": "{event} надіслано (м'яко, без реального винятку)",
+        "b24_user": "{method} → ID: {id}, ім'я: {name}",
+        "b24_status": "{method} → статусів: {count}",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

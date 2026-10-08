@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<sub>Last reviewed: 2026-10-07.</sub>
+<sub>Last reviewed: 2026-10-08.</sub>
 
 Единый источник правды для ИИ-агентов и людей, работающих с репозиторием `b24-ai-starter`. `CLAUDE.md` — ссылка на этот файл. Подробные руководства лежат в `.github/contributing/` и `instructions/` — загружай их только когда они относятся к задаче.
 
@@ -13,7 +13,7 @@
 | Фронтенд | `frontend/` | Nuxt 4.6, Vue 3, `@bitrix24/b24ui-nuxt` 2.14, `@bitrix24/b24jssdk-nuxt` 3.x, Pinia 4, i18n, Tailwind 4 |
 | PHP | `backends/php/` | Symfony 7.4 LTS, Doctrine ORM 3, `bitrix24/b24phpsdk`, OpenTelemetry |
 | Python | `backends/python/django/` | Django 6.1, `b24pysdk` 1.3, Celery |
-| Node.js | `backends/node/api/` | Node 24, Express 5, `@bitrix24/b24jssdk` |
+| Node.js | `backends/node/api/` | Node 24, Express 5, `pg` / `mysql2`, REST Bitrix24 через `fetch` (`@bitrix24/b24jssdk` не установлен) |
 | Инфраструктура | `docker-compose.yml`, `infrastructure/` | PostgreSQL / MySQL, RabbitMQ, Cloudpub |
 
 Тулчейн: Node 24, pnpm 12 (поле `packageManager`), TypeScript 6.0, PHP 8.4, Python 3.13.
@@ -27,6 +27,7 @@ make down                     # остановить окружение
 make logs
 make security-tests
 make php-cli-lint-phpstan     # PHP: phpstan / rector / cs-fixer — см. make help
+make test-php                 # PHP: все unit-тесты (tests/Security + tests/Telemetry)
 ```
 
 Фронтенд (в `frontend/`) — те же шаги, что в CI:
@@ -36,13 +37,13 @@ pnpm install --frozen-lockfile
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Бэкенды в CI: Node — `node --check`; Python — `manage.py check` + `makemigrations --check`; PHP — `composer validate`.
+Бэкенды в CI: Node — `node --check` + `pnpm test`; Python — `manage.py check` + `makemigrations --check` + `manage.py test`; PHP — `composer validate` + `composer install` + `lint:container --env=prod` + `phpunit`; Docker — сборка production-образов и smoke Node + PostgreSQL.
 
 ## Ключевые соглашения
 
-- **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt`; страницы — `*.client.vue`; вызовы бэкенда — через `useApiStore`.
+- **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt` (+ `Prose*` для текста; `B24App` уже в `app.vue` — не вкладывать); страницы — `*.client.vue`, инициализация через `useAppInit` (`initApp`, `processErrorGlobal`); вызовы бэкенда — через `useApiStore`; строки — через i18n (`frontend/i18n/locales/`, эталон `en.json`).
 - **JS SDK 3**: `$b24.actions.v2|v3.*.make()` (нет `callMethod` / `callBatch`), логгер — `LoggerFactory.createForBrowser(name, isDev)`, вызовы `logger.info('message', { context })`.
-- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/install`, `/api/getToken` и `/api/app-events/`. Не логировать OAuth-токены и URL вебхуков.
+- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/health`, `/api/install`, `/api/getToken` и `/api/app-events/` (в PHP публичен также `/api/custom-b24-events/` — см. `PUBLIC_ROUTES` в `JwtAuthenticationListener`). `/api/install` во всех бэкендах отвечает `{"message": "Installation successful"}`. `/api/getToken` выдаёт JWT только после проверки `AUTH_ID` OAuth-сервером Bitrix24 (`app.info`) (PHP — `FrontendAuthVerifier`, Node — `verifyFrontendAuth.js`, Python — `auth_required`); не ослаблять. Не логировать OAuth-токены и URL вебхуков: тело запроса — только через редактор (PHP `LogRedactor::redact()`, Node `redactSensitive()`).
 - **Bitrix24**: виджеты — `placement.bind`, роботы — `bizproc.robot.add`, события — `event.bind`.
 - **Conventional Commits**: `feat`, `fix`, `perf`, `security`, `deps`, `refactor`, `build`, `docs`, `test`, `ci`, `chore`. Область — часть репозитория: `feat(frontend): …`, `deps(php): …`. Заголовок понятен без чтения диффа.
 - **CHANGELOG**: заметное изменение — запись в `## [Unreleased]` в [CHANGELOG.md](CHANGELOG.md) в том же PR.
@@ -60,8 +61,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `develop-b24-frontend` | Страницы, компоненты, JS SDK |
 | `develop-b24-php` / `develop-b24-python` / `develop-b24-node` | Бэкенд на выбранном языке |
 | `implement-b24-features` | Виджеты, роботы, события, очереди |
-| `bitrix24-static-local-app` | Сборка статического локального приложения |
-| `Bitrix24 MCP server` | Поиск методов REST API через MCP |
+| `bitrix24-mcp-server` | Поиск методов REST API через MCP |
 
 ## Документация
 
@@ -71,7 +71,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `instructions/front/` | Фронтенд: JS SDK, UI Kit, рецепты компонентов |
 | `instructions/{php,python,node}/` | Бэкенды, включая `code-review.md` для каждого |
 | `instructions/bitrix24/`, `instructions/queues/` | Виджеты, роботы, MCP; очереди |
-| `.github/contributing/` | Процессы: ревью, зависимости |
+| `.github/contributing/` | Процессы: ревью, зависимости, [план проверки](.github/contributing/testing.md) и известные проблемы кода |
 
 Документация обновляется **в том же PR**, что и код. Устаревшая документация — такой же баг, как упавший тест: агенты копируют примеры из `instructions/` дословно.
 

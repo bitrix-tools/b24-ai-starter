@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -28,9 +30,8 @@ def root(request: AuthorizedRequest):
 
 @xframe_options_exempt
 @require_GET
-@auth_required
-def health(request: AuthorizedRequest):
-    """Return authenticated health data for the Python backend."""
+def health(request):
+    """Public liveness probe (same in every backend): no auth, no sensitive data."""
     return JsonResponse({
         "status": "healthy",
         "backend": "python",
@@ -72,7 +73,16 @@ def get_token(request: AuthorizedRequest):
 def install(request: AuthorizedRequest):
     """Register lifecycle event handlers during Bitrix24 app installation."""
 
+    # Installation must come with fresh Bitrix24 auth data from the install page,
+    # validated by auth_required — never with a previously issued JWT.
+    if request.headers.get("Authorization", "").lower().startswith("bearer "):
+        return JsonResponse({"error": "Installation expects Bitrix24 auth data, not a JWT"}, status=HTTPStatus.BAD_REQUEST)
+
     bitrix24_account = request.bitrix24_account
+
+    # Bitrix24 lets only portal administrators install applications.
+    if not bitrix24_account.is_b24_user_admin:
+        return JsonResponse({"error": "Only a portal administrator can install the application"}, status=HTTPStatus.FORBIDDEN)
 
     bitrix24_account.create_application_installation(request.params)
 

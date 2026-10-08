@@ -6,7 +6,8 @@
          cacheDirectory=".phpunit.cache"
          beStrictAboutOutputDuringTests="true"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         defaultTestSuite="all">
     <php>
         <env name="KERNEL_CLASS" value="App\Kernel"/>
         <env name="APP_ENV" value="test"/>
@@ -21,6 +22,17 @@
         <env name="JWT_ALGORITHM" value="HS256" force="true"/>
     </php>
     <testsuites>
+        <!-- Default for a plain `phpunit` run (make test-php, CI). The suites below
+             overlap on purpose (one per make target), so running them all at once
+             would trip failOnWarning — always pick one with `testsuite`. -->
+        <testsuite name="all">
+            <directory>tests/Security</directory>
+            <directory>tests/Telemetry</directory>
+            <exclude>tests/Telemetry/E2E</exclude>
+        </testsuite>
+        <testsuite name="security">
+            <directory>tests/Security</directory>
+        </testsuite>
         <testsuite name="telemetry-all">
             <directory>tests/Telemetry</directory>
             <exclude>tests/Telemetry/E2E</exclude>

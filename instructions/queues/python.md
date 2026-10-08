@@ -54,10 +54,13 @@ CELERY_BROKER_URL=${RABBITMQ_DSN}
 ```
 
 ## 6. Запуск воркера
+В стартере уже есть сервис `python-worker` (профиль `python-worker`, команда `celery -A celery_app:celery_app worker --loglevel=info`). `make dev-python` запускает его вместе с профилем `queue`, если в `.env` задано `ENABLE_RABBITMQ=1`.
+
+Разовый запуск воркера вручную:
 ```bash
 COMPOSE_PROFILES=python,queue docker compose --env-file .env run --rm \
   api-python celery -A celery_app.celery_app worker --loglevel=info
 ```
 
-> Для продакшна вынесите воркер в отдельный сервис Docker или управляйте им через Supervisor/systemd.
+> Для продакшна используйте сервис `python-worker` или управляйте воркером через Supervisor/systemd.
 

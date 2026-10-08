@@ -1,5 +1,7 @@
 # B24Form: Форма редактирования объекта
 
+> **Встраивание в проект.** Примеры ниже — фрагменты. Готовую страницу кладите в `frontend/app/pages/<name>.client.vue` и стройте по «Шаблону страницы» из [knowledge.md](./knowledge.md): `useAppInit('Name')` → `$initializeB24Frame()` → `initApp($b24, localesI18n, setLocale)` в `onMounted` с `try/catch` + `processErrorGlobal`, данные — через `$b24.actions.v2.*.make()` или методы `useApiStore()` (не `fetch`/`$fetch`), логи — `$logger`. **Не оборачивайте** разметку в `<B24App>` / `<B24SidebarLayout>` — они уже есть в `app/app.vue` и `layouts/`. Строки интерфейса выносите в `frontend/i18n/locales/*.json` и выводите через `$t('…')` (здесь они оставлены по-русски для краткости). `vue`-API, сторы и composables импортируются автоматически.
+
 > **⚠️ ВАЖНО ДЛЯ ИИ АГЕНТОВ**: Используйте **B24Form** и **B24FormField** из Bitrix24 UI Kit, а НЕ UForm/UFormGroup из Nuxt UI!
 
 ## 📋 Описание
@@ -30,13 +32,19 @@
   </B24Form>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FormSubmitEvent } from '@bitrix24/b24ui-nuxt'
+
+const { $logger } = useAppInit('FormPage')
+const { track } = useTelemetry()
+
 const state = reactive({
   name: ''
 })
 
-const onSubmit = async (data) => {
-  console.log('Submitted:', data)
+const onSubmit = async (event: FormSubmitEvent<typeof state>) => {
+  track('ui_form_submit', { 'ui.form': 'basic_form' })
+  $logger.info('Submitted', { data: event.data })
 }
 </script>
 ```
@@ -47,7 +55,6 @@ const onSubmit = async (data) => {
 
 ```vue
 <template>
-  <B24App>
     <B24Container class="py-8">
       <div v-if="loading" class="flex items-center justify-center min-h-screen">
         <LoadingIcon class="w-8 h-8 animate-spin" />
@@ -97,7 +104,7 @@ const onSubmit = async (data) => {
           <div class="lg:col-span-2 space-y-6">
             <B24Card>
               <template #header>
-                <h3 class="text-lg font-semibold">Основная информация</h3>
+                <ProseH3 class="text-lg font-semibold">Основная информация</ProseH3>
               </template>
 
               <div class="space-y-4 p-4">
@@ -145,7 +152,7 @@ const onSubmit = async (data) => {
 
             <B24Card>
               <template #header>
-                <h3 class="text-lg font-semibold">Дополнительно</h3>
+                <ProseH3 class="text-lg font-semibold">Дополнительно</ProseH3>
               </template>
 
               <div class="p-4">
@@ -164,7 +171,7 @@ const onSubmit = async (data) => {
           <div class="space-y-6">
             <B24Card>
               <template #header>
-                <h3 class="text-lg font-semibold">Информация</h3>
+                <ProseH3 class="text-lg font-semibold">Информация</ProseH3>
               </template>
 
               <div class="space-y-3 text-sm p-4">
@@ -177,7 +184,7 @@ const onSubmit = async (data) => {
 
             <B24Card>
               <template #header>
-                <h3 class="text-lg font-semibold">Действия</h3>
+                <ProseH3 class="text-lg font-semibold">Действия</ProseH3>
               </template>
 
               <div class="space-y-2 p-4">
@@ -204,17 +211,24 @@ const onSubmit = async (data) => {
         </div>
       </div>
     </B24Container>
-  </B24App>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import type { B24Frame } from '@bitrix24/b24jssdk'
 import LoadingIcon from '@bitrix24/b24icons-vue/animated/LoaderWaitIcon'
 import CalendarIcon from '@bitrix24/b24icons-vue/outline/CalendarIcon'
 import CheckIcon from '@bitrix24/b24icons-vue/main/CheckIcon'
 import CloseIcon from '@bitrix24/b24icons-vue/actions/Cross30Icon'
 import CopyIcon from '@bitrix24/b24icons-vue/outline/CopyIcon'
 import TrashIcon from '@bitrix24/b24icons-vue/outline/TrashcanIcon'
+
+const { locale, locales: localesI18n, setLocale } = useI18n()
+const { $logger, initApp, processErrorGlobal } = useAppInit('ItemCardPage')
+const { $initializeB24Frame } = useNuxtApp()
+let $b24: null | B24Frame = null
+const apiStore = useApiStore()
+const toast = useToast()
+const { track } = useTelemetry()
 
 const item = ref({ id: 1, createdAt: new Date().toISOString() })
 const form = reactive({
@@ -243,13 +257,20 @@ const currencyOptions = [
 ]
 
 const saveItem = async () => {
+  track('ui_button_click', { 'ui.button_id': 'item_card_save' })
   saving.value = true
   try {
-    await fetch(`/api/items/${item.value.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(form)
+    // Метод своего бэкенда в app/stores/api.ts (по образцу getList, с headers: authHeaders()).
+    // Для сущностей Bitrix24 — $b24.actions.v2.call.make({ method: 'crm.item.update', params: { ... } })
+    await apiStore.updateItem(item.value.id, { ...form })
+    toast.add({ title: 'Сохранено', color: 'air-primary-success' })
+  } catch (error) {
+    $logger.error('Failed to save item', { error })
+    toast.add({
+      title: 'Ошибка',
+      description: error instanceof Error ? error.message : String(error),
+      color: 'air-primary-alert'
     })
-    useToast().add({ title: 'Сохранено', color: 'air-primary-success' })
   } finally {
     saving.value = false
   }
@@ -260,14 +281,27 @@ const cancelEdit = () => {
 }
 
 const duplicate = () => {
-  console.log('Duplicate')
+  $logger.debug('Duplicate', { id: item.value.id })
 }
 
 const deleteItem = () => {
-  console.log('Delete')
+  $logger.debug('Delete', { id: item.value.id })
 }
 
-const formatDate = (date) => new Date(date).toLocaleString('ru-RU')
+const formatDate = (date: string) => new Date(date).toLocaleString(locale.value)
+
+onMounted(async () => {
+  try {
+    loading.value = true
+    $b24 = await $initializeB24Frame()
+    await initApp($b24, localesI18n, setLocale)
+    await $b24.parent.setTitle('Карточка объекта')
+  } catch (error) {
+    processErrorGlobal(error)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 ```
 

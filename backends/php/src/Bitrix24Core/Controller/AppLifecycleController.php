@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace App\Bitrix24Core\Controller;
 
+use App\Service\LogRedactor;
 use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
 use App\Bitrix24Core\FrontendPayload;
 use App\Service\Telemetry\TelemetryInterface;
@@ -26,6 +27,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -48,7 +50,7 @@ class AppLifecycleController extends AbstractController
     public function install(Request $request): Response
     {
         $this->logger->debug('AppLifecycleController.install.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -59,12 +61,14 @@ class AppLifecycleController extends AbstractController
         }
 
         $this->logger->debug('AppLifecycleController.install.payload', [
-            'payload' => print_r($payload, true),
+            'payload' => LogRedactor::redact($payload),
         ]);
         $frontendPayload = FrontendPayload::initFromArray($payload);
 
         $this->logger->debug('AppLifecycleController.install.frontendPayload', [
-            'payload' => print_r($frontendPayload, true),
+            'domain' => $frontendPayload->domain,
+            'member_id' => $frontendPayload->memberId,
+            'user_id' => $frontendPayload->b24UserId,
         ]);
 
         try {
@@ -157,7 +161,7 @@ class AppLifecycleController extends AbstractController
                 'registration.events_count' => '2',
             ]);
 
-            $response = new Response('OK', 200);
+            $response = new JsonResponse(['message' => 'Installation successful'], 200);
             $this->logger->debug('AppLifecycleController.install.finish', [
                 'response' => $response->getContent(),
                 'statusCode' => $response->getStatusCode(),

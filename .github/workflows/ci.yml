@@ -56,7 +56,7 @@ jobs:
         run: pnpm build
 
   backend-node:
-    name: Node backend (install · syntax)
+    name: Node backend (install · syntax · test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -81,12 +81,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Syntax check
-        run: node --check server.js && node --check utils/verifyToken.js
+        run: node --check server.js && node --check utils/verifyToken.js && node --check utils/verifyFrontendAuth.js
+
+      - name: Unit tests
+        run: pnpm test
 
   backend-php:
-    name: PHP backend (composer validate)
+    name: PHP backend (validate · install · container · test)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backends/php
@@ -97,20 +100,31 @@ jobs:
         with:
           php-version: '8.4'
           tools: composer:v2
+          extensions: intl, bcmath, amqp, sockets, pdo_pgsql, pdo_mysql
+        env:
+          # lets composer download GitHub-hosted packages (incl. dev branches of
+          # bitrix24/b24phpsdk) without anonymous API rate limits — no extra secret
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # `composer validate` verifies composer.json is well-formed AND that
-      # composer.lock is in sync with it — this is exactly the drift that
-      # broke `make composer-install` (issue #19). Full `composer install` is
-      # skipped because several dependencies are dev-branch git sources that
-      # require GitHub authentication not available to a generic CI runner.
+      # composer.lock is in sync with it (issue #19). No --strict: benign schema
+      # warnings (version field, unbound constraint) must not fail CI.
       - name: Validate composer.json / composer.lock
-        # No --strict: benign schema warnings (version field, unbound constraint)
-        # must not fail CI, but a lock out of sync with composer.json still
-        # returns a non-zero exit — which is exactly the #19 drift we guard against.
         run: composer validate --no-check-publish
 
+      - name: Install (from composer.lock)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Boots the prod container: catches config/bundle/DI breakage (e.g. options
+      # removed by a dependency upgrade) that unit tests do not load.
+      - name: Symfony container (prod)
+        run: php bin/console lint:container --env=prod
+
+      - name: Unit tests (security + telemetry)
+        run: vendor/bin/phpunit
+
   backend-python:
-    name: Python backend (install · Django check)
+    name: Python backend (install · Django check · test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -133,6 +147,9 @@ jobs:
 
       - name: Migrations are in sync with models
         run: python manage.py makemigrations --check --dry-run
+
+      - name: Unit tests (no database needed)
+        run: python manage.py test
 
   repo-lint:
     name: Repo lint (actionlint · markdownlint)
@@ -158,3 +175,39 @@ jobs:
             CHANGELOG.md
             .github/contributing/**/*.md
             .claude/skills/**/*.md
+
+  docker:
+    name: Docker images (build · smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      # Production images of every service (the stages users run with make prod-*),
+      # plus the PHP images. Catches Dockerfile / lockfile / build-context mistakes.
+      - name: Build images
+        run: |
+          COMPOSE_PROFILES=frontend,php,python,node \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build \
+            frontend api-php php-cli api-python api-node
+
+      # One backend end to end with a real database: liveness is public,
+      # data routes need a JWT, getToken does not hand out tokens to anyone.
+      - name: Smoke test (Node backend + PostgreSQL)
+        run: |
+          COMPOSE_PROFILES=node,db-postgres BUILD_TARGET=production \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait database-postgres api-node
+          for _ in $(seq 1 30); do curl -fsS http://localhost:8000/api/health && break; sleep 2; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/health)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/enum)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+            -d '{"DOMAIN":"example.bitrix24.ru","member_id":"x","AUTH_ID":"forged"}' \
+            http://localhost:8000/api/getToken)" = 401
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=100
+

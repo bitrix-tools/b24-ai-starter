@@ -153,27 +153,22 @@
 
 ### Шаг 2: Автоматизированная проверка (если доступны инструменты)
 
-#### 2.1 PHP_CodeSniffer (phpcs)
-```bash
-# Проверка с PSR-12
-vendor/bin/phpcs --standard=PSR12 /путь/к/файлу.php
+В стартере (`backends/php`) уже настроены PHPStan, Rector и PHP CS Fixer. Запуск — из корня репозитория, внутри контейнера `php-cli`:
 
-# Или для всего проекта
-vendor/bin/phpcs --standard=PSR12 /путь/к/проекту
+```bash
+make php-cli-lint-phpstan   # PHPStan, конфиг phpstan.dist.neon (level 6: bin/, config/, public/, src/)
+make test-php               # PHPUnit: tests/Security + tests/Telemetry (suite `all` по умолчанию)
+make lint-rector            # Rector --dry-run, конфиг rector.php (make lint-rector-fix — применить)
+make lint-cs-fixer          # PHP CS Fixer check, конфиг .php-cs-fixer.dist.php (@Symfony + @PSR12)
+make lint-cs-fixer-fix      # применить исправления
 ```
 
-#### 2.2 PHPStan (статический анализ)
-```bash
-# Базовый уровень
-vendor/bin/phpstan analyse /путь/к/файлу.php --level=5
+PHP_CodeSniffer и Psalm в проект не установлены — не предлагай их команды как готовые.
 
-# Строгий уровень
-vendor/bin/phpstan analyse /путь/к/файлу.php --level=8
-```
-
-#### 2.3 Psalm (альтернатива PHPStan)
+#### 2.1 PHPStan на отдельном файле
 ```bash
-vendor/bin/psalm /путь/к/файлу.php
+# внутри контейнера php-cli (make php-cli-sh)
+vendor/bin/phpstan analyse src/Controller/ApiController.php --level=8
 ```
 
 ---
@@ -710,7 +705,7 @@ public function getUsers(): array {
 ## 🎯 Общие рекомендации
 
 1. Настройте автоматическое форматирование кода в IDE (PhpStorm/VSCode)
-2. Установите PHP_CodeSniffer для автоматической проверки перед коммитом
+2. Запускайте `make lint-cs-fixer` и `make php-cli-lint-phpstan` перед коммитом
 3. Используйте PHPStan уровня 6+ для статического анализа
 4. Добавьте pre-commit хуки для проверки стандартов кодирования
 
@@ -719,14 +714,11 @@ public function getUsers(): array {
 ## 🔧 Команды для автоматизации
 
 ```bash
-# Установка инструментов
-composer require --dev squizlabs/php_codesniffer phpstan/phpstan
-
-# Проверка кода
-vendor/bin/phpcs --standard=PSR12 src/
-
-# Статический анализ
-vendor/bin/phpstan analyse src/ --level=6
+# Инструменты уже в require-dev (phpstan/phpstan, rector/rector, friendsofphp/php-cs-fixer)
+make php-cli-lint-phpstan
+make lint-rector
+make lint-cs-fixer
+make lint-cs-fixer-fix
 ```
 
 ---
@@ -746,7 +738,7 @@ vendor/bin/phpstan analyse src/ --level=6
 4. **СПРАШИВАЙ** перед каждым исправлением
 5. **ГРУППИРУЙ** похожие проблемы для удобства
 6. **ПРИОРИТИЗИРУЙ** проблемы по серьезности
-7. **УЧИТЫВАЙ** версию PHP проекта (некоторые фичи доступны только в PHP 7.4+/8.0+)
+7. **УЧИТЫВАЙ** версию PHP проекта (стартер — PHP 8.4)
 8. **БУДЬ КОНСТРУКТИВНЫМ** - не просто критикуй, а помогай улучшить код
 
 ### Тон коммуникации:
