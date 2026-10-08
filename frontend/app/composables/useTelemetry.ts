@@ -21,9 +21,14 @@
  * Допустимые event_name (whitelist из telemetry.yaml):
  * - page_view
  * - ui_button_click
+ * - ui_select_change
  * - ui_form_submit
  * - ui_error
  * - app_frame_loaded
+ * - b24_api_call
+ *
+ * Эндпоинт POST /api/telemetry/event есть только в PHP-бэкенде: с Python и Node
+ * запрос получит 404 — держите для них NUXT_PUBLIC_TELEMETRY_ENABLED=false (по умолчанию).
  */
 
 const MAX_QUEUE_SIZE = 10

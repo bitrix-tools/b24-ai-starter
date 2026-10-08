@@ -210,13 +210,13 @@ onUnmounted(() => {
 
 - Вызовы бэкенда — только через `useApiStore()` (не `$fetch` в страницах). `initApp()` вызывает `apiStore.init($b24)`, который получает JWT через `POST /api/getToken`. Новый эндпоинт добавляйте методом в `app/stores/api.ts` по образцу `getList` (`$api('/api/…', { headers: authHeaders() })`) и возвращайте его из стора.
 - Телеметрия: `const { track } = useTelemetry()`; `track('ui_button_click', { 'ui.button_id': 'save' })`. Значения атрибутов — строки; разрешённые имена событий (whitelist PHP-бэкенда): `page_view`, `ui_button_click`, `ui_select_change`, `ui_form_submit`, `ui_error`, `app_frame_loaded`, `b24_api_call`. `plugins/telemetry.client.ts` уже шлёт `app_frame_loaded`, `page_view`, `ui_error`.
-- Настройки: `useAppSettingsStore()` / `useUserSettingsStore()` — `configSettings` + `saveSettings()` (`app.option.set` / `user.option.set`); `useUserStore()` — `id`, `login`, `isAdmin`; `usePageStore()` — `title`/`description` для layout `slider`.
+- Настройки: `useAppSettingsStore()` / `useUserSettingsStore()` — `configSettings` + `saveSettings()` (`app.option.set` / `user.option.set`); `useUserStore()` — `id`, `fullName`, `isAdmin`; `usePageStore()` — `title`/`description` для layout `slider`.
 
 #### i18n
 
 - Все строки интерфейса — через `t('…')` / `$t('…')`; ключи в `frontend/i18n/locales/<code>.json` (`page.<name>.*`, `components.<name>.*`).
 - Список локалей — `frontend/i18n/i18n.map.ts` (19 штук: en, de, la, br, fr, it, pl, ru, ua, tr, sc, tc, ja, vn, id, ms, th, ar, kz). Источник истины и fallback — `en.json`; новые ключи добавляйте как минимум в `en.json` и `ru.json` (недостающие ключи берутся из английского).
-- Известный пробел: скрипт `translate-ui` в `package.json` ссылается на несуществующий `tools/translate.ui.ts`.
+- Все 19 локалей обязаны содержать ровно ключи `en.json` — это проверяет тест `frontend/test/i18n.spec.ts` (`pnpm test`, CI). Новый ключ добавляйте во все файлы `frontend/i18n/locales/` с переводом.
 - Строки на русском в рецептах ниже оставлены для краткости; в коде проекта выносите их в локали.
 
 #### Структура кода, линтер, тесты

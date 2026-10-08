@@ -125,7 +125,11 @@ export const useAppInit = (loggerTitle?: string) => {
    * Reloads data
    */
   async function reloadData() {
-    await b24Helper.value?.loadData([
+    if (!b24Helper.value) {
+      throw new Error('useAppInit: call initApp() before reloadData()')
+    }
+
+    await b24Helper.value.loadData([
       LoadDataType.AppOptions,
       LoadDataType.UserOptions,
       LoadDataType.Currency

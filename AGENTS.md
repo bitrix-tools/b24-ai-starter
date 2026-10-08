@@ -61,7 +61,6 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `develop-b24-frontend` | Страницы, компоненты, JS SDK |
 | `develop-b24-php` / `develop-b24-python` / `develop-b24-node` | Бэкенд на выбранном языке |
 | `implement-b24-features` | Виджеты, роботы, события, очереди |
-| `bitrix24-static-local-app` | Сборка статического локального приложения |
 | `Bitrix24 MCP server` | Поиск методов REST API через MCP |
 
 ## Документация

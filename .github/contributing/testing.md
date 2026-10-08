@@ -84,7 +84,7 @@
 | 12 | ✅ Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |
 | 13 | ✅ Python: `DEBUG = True` захардкожен; при пустом `VIRTUAL_HOST` в `ALLOWED_HOSTS` попадает `None` | `backends/python/django/settings.py` | Prod-запуск с пустым `VIRTUAL_HOST` |
 | 14 | ✅ Python Dockerfile выполняет `makemigrations` при старте (dev и prod) — миграции генерируются в рантайме | `backends/python/django/Dockerfile` | `git status` после `make dev-python` |
-| 15 | `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
+| 15 | ✅ `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
 | 16 | Схема БД для PHP создаётся init-скриптами, а единственная Doctrine-миграция не содержит уникального индекса из #8 | `backends/php/migrations/`, `infrastructure/database/` | `make dev-php-db-migrate` на пустой БД без init-скриптов |
 | 17 | Смена домена портала не обрабатывается: после переименования PHP `/api/getToken` отвечает 401 «not installed» (в БД старый домен) | `backends/php` (нет обработчика `ONAPPDOMAINCHANGE`/`PortalDomainChanged`) | Переименовать тестовый портал |
 
@@ -92,16 +92,16 @@
 
 | # | Проблема | Где |
 | --- | --- | --- |
-| F1 | Whitelist в комментарии не содержит `ui_select_change` и `b24_api_call`; эндпоинт телеметрии есть только в PHP | `app/composables/useTelemetry.ts` |
-| F2 | `makeSendPullCommandHandler.bind(this)` — `this` в `<script setup>` не определён | `app/pages/handler/uf.demo.client.vue` |
-| F3 | `clearErrorHref` скопирован со страницы пользовательского поля; `isLoading=false` выставляется дважды | `app/pages/handler/placement-crm-deal-detail-tab.client.vue` |
-| F4 | `isSkipB24`: `!toPath.includes('/')` всегда `false`; пропускаются несуществующие `/eula`, `/render` | `app/middleware/01.app.page.or.slider.global.ts` |
-| F5 | `useSeoMeta({ title: page.title })` — строка, а не геттер: заголовок не обновляется | `app/layouts/slider.vue`, `placement.vue` |
-| F6 | Разные адреса бэкенда по умолчанию: `http://api:8000` и `http://api-need_set:8000` | `server/routes/install.post.ts`, `nuxt.config.ts` |
-| F7 | Только `en.json` и `ru.json` содержат все ключи; в 17 локалях нет новых ключей | `i18n/locales/` |
-| F8 | Страница телеметрии: сырой `<input>`, цвета `text-gray-*` вместо B24-компонентов и `--ui-*`, захардкоженная русская строка | `app/pages/telemetry-test.client.vue` |
-| F9 | `reinitToken` логирует через `console.error` вместо логгера | `app/stores/api.ts` |
-| F10 | `reloadData` до инициализации молча ничего не делает (optional chaining по `b24Helper`) | `app/composables/useAppInit.ts` |
-| F11 | В `user` нет поля `name`: полное имя хранится в `login`, по умолчанию `' '` | `app/stores/user.ts` |
+| F1 | ✅ Whitelist в комментарии не содержит `ui_select_change` и `b24_api_call`; эндпоинт телеметрии есть только в PHP | `app/composables/useTelemetry.ts` |
+| F2 | ✅ `makeSendPullCommandHandler.bind(this)` — `this` в `<script setup>` не определён | `app/pages/handler/uf.demo.client.vue` |
+| F3 | ✅ `clearErrorHref` скопирован со страницы пользовательского поля; `isLoading=false` выставляется дважды | `app/pages/handler/placement-crm-deal-detail-tab.client.vue` |
+| F4 | ✅ `isSkipB24`: `!toPath.includes('/')` всегда `false`; пропускаются несуществующие `/eula`, `/render` | `app/middleware/01.app.page.or.slider.global.ts` |
+| F5 | ✅ `useSeoMeta({ title: page.title })` — строка, а не геттер: заголовок не обновляется | `app/layouts/slider.vue`, `placement.vue` |
+| F6 | ✅ Разные адреса бэкенда по умолчанию: `http://api:8000` и `http://api-need_set:8000` | `server/routes/install.post.ts`, `nuxt.config.ts` |
+| F7 | ✅ Только `en.json` и `ru.json` содержат все ключи; в 17 локалях нет новых ключей | `i18n/locales/` |
+| F8 | ✅ Страница телеметрии: сырой `<input>`, цвета `text-gray-*` вместо B24-компонентов и `--ui-*`, захардкоженная русская строка | `app/pages/telemetry-test.client.vue` |
+| F9 | ✅ `reinitToken` логирует через `console.error` вместо логгера | `app/stores/api.ts` |
+| F10 | ✅ `reloadData` до инициализации молча ничего не делает (optional chaining по `b24Helper`) | `app/composables/useAppInit.ts` |
+| F11 | ✅ В `user` нет поля `name`: полное имя хранится в `login`, по умолчанию `' '` | `app/stores/user.ts` |
 
 Проблемы безопасности в эту таблицу не вносятся — они передаются мейнтейнерам по [SECURITY.md](../../SECURITY.md).

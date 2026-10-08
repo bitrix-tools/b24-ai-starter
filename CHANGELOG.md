@@ -15,6 +15,9 @@
 
 ### Fixed
 
+- Фронтенд: страница ошибки учитывает параметры `processErrorGlobal` (`isShowClearError`, `clearErrorHref`, `clearErrorTitle`) — ссылки «очистить ошибку» указывали на несуществующие `.html`-адреса и не показывались; заголовок в layout `slider`/`placement` обновляется реактивно; адрес бэкенда по умолчанию — `http://api:8000` и в dev-прокси, и в `server/routes`; `reinitToken()`/`reloadData()` до инициализации бросают понятную ошибку вместо молчания; мелкие правки (`bind(this)`, двойной сброс `isLoading`, условие пропуска фрейма в middleware).
+- i18n: во всех 19 локалях одинаковый набор ключей (в 17 не хватало строк страницы телеметрии, во `vn.json` была старая структура — вьетнамский интерфейс частично показывался на английском); тест `test/i18n.spec.ts` не даёт разойтись снова.
+- Страница `telemetry-test`: компоненты B24 и токены UI-кита вместо сырых `<input>` и цветов Tailwind, строки вынесены в i18n.
 - Переустановка (#8) на базе, созданной до исправления: `make db-upgrade` применяет идемпотентные скрипты `infrastructure/database/upgrades/` (PostgreSQL и MySQL), без потери данных.
 - Python: `DEBUG` берётся из `BUILD_TARGET` (был захардкожен `True`, в т.ч. в production); пустой `VIRTUAL_HOST` больше не ломает `ALLOWED_HOSTS`; разрешены внутренние имена `api`/`api-python`.
 - Python: контейнер не выполняет `makemigrations` при старте; ошибка `migrate` больше не маскируется.
@@ -41,6 +44,8 @@
 
 ### Changed
 
+- `useUserStore`: поле `login` (хранило полное имя) переименовано в `fullName`.
+- Удалены нерабочий скрипт `translate-ui` и навык `bitrix24-static-local-app` (инструментов статической сборки нет; стартер работает с бэкендом).
 - Node: бэкенд больше не заглушка — `app.js` (`createApp()` с внедряемыми зависимостями), `server.js` (пул БД + `listen`), `db/accounts.js` (общая таблица `bitrix24account`, PostgreSQL и MySQL). `/api/install` проверяет `AUTH_ID` OAuth-сервером, сохраняет аккаунт и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL`; добавлен `/api/app-events/` (`ONAPPUNINSTALL` — только с сохранённым `application_token`); `/api/getToken` сначала ищет установленный аккаунт локально. Тесты — `pnpm test` (`node --test`).
 - frontend: `LoggerBrowser` → `LoggerFactory.createForBrowser()` (JS SDK 3); состояние загрузки — локальный `ref` вместо удалённого `useDashboard().isLoading`.
 

@@ -56,9 +56,9 @@ function setErr(s: ActionState, err: unknown) {
   s.result = err instanceof Error ? err.message : String(err)
 }
 function statusClass(status: Status): string {
-  if (status === 'ok')    return 'text-sm font-medium text-green-600'
-  if (status === 'error') return 'text-sm font-medium text-red-600'
-  return 'text-sm text-gray-400'
+  if (status === 'ok')    return 'text-sm font-medium text-(--ui-color-accent-main-success)'
+  if (status === 'error') return 'text-sm font-medium text-(--ui-color-accent-main-alert)'
+  return 'text-sm text-(--ui-color-base-50)'
 }
 function statusLabel(status: Status): string {
   if (status === 'ok')    return t('page.telemetry-test.status.ok')
@@ -73,7 +73,7 @@ async function runBackendEvents() {
   state.backend.result = ''
   try {
     const res = await apiStore.telemetryTest()
-    setOk(state.backend, `Fired ${res.fired_count} events: ${res.fired_events.join(', ')}`)
+    setOk(state.backend, t('page.telemetry-test.result.backend_fired', { count: res.fired_count, events: res.fired_events.join(', ') }))
   } catch (err) {
     setErr(state.backend, err)
   }
@@ -86,7 +86,7 @@ function doButtonClick() {
     'ui.button_id': 'telemetry_test_button',
     'ui.path': route.path,
   })
-  setOk(state.buttonClick, 'ui_button_click sent')
+  setOk(state.buttonClick, t('page.telemetry-test.result.sent', { event: 'ui_button_click' }))
 }
 
 function onSelectChange(val: string[]) {
@@ -95,7 +95,7 @@ function onSelectChange(val: string[]) {
     'ui.selected_count': String(val.length),
     'ui.path': route.path,
   })
-  setOk(state.selectChange, `ui_select_change sent (selected: ${val.join(', ') || '—'})`)
+  setOk(state.selectChange, t('page.telemetry-test.result.select_sent', { event: 'ui_select_change', values: val.join(', ') || '—' }))
 }
 
 function doFormSubmit() {
@@ -103,7 +103,7 @@ function doFormSubmit() {
     'ui.form': 'telemetry_test_form',
     'ui.path': route.path,
   })
-  setOk(state.formSubmit, 'ui_form_submit sent')
+  setOk(state.formSubmit, t('page.telemetry-test.result.sent', { event: 'ui_form_submit' }))
 }
 
 function doErrorTrack() {
@@ -112,7 +112,7 @@ function doErrorTrack() {
     'error.message': '[TelemetryTest] Soft frontend test error',
     'ui.path':       route.path,
   })
-  setOk(state.errorTrack, 'ui_error sent (soft, no real exception)')
+  setOk(state.errorTrack, t('page.telemetry-test.result.error_sent', { event: 'ui_error' }))
 }
 // endregion ////
 
@@ -128,7 +128,7 @@ async function doB24UserCurrent() {
     }
     const result = res.getData()?.result
     const user = (Array.isArray(result) ? result[0] : result) as { ID?: string, NAME?: string, LAST_NAME?: string } | undefined
-    setOk(state.b24User, `user.current → ID: ${user?.ID}, name: ${user?.NAME} ${user?.LAST_NAME}`)
+    setOk(state.b24User, t('page.telemetry-test.result.b24_user', { method: 'user.current', id: String(user?.ID), name: `${user?.NAME} ${user?.LAST_NAME}` }))
   } catch (err) {
     setErr(state.b24User, err)
   }
@@ -145,7 +145,7 @@ async function doB24StatusList() {
     }
     const result = res.getData()?.result
     const count = Array.isArray(result) ? result.length : '?'
-    setOk(state.b24Status, `crm.status.list → ${count} статусов`)
+    setOk(state.b24Status, t('page.telemetry-test.result.b24_status', { method: 'crm.status.list', count }))
   } catch (err) {
     setErr(state.b24Status, err)
   }
@@ -158,7 +158,7 @@ async function doB24PlacementInfo() {
     track('b24_api_call', { 'b24.method': 'placement.info', 'ui.path': route.path })
     const placement = $b24?.placement?.title ?? 'n/a'
     const options   = JSON.stringify($b24?.placement?.options ?? {})
-    setOk(state.b24Placement, `placement: ${placement}, options: ${options}`)
+    setOk(state.b24Placement, t('page.telemetry-test.result.b24_placement', { placement, options }))
   } catch (err) {
     setErr(state.b24Placement, err)
   }
@@ -173,7 +173,7 @@ onMounted(async () => {
     await $b24.parent.setTitle(t('page.telemetry-test.seo.title'))
     isInit.value = true
 
-    // Автоматически запускаем бэкенд-события при открытии страницы
+    // Fire backend events automatically when the page opens
     await runBackendEvents()
   } catch (error) {
     processErrorGlobal(error)
@@ -195,7 +195,7 @@ onMounted(async () => {
       />
       <div>
         <ProseH2 class="mb-0">{{ $t('page.telemetry-test.title') }}</ProseH2>
-        <ProseP class="text-sm text-gray-500 mb-0">{{ $t('page.telemetry-test.description') }}</ProseP>
+        <ProseP class="text-sm text-(--ui-color-base-70) mb-0">{{ $t('page.telemetry-test.description') }}</ProseP>
       </div>
     </div>
 
@@ -205,14 +205,14 @@ onMounted(async () => {
       <B24Card>
         <template #header>
           <ProseH3 class="mb-0">{{ $t('page.telemetry-test.section.backend') }}</ProseH3>
-          <ProseP class="text-sm text-gray-500 mb-0">{{ $t('page.telemetry-test.section.backend_desc') }}</ProseP>
+          <ProseP class="text-sm text-(--ui-color-base-70) mb-0">{{ $t('page.telemetry-test.section.backend_desc') }}</ProseP>
         </template>
         <div class="flex flex-col gap-2">
           <div class="flex flex-row items-center gap-3 flex-wrap">
             <B24Button :label="$t('page.telemetry-test.action.run_backend')" loading-auto @click="runBackendEvents" />
             <span :class="statusClass(state.backend.status)">{{ statusLabel(state.backend.status) }}</span>
           </div>
-          <ProseP v-if="state.backend.result" class="text-xs text-gray-500 mb-0 break-all">{{ state.backend.result }}</ProseP>
+          <ProseP v-if="state.backend.result" class="text-xs text-(--ui-color-base-70) mb-0 break-all">{{ state.backend.result }}</ProseP>
         </div>
       </B24Card>
 
@@ -220,7 +220,7 @@ onMounted(async () => {
       <B24Card>
         <template #header>
           <ProseH3 class="mb-0">{{ $t('page.telemetry-test.section.frontend') }}</ProseH3>
-          <ProseP class="text-sm text-gray-500 mb-0">{{ $t('page.telemetry-test.section.frontend_desc') }}</ProseP>
+          <ProseP class="text-sm text-(--ui-color-base-70) mb-0">{{ $t('page.telemetry-test.section.frontend_desc') }}</ProseP>
         </template>
         <div class="flex flex-col gap-4">
 
@@ -232,32 +232,34 @@ onMounted(async () => {
 
           <!-- ui_select_change -->
           <div class="flex flex-col gap-1">
-            <ProseP class="text-sm font-medium mb-0">{{ $t('page.telemetry-test.label.select') }}</ProseP>
-            <div class="flex flex-row items-center gap-3 flex-wrap">
-              <B24InputMenu
-                v-model="selectValue"
-                multiple
-                class="w-[240px]"
-                :items="selectItems"
+            <B24FormField :label="$t('page.telemetry-test.label.select')">
+              <div class="flex flex-row items-center gap-3 flex-wrap">
+                <B24InputMenu
+                  v-model="selectValue"
+                  multiple
+                  class="w-[240px]"
+                  :items="selectItems"
                 @update:model-value="onSelectChange"
-              />
-              <span :class="statusClass(state.selectChange.status)">{{ statusLabel(state.selectChange.status) }}</span>
-            </div>
-            <ProseP v-if="state.selectChange.result" class="text-xs text-gray-500 mb-0">{{ state.selectChange.result }}</ProseP>
+                />
+                <span :class="statusClass(state.selectChange.status)">{{ statusLabel(state.selectChange.status) }}</span>
+              </div>
+            </B24FormField>
+            <ProseP v-if="state.selectChange.result" class="text-xs text-(--ui-color-base-70) mb-0">{{ state.selectChange.result }}</ProseP>
           </div>
 
           <!-- ui_form_submit -->
           <form class="flex flex-col gap-2" @submit.prevent="doFormSubmit">
-            <ProseP class="text-sm font-medium mb-0">{{ $t('page.telemetry-test.label.form_field') }}</ProseP>
-            <div class="flex flex-row items-center gap-3 flex-wrap">
-              <input
-                v-model="formText"
-                class="w-[240px] rounded border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
-                placeholder="test value"
-              >
-              <B24Button type="submit" :label="$t('page.telemetry-test.action.form_submit')" color="air-secondary" />
-              <span :class="statusClass(state.formSubmit.status)">{{ statusLabel(state.formSubmit.status) }}</span>
-            </div>
+            <B24FormField :label="$t('page.telemetry-test.label.form_field')">
+              <div class="flex flex-row items-center gap-3 flex-wrap">
+                <B24Input
+                  v-model="formText"
+                  class="w-[240px]"
+                  :placeholder="$t('page.telemetry-test.label.form_placeholder')"
+                />
+                <B24Button type="submit" :label="$t('page.telemetry-test.action.form_submit')" color="air-secondary" />
+                <span :class="statusClass(state.formSubmit.status)">{{ statusLabel(state.formSubmit.status) }}</span>
+              </div>
+            </B24FormField>
           </form>
 
           <!-- ui_error -->
@@ -273,7 +275,7 @@ onMounted(async () => {
       <B24Card>
         <template #header>
           <ProseH3 class="mb-0">{{ $t('page.telemetry-test.section.b24api') }}</ProseH3>
-          <ProseP class="text-sm text-gray-500 mb-0">{{ $t('page.telemetry-test.section.b24api_desc') }}</ProseP>
+          <ProseP class="text-sm text-(--ui-color-base-70) mb-0">{{ $t('page.telemetry-test.section.b24api_desc') }}</ProseP>
         </template>
         <div class="flex flex-col gap-3">
 
@@ -282,7 +284,7 @@ onMounted(async () => {
               <B24Button :label="$t('page.telemetry-test.action.b24_user')" loading-auto @click="doB24UserCurrent" />
               <span :class="statusClass(state.b24User.status)">{{ statusLabel(state.b24User.status) }}</span>
             </div>
-            <ProseP v-if="state.b24User.result" class="text-xs text-gray-500 mb-0 break-all">{{ state.b24User.result }}</ProseP>
+            <ProseP v-if="state.b24User.result" class="text-xs text-(--ui-color-base-70) mb-0 break-all">{{ state.b24User.result }}</ProseP>
           </div>
 
           <div class="flex flex-col gap-1">
@@ -290,7 +292,7 @@ onMounted(async () => {
               <B24Button :label="$t('page.telemetry-test.action.b24_status')" loading-auto @click="doB24StatusList" />
               <span :class="statusClass(state.b24Status.status)">{{ statusLabel(state.b24Status.status) }}</span>
             </div>
-            <ProseP v-if="state.b24Status.result" class="text-xs text-gray-500 mb-0 break-all">{{ state.b24Status.result }}</ProseP>
+            <ProseP v-if="state.b24Status.result" class="text-xs text-(--ui-color-base-70) mb-0 break-all">{{ state.b24Status.result }}</ProseP>
           </div>
 
           <div class="flex flex-col gap-1">
@@ -298,7 +300,7 @@ onMounted(async () => {
               <B24Button :label="$t('page.telemetry-test.action.b24_placement')" loading-auto @click="doB24PlacementInfo" />
               <span :class="statusClass(state.b24Placement.status)">{{ statusLabel(state.b24Placement.status) }}</span>
             </div>
-            <ProseP v-if="state.b24Placement.result" class="text-xs text-gray-500 mb-0 break-all">{{ state.b24Placement.result }}</ProseP>
+            <ProseP v-if="state.b24Placement.result" class="text-xs text-(--ui-color-base-70) mb-0 break-all">{{ state.b24Placement.result }}</ProseP>
           </div>
 
         </div>

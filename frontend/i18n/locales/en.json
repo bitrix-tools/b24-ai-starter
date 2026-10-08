@@ -38,17 +38,27 @@
         "b24_user": "user.current",
         "b24_status": "crm.status.list",
         "b24_placement": "placement.info",
-        "back": "\u2190 Back"
+        "back": "← Back"
       },
       "label": {
         "select": "Select (ui_select_change)",
-        "form_field": "Form field"
+        "form_field": "Form field",
+        "form_placeholder": "test value"
       },
       "status": {
         "idle": "Idle",
-        "ok": "\u2713 Sent",
-        "error": "\u2717 Error",
+        "ok": "✓ Sent",
+        "error": "✗ Error",
         "result": "Result"
+      },
+      "result": {
+        "backend_fired": "Fired {count} events: {events}",
+        "sent": "{event} sent",
+        "select_sent": "{event} sent (selected: {values})",
+        "error_sent": "{event} sent (soft, no real exception)",
+        "b24_user": "{method} → ID: {id}, name: {name}",
+        "b24_status": "{method} → {count} statuses",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

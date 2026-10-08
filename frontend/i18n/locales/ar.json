@@ -11,6 +11,54 @@
       "message": {
         "title": "مرحبًا!",
         "line1": "لنختبر عمل التطبيق في Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "اختبار القياس عن بُعد"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "اختبار القياس عن بُعد"
+      },
+      "title": "اختبار القياس عن بُعد",
+      "description": "تحقق مرئي من جميع قنوات القياس عن بُعد: أحداث الواجهة الخلفية، أحداث الواجهة الأمامية، استدعاءات Bitrix24 API.",
+      "section": {
+        "backend": "أحداث الواجهة الخلفية (PHP)",
+        "backend_desc": "اضغط على الزر — سترسل الواجهة الخلفية PHP سبعة أحداث مختلفة إلى OTel Collector.",
+        "frontend": "أحداث الواجهة الأمامية",
+        "frontend_desc": "يرسل كل زر / حقل / نموذج الحدث المقابل عبر useTelemetry.",
+        "b24api": "استدعاءات Bitrix24 API",
+        "b24api_desc": "استدعاءات مباشرة لـ JS SDK مع تتبع b24_api_call."
+      },
+      "action": {
+        "run_backend": "إطلاق أحداث الواجهة الخلفية",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (خفيف)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← رجوع"
+      },
+      "label": {
+        "select": "اختيار (ui_select_change)",
+        "form_field": "حقل النموذج",
+        "form_placeholder": "قيمة اختبارية"
+      },
+      "status": {
+        "idle": "في الانتظار",
+        "ok": "✓ تم الإرسال",
+        "error": "✗ خطأ",
+        "result": "النتيجة"
+      },
+      "result": {
+        "backend_fired": "تم إرسال {count} حدث: {events}",
+        "sent": "تم إرسال {event}",
+        "select_sent": "تم إرسال {event} (المحدد: {values})",
+        "error_sent": "تم إرسال {event} (خفيف، بدون استثناء حقيقي)",
+        "b24_user": "{method} → ID: {id}, الاسم: {name}",
+        "b24_status": "{method} → {count} حالة",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

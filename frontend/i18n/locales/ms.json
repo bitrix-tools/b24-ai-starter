@@ -11,6 +11,54 @@
       "message": {
         "title": "Helo!",
         "line1": "Mari uji fungsi aplikasi dalam Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Ujian telemetri"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Ujian telemetri"
+      },
+      "title": "Ujian telemetri",
+      "description": "Pengesahan visual semua saluran telemetri: acara backend, acara frontend, panggilan API Bitrix24.",
+      "section": {
+        "backend": "Acara backend (PHP)",
+        "backend_desc": "Tekan butang — backend PHP akan menghantar 7 acara berbeza ke OTel Collector.",
+        "frontend": "Acara frontend",
+        "frontend_desc": "Setiap butang / medan / borang menghantar acara yang sepadan melalui useTelemetry.",
+        "b24api": "Panggilan API Bitrix24",
+        "b24api_desc": "Panggilan terus JS SDK dengan penjejakan b24_api_call."
+      },
+      "action": {
+        "run_backend": "Cetuskan acara backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (lembut)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Kembali"
+      },
+      "label": {
+        "select": "Pilihan (ui_select_change)",
+        "form_field": "Medan borang",
+        "form_placeholder": "nilai ujian"
+      },
+      "status": {
+        "idle": "Menunggu",
+        "ok": "✓ Dihantar",
+        "error": "✗ Ralat",
+        "result": "Keputusan"
+      },
+      "result": {
+        "backend_fired": "{count} acara dihantar: {events}",
+        "sent": "{event} dihantar",
+        "select_sent": "{event} dihantar (dipilih: {values})",
+        "error_sent": "{event} dihantar (lembut, tiada pengecualian sebenar)",
+        "b24_user": "{method} → ID: {id}, nama: {name}",
+        "b24_status": "{method} → {count} status",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

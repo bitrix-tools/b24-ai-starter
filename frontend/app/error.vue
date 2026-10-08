@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NuxtError } from '#app'
-import { createError as createH3Error } from "h3"
+import { createError as createH3Error } from 'h3'
+import type { ProcessErrorData } from '~/composables/useAppInit'
 
 const props = defineProps<{
   error: NuxtError
@@ -27,7 +28,14 @@ const getError = computed(() => {
   return props?.error
 })
 
-console.log(props?.error.message)
+// Options passed by pages through processErrorGlobal(error, { isShowClearError, clearErrorHref, ... })
+const errorData = computed(() => (props?.error?.data ?? {}) as ProcessErrorData)
+
+const clear = computed(() => errorData.value.isShowClearError
+  ? { label: errorData.value.clearErrorTitle }
+  : false
+)
+const redirect = computed(() => errorData.value.clearErrorHref ?? '/')
 </script>
 
 <template>
@@ -38,7 +46,8 @@ console.log(props?.error.message)
       <B24Card class="mt-[2px]">
         <B24Error
           :error="getError"
-          :clear="false"
+          :clear="clear"
+          :redirect="redirect"
         />
       </B24Card>
     </B24SidebarLayout>

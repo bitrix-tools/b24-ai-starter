@@ -9,10 +9,14 @@ const $logger = LoggerFactory.createForBrowser(
 
 const baseDir = '/'
 
+/**
+ * Routes that are opened outside Bitrix24 (no B24Frame) — e.g. a public EULA page.
+ * The starter has none yet; add a prefix here when you create such a page.
+ */
+const SKIP_B24_PREFIXES = [`${baseDir}eula`, `${baseDir}render`]
+
 function isSkipB24(toPath: string): boolean {
-  return !toPath.includes(`${baseDir}`)
-    || toPath.includes(`${baseDir}eula`)
-    || toPath.includes(`${baseDir}render`)
+  return SKIP_B24_PREFIXES.some(prefix => toPath.startsWith(prefix))
 }
 
 export default defineNuxtRouteMiddleware(async (

@@ -7,7 +7,7 @@ export const useUserStore = defineStore(
   () => {
     // region State ////
     const id = ref(0)
-    const login = ref('')
+    const fullName = ref('')
     const isAdmin = ref(false)
     // endregion ////
 
@@ -27,14 +27,14 @@ export const useUserStore = defineStore(
       isAdmin?: boolean
     }) {
       id.value = data?.id ?? 0
-      login.value = [data?.name, data?.lastName].filter(Boolean).join(' ') || ' '
+      fullName.value = [data?.name, data?.lastName].filter(Boolean).join(' ')
       isAdmin.value = data.isAdmin || false
     }
     // endregion ////
 
     return {
       id,
-      login,
+      fullName,
       isAdmin,
       initFromBatch
     }

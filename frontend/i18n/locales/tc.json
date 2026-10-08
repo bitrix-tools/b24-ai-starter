@@ -11,6 +11,54 @@
       "message": {
         "title": "你好！",
         "line1": "讓我們來測試 Bitrix24 中的應用程式運作。"
+      },
+      "action": {
+        "telemetry_test": "遙測測試"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "遙測測試"
+      },
+      "title": "遙測測試",
+      "description": "視覺化檢查所有遙測通道：後端事件、前端事件、Bitrix24 API 呼叫。",
+      "section": {
+        "backend": "後端事件（PHP）",
+        "backend_desc": "點擊按鈕 — PHP 後端將向 OTel Collector 傳送 7 個不同的事件。",
+        "frontend": "前端事件",
+        "frontend_desc": "每個按鈕 / 欄位 / 表單都會透過 useTelemetry 傳送相應的事件。",
+        "b24api": "Bitrix24 API 呼叫",
+        "b24api_desc": "帶有 b24_api_call 追蹤的 JS SDK 直接呼叫。"
+      },
+      "action": {
+        "run_backend": "觸發後端事件",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error（軟）",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← 返回"
+      },
+      "label": {
+        "select": "選擇（ui_select_change）",
+        "form_field": "表單欄位",
+        "form_placeholder": "測試值"
+      },
+      "status": {
+        "idle": "等待中",
+        "ok": "✓ 已傳送",
+        "error": "✗ 錯誤",
+        "result": "結果"
+      },
+      "result": {
+        "backend_fired": "已傳送 {count} 個事件：{events}",
+        "sent": "{event} 已傳送",
+        "select_sent": "{event} 已傳送（已選：{values}）",
+        "error_sent": "{event} 已傳送（軟錯誤，無實際例外）",
+        "b24_user": "{method} → ID: {id}, 姓名: {name}",
+        "b24_status": "{method} → {count} 個狀態",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

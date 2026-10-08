@@ -194,7 +194,7 @@ Methods: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `em
 
 ## Stores and backend calls
 
-* Pinia setup stores in `app/stores/` (auto-imported): `useApiStore`, `useAppSettingsStore` / `useUserSettingsStore` (`configSettings` + `saveSettings()` → `app.option.set` / `user.option.set`), `useUserStore` (`id`, `login`, `isAdmin`), `usePageStore` (`title`, `description` shown by the `slider` layout).
+* Pinia setup stores in `app/stores/` (auto-imported): `useApiStore`, `useAppSettingsStore` / `useUserSettingsStore` (`configSettings` + `saveSettings()` → `app.option.set` / `user.option.set`), `useUserStore` (`id`, `fullName`, `isAdmin`), `usePageStore` (`title`, `description` shown by the `slider` layout).
 * **Backend calls go through `useApiStore`** — never raw `$fetch` in pages. `initApp()` calls `apiStore.init($b24)`, which posts the auth data to `/api/getToken` and keeps the JWT in `tokenJWT`. To add an endpoint, add a method next to `getList` in `app/stores/api.ts` that calls `$api('/api/…', { headers: authHeaders() })` and export it from the store.
 * `useBackend()` wraps the health check (`BackendStatus.vue`).
 * **Telemetry**: `const { track } = useTelemetry(); track('ui_button_click', { 'ui.button_id': 'save' })`. Fire-and-forget; enabled by `NUXT_PUBLIC_TELEMETRY_ENABLED=true`; events are queued until the JWT is ready. Allowed event names are whitelisted by the PHP backend (`page_view`, `ui_button_click`, `ui_select_change`, `ui_form_submit`, `ui_error`, `app_frame_loaded`, `b24_api_call`); attribute values must be strings. `plugins/telemetry.client.ts` already sends `app_frame_loaded`, `page_view` and `ui_error`.
@@ -203,7 +203,7 @@ Methods: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `em
 
 * All UI strings via `t('…')` in script / `$t('…')` in templates. Keys live in `frontend/i18n/locales/<code>.json`, grouped as `page.<name>.*`, `components.<name>.*`, etc.
 * Locales are listed in `frontend/i18n/i18n.map.ts` (19: `en`, `de`, `la`, `br`, `fr`, `it`, `pl`, `ru`, `ua`, `tr`, `sc`, `tc`, `ja`, `vn`, `id`, `ms`, `th`, `ar`, `kz`). `en.json` is the source of truth and the fallback locale; add every new key to `en.json` and `ru.json` at least (missing keys fall back to English). The locale is set from `$b24.getLang()` by `initApp`/`initLang`.
-* Known gap: the `translate-ui` script in `package.json` points to `tools/translate.ui.ts`, which does not exist — translate other locales manually.
+* Every locale must have exactly the keys of `en.json` — enforced by `frontend/test/i18n.spec.ts` (`pnpm test`, CI). When you add a key, add it with a translation to all files in `frontend/i18n/locales/`.
 
 ## Code style and tests
 

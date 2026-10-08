@@ -11,6 +11,54 @@
       "message": {
         "title": "Xin chào!",
         "line1": "Hãy cùng kiểm thử hoạt động của ứng dụng trong Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Kiểm thử telemetry"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Kiểm thử telemetry"
+      },
+      "title": "Kiểm thử telemetry",
+      "description": "Kiểm tra trực quan tất cả các kênh telemetry: sự kiện backend, sự kiện frontend, lệnh gọi API Bitrix24.",
+      "section": {
+        "backend": "Sự kiện backend (PHP)",
+        "backend_desc": "Nhấn nút — backend PHP sẽ gửi 7 sự kiện khác nhau đến OTel Collector.",
+        "frontend": "Sự kiện frontend",
+        "frontend_desc": "Mỗi nút / trường / biểu mẫu gửi sự kiện tương ứng qua useTelemetry.",
+        "b24api": "Lệnh gọi API Bitrix24",
+        "b24api_desc": "Gọi trực tiếp JS SDK với theo dõi b24_api_call."
+      },
+      "action": {
+        "run_backend": "Kích hoạt sự kiện backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (nhẹ)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Quay lại"
+      },
+      "label": {
+        "select": "Lựa chọn (ui_select_change)",
+        "form_field": "Trường biểu mẫu",
+        "form_placeholder": "giá trị thử"
+      },
+      "status": {
+        "idle": "Đang chờ",
+        "ok": "✓ Đã gửi",
+        "error": "✗ Lỗi",
+        "result": "Kết quả"
+      },
+      "result": {
+        "backend_fired": "Đã gửi {count} sự kiện: {events}",
+        "sent": "Đã gửi {event}",
+        "select_sent": "Đã gửi {event} (đã chọn: {values})",
+        "error_sent": "Đã gửi {event} (nhẹ, không có ngoại lệ thực)",
+        "b24_user": "{method} → ID: {id}, tên: {name}",
+        "b24_status": "{method} → {count} trạng thái",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {
@@ -73,42 +121,42 @@
           "alert": "Mỗi lần đăng nhập của nhân viên được hiển thị trong Nhật ký sự kiện. Bạn luôn có thể kiểm tra ai, khi nào và từ địa chỉ IP nào đã đăng nhập vào Bitrix24."
         }
       }
-    },
-    "uf": {
-      "demo": {
-        "alert": {
-          "title": "Trình diễn hoạt động với thuộc tính.",
-          "description": "Tương tự, bạn có thể cấu hình bất kỳ thuộc tính nào của ứng dụng"
-        },
-        "field": {
-          "label": "Ví dụ về trường",
-          "description": "Thay đổi giá trị dẫn đến việc xây dựng lại biểu đồ",
-          "hint": "Xu hướng"
-        },
-        "action": {
-          "settings": "Mở cài đặt"
-        }
+    }
+  },
+  "uf": {
+    "demo": {
+      "alert": {
+        "title": "Trình diễn hoạt động với thuộc tính.",
+        "description": "Tương tự, bạn có thể cấu hình bất kỳ thuộc tính nào của ứng dụng"
+      },
+      "field": {
+        "label": "Ví dụ về trường",
+        "description": "Thay đổi giá trị dẫn đến việc xây dựng lại biểu đồ",
+        "hint": "Xu hướng"
+      },
+      "action": {
+        "settings": "Mở cài đặt"
       }
-    },
-    "placement": {
-      "crm_deal_detail_tab": {
-        "seo": {
-          "title": "Nhúng vào thẻ giao dịch",
-          "description": "Trình diễn."
-        },
-        "action": "Xáo trộn"
-      }
-    },
-    "components": {
-      "backendStatus": {
-        "title": "Trạng thái backend",
-        "description": {
-          "healthy": "Backend khỏe mạnh ({msg})",
-          "checking": "Đang kiểm tra tình trạng backend...",
-          "error": "Lỗi kết nối nội bộ"
-        },
-        "action": "Cập nhật trạng thái"
-      }
+    }
+  },
+  "placement": {
+    "crm_deal_detail_tab": {
+      "seo": {
+        "title": "Nhúng vào thẻ giao dịch",
+        "description": "Trình diễn."
+      },
+      "action": "Xáo trộn"
+    }
+  },
+  "components": {
+    "backendStatus": {
+      "title": "Trạng thái backend",
+      "description": {
+        "healthy": "Backend khỏe mạnh ({msg})",
+        "checking": "Đang kiểm tra tình trạng backend...",
+        "error": "Lỗi kết nối nội bộ"
+      },
+      "action": "Cập nhật trạng thái"
     }
   }
 }

@@ -11,6 +11,54 @@
       "message": {
         "title": "Ciao!",
         "line1": "Testiamo il funzionamento dell'applicazione in Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Test della telemetria"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Test della telemetria"
+      },
+      "title": "Test della telemetria",
+      "description": "Verifica visiva di tutti i canali di telemetria: eventi backend, eventi frontend, chiamate API Bitrix24.",
+      "section": {
+        "backend": "Eventi backend (PHP)",
+        "backend_desc": "Premi il pulsante — il backend PHP invierà 7 eventi diversi all'OTel Collector.",
+        "frontend": "Eventi frontend",
+        "frontend_desc": "Ogni pulsante / campo / modulo invia l'evento corrispondente tramite useTelemetry.",
+        "b24api": "Chiamate API Bitrix24",
+        "b24api_desc": "Chiamate dirette al JS SDK con tracciamento b24_api_call."
+      },
+      "action": {
+        "run_backend": "Invia eventi backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (leggero)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Indietro"
+      },
+      "label": {
+        "select": "Selezione (ui_select_change)",
+        "form_field": "Campo del modulo",
+        "form_placeholder": "valore di test"
+      },
+      "status": {
+        "idle": "In attesa",
+        "ok": "✓ Inviato",
+        "error": "✗ Errore",
+        "result": "Risultato"
+      },
+      "result": {
+        "backend_fired": "{count} eventi inviati: {events}",
+        "sent": "{event} inviato",
+        "select_sent": "{event} inviato (selezionati: {values})",
+        "error_sent": "{event} inviato (leggero, nessuna eccezione reale)",
+        "b24_user": "{method} → ID: {id}, nome: {name}",
+        "b24_status": "{method} → {count} stati",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

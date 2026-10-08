@@ -11,6 +11,54 @@
       "message": {
         "title": "Bonjour !",
         "line1": "Testons le fonctionnement de l'application dans Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Test de télémétrie"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Test de télémétrie"
+      },
+      "title": "Test de télémétrie",
+      "description": "Vérification visuelle de tous les canaux de télémétrie : événements backend, événements frontend, appels API Bitrix24.",
+      "section": {
+        "backend": "Événements backend (PHP)",
+        "backend_desc": "Cliquez sur le bouton — le backend PHP enverra 7 événements différents à l'OTel Collector.",
+        "frontend": "Événements frontend",
+        "frontend_desc": "Chaque bouton / champ / formulaire envoie l'événement correspondant via useTelemetry.",
+        "b24api": "Appels API Bitrix24",
+        "b24api_desc": "Appels directs du JS SDK avec suivi b24_api_call."
+      },
+      "action": {
+        "run_backend": "Déclencher les événements backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (léger)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Retour"
+      },
+      "label": {
+        "select": "Sélection (ui_select_change)",
+        "form_field": "Champ de formulaire",
+        "form_placeholder": "valeur de test"
+      },
+      "status": {
+        "idle": "En attente",
+        "ok": "✓ Envoyé",
+        "error": "✗ Erreur",
+        "result": "Résultat"
+      },
+      "result": {
+        "backend_fired": "{count} événements envoyés : {events}",
+        "sent": "{event} envoyé",
+        "select_sent": "{event} envoyé (sélection : {values})",
+        "error_sent": "{event} envoyé (léger, sans exception réelle)",
+        "b24_user": "{method} → ID: {id}, nom: {name}",
+        "b24_status": "{method} → {count} statuts",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {

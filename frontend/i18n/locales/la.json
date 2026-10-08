@@ -11,6 +11,54 @@
       "message": {
         "title": "¡Hola!",
         "line1": "Vamos a probar el funcionamiento de la aplicación en Bitrix24."
+      },
+      "action": {
+        "telemetry_test": "Prueba de telemetría"
+      }
+    },
+    "telemetry-test": {
+      "seo": {
+        "title": "Prueba de telemetría"
+      },
+      "title": "Prueba de telemetría",
+      "description": "Verificación visual de todos los canales de telemetría: eventos del backend, eventos del frontend, llamadas a la API de Bitrix24.",
+      "section": {
+        "backend": "Eventos del backend (PHP)",
+        "backend_desc": "Presiona el botón — el backend PHP enviará 7 eventos diferentes al OTel Collector.",
+        "frontend": "Eventos del frontend",
+        "frontend_desc": "Cada botón / campo / formulario envía el evento correspondiente mediante useTelemetry.",
+        "b24api": "Llamadas a la API de Bitrix24",
+        "b24api_desc": "Llamadas directas al JS SDK con seguimiento b24_api_call."
+      },
+      "action": {
+        "run_backend": "Disparar eventos del backend",
+        "button_click": "ui_button_click",
+        "form_submit": "ui_form_submit",
+        "error_track": "ui_error (leve)",
+        "b24_user": "user.current",
+        "b24_status": "crm.status.list",
+        "b24_placement": "placement.info",
+        "back": "← Volver"
+      },
+      "label": {
+        "select": "Selección (ui_select_change)",
+        "form_field": "Campo del formulario",
+        "form_placeholder": "valor de prueba"
+      },
+      "status": {
+        "idle": "En espera",
+        "ok": "✓ Enviado",
+        "error": "✗ Error",
+        "result": "Resultado"
+      },
+      "result": {
+        "backend_fired": "{count} eventos enviados: {events}",
+        "sent": "{event} enviado",
+        "select_sent": "{event} enviado (seleccionados: {values})",
+        "error_sent": "{event} enviado (leve, sin excepción real)",
+        "b24_user": "{method} → ID: {id}, nombre: {name}",
+        "b24_status": "{method} → {count} estados",
+        "b24_placement": "placement: {placement}, options: {options}"
       }
     },
     "install": {
