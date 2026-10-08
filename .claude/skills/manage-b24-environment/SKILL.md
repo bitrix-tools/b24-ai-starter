@@ -17,8 +17,12 @@ make dev-php      # For PHP backend
 make dev-python   # For Python backend
 make dev-node     # For Node.js backend
 
-# Stop all services
+# Production mode (detached): docker-compose.yml + docker-compose.prod.yml
+make prod-php | prod-python | prod-node
+
+# Stop all services (`down-all` also covers the prod override)
 make down
+make down-all
 
 # View logs
 make logs         # All logs
@@ -29,6 +33,17 @@ docker logs frontend # Frontend logs
 docker restart api
 docker restart frontend
 ```
+
+### How profiles are chosen
+
+`scripts/compose-profiles.sh <php|python|node|front>` prints `COMPOSE_PROFILES` from `.env`
+(`frontend,cloudpub,<backend>` + `db-postgres`/`db-mysql` by `DB_TYPE` + `queue` (and `python-worker`)
+when `ENABLE_RABBITMQ=1`). All `dev-*` / `prod-*` targets use it — change profiles there, not in the makefile.
+`make` picks `docker compose` (v2) automatically, falling back to `docker-compose` (v1).
+
+Production (`docker-compose.prod.yml`) builds the `production` stage of the frontend, Node and Python images
+and does not bind-mount their source (the image already contains the built app); PHP serves the mounted
+`backends/php` in both modes.
 
 ## Environment Setup
 

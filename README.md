@@ -195,7 +195,7 @@ DB_PASSWORD - пароль пользователя базы данных
 DB_NAME - имя базы данных
 DB_PORT - порт выбранной СУБД (`5432` для PostgreSQL, `3306` для MySQL)
 DATABASE_URL - DSN для PHP/Doctrine (автоматически настраивается через `make dev-init`)
-BUILD_TARGET установить в `production` - для сборки фронтенда и бэкенда в production режиме (переменная `FRONTEND_TARGET`, которую передают цели `make prod-*`, в `docker-compose.yml` не используется).
+`make prod-*` запускает стек в production-режиме: поверх `docker-compose.yml` подключается `docker-compose.prod.yml` — собирается стадия `production` образов фронтенда, Node и Python, исходники в контейнеры не монтируются (код и зависимости уже в образе), запуск в фоне (`-d`). Профили (БД, RabbitMQ) берутся из `.env` так же, как в `make dev-*` (`scripts/compose-profiles.sh`). Остановить — `make down-all`. Нужен Docker Compose v2.24.4+ (`!reset`/`!override`); make сам выбирает `docker compose` (v2) или `docker-compose` (v1).
 DJANGO_SUPERUSER_USERNAME - имя суперпользователя Django в случае backend на Python
 DJANGO_SUPERUSER_EMAIL - email суперпользователя Django.
 DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Django.

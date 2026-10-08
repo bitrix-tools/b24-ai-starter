@@ -35,7 +35,7 @@
 | Безопасность | `make security-tests` | Все проверки зелёные |
 | PHP-телеметрия | `make test-telemetry` | Тесты проходят на Symfony 7.4 |
 | Миграции PHP | `make dev-php-db-migrate-status` | Нет непримененных / ошибок |
-| Prod-сборка | `make prod-php` (и др.) | Образы собираются (`FRONTEND_TARGET=production`) |
+| Prod-сборка | `make prod-php` / `prod-python` / `prod-node` | Собирается стадия `production`, исходники не смонтированы (`docker compose ... config`), приложение отвечает |
 
 Матрица БД: PHP и Python — PostgreSQL **и** MySQL (`DB_TYPE` в `.env`); Node — то, что поддерживает `server.js`.
 
@@ -66,18 +66,18 @@
 
 ## Найденные проблемы в коде (кандидаты в issues)
 
-Найдены при сверке документации с кодом; не исправлены — каждая требует отдельного решения.
+Найдены при сверке документации с кодом. ✅ — исправлено (см. `CHANGELOG.md`); остальные — в плане работ.
 
 | # | Проблема | Где | Как проверить |
 | --- | --- | --- | --- |
-| 1 | `make prod-*` передаёт `FRONTEND_TARGET`, а compose читает `BUILD_TARGET` — образы собираются в dev-режиме; поднимается только профиль бэкенда (без фронтенда и БД) | `makefile`, `docker-compose.yml` | `make prod-php`, затем `docker compose ps` и `docker inspect` target |
-| 2 | `make down-all` ссылается на несуществующий `docker-compose.server.yml` | `makefile` | `make down-all` |
-| 3 | `DOCKER_COMPOSE = docker-compose` (v1), а `dev-init.sh` / `security-tests.sh` используют `docker compose` (v2) — на хосте только с v2 make-цели падают | `makefile`, `scripts/fix-php.sh` | Запуск на чистой машине с Docker Compose v2 |
-| 4 | `make down` не останавливает профили `db-*` и `python-worker` | `makefile` | `make down` → `docker ps` |
+| 1 | ✅ `make prod-*` передаёт `FRONTEND_TARGET`, а compose читает `BUILD_TARGET` — образы собираются в dev-режиме; поднимается только профиль бэкенда (без фронтенда и БД) | `makefile`, `docker-compose.yml` | `make prod-php`, затем `docker compose ps` и `docker inspect` target |
+| 2 | ✅ `make down-all` ссылается на несуществующий `docker-compose.server.yml` | `makefile` | `make down-all` |
+| 3 | ✅ `DOCKER_COMPOSE = docker-compose` (v1), а `dev-init.sh` / `security-tests.sh` используют `docker compose` (v2) — на хосте только с v2 make-цели падают | `makefile`, `scripts/fix-php.sh` | Запуск на чистой машине с Docker Compose v2 |
+| 4 | ✅ `make down` не останавливает профили `db-*` и `python-worker` | `makefile` | `make down` → `docker ps` |
 | 5 | `/api/health` публичный в PHP, но под JWT в Python и Node | бэкенды | `curl /api/health` без токена на каждом |
 | 6 | В Node нет `/api/app-events/`, хотя он описан как общий; у PHP есть лишний публичный `/api/custom-b24-events/` | `backends/node/api/server.js`, PHP-контроллеры | Сценарий 7 уровня 2 на Node |
 | 7 | Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
-| 8 | `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
+| 8 | ✅ `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
 | 9 | В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
 | 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
 | 11 | Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |

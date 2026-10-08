@@ -15,6 +15,11 @@
 
 ### Fixed
 
+- `make prod-*` собирали образы в dev-режиме (передавался неиспользуемый `FRONTEND_TARGET`) и поднимали только бэкенд. Теперь подключается `docker-compose.prod.yml`: стадия `production` образов, без монтирования исходников, тот же набор профилей (фронтенд, БД, очередь), что в `dev-*`. Стадия Python-образа переименована `prod` → `production`.
+- Профили для `dev-*` / `prod-*` вычисляются в одном месте — `scripts/compose-profiles.sh`.
+- make выбирает `docker compose` (v2), если он есть, иначе `docker-compose` (v1).
+- `make down` останавливает все профили (включая БД и `python-worker`); `down-all` больше не ссылается на несуществующий `docker-compose.server.yml`; удалена цель `logs-nginxproxy`.
+- `make fix-php` больше не удаляет `composer.lock`.
 - PHP не запускался после обновления зависимостей: убраны опции `proxy_dir`/`proxy_auto_generate`, которых нет в doctrine-bundle 3; `bitrix24/b24phpsdk` закреплён на коммите, совместимом с `mesilov/bitrix24-php-lib` 0.5.2; добавлен обязательный `OTEL_TELEMETRY_PROFILE=simple-ui`; `.env` снова парсится (значение с пробелом без кавычек).
 
 ### Dependencies

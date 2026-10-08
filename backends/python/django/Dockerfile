@@ -25,7 +25,7 @@ CMD ["sh", "-c", "python manage.py makemigrations \
   && python manage.py runserver 0.0.0.0:8000"]
 
 # ---------- Production stage ----------
-FROM base AS prod
+FROM base AS production
 COPY . .
 ENV DJANGO_ENV=production \
     PYTHONUNBUFFERED=1

@@ -1,0 +1,39 @@
+# Production overrides — used by `make prod-*`:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+#
+# Builds the `production` stage of each image and drops the dev bind mounts of
+# the source code: in production the images contain the built app (frontend
+# `.output`, Node `node_modules`, Python sources), and mounting the working tree
+# over `/app` would hide it. Log directories stay mounted.
+#
+# PHP is not overridden: its php-fpm image has a single stage and serves the
+# mounted `backends/php` directory (dependencies are installed by the
+# entrypoint from composer.lock).
+#
+# `!reset` / `!override` need Docker Compose v2.24.4+.
+
+services:
+  frontend:
+    build:
+      target: production
+    volumes: !reset []
+
+  api-node:
+    build:
+      target: production
+    environment:
+      NODE_ENV: production
+    volumes: !override
+      - ./logs/node:/var/log/node
+
+  api-python:
+    build:
+      target: production
+    volumes: !override
+      - ./logs/python:/var/log/python
+
+  python-worker:
+    build:
+      target: production
+    volumes: !override
+      - ./logs/python:/var/log/python

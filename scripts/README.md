@@ -130,17 +130,17 @@ make security-tests SECURITY_TESTS_ARGS="--profile full --allow-fail"
 
 ### 🛠 Что исправляет
 
-- ❌ Конфликты версий между `phpstan/phpstan` и `rector/rector`
 - ❌ Поврежденные или отсутствующие vendor файлы
-- ❌ Ошибки composer.lock
 - ❌ Проблемы с автозагрузкой классов
 
 ### 🔄 Процесс исправления
 
 1. Останавливает все контейнеры
-2. Удаляет папку `vendor` и `composer.lock` (⚠️ lock-файл будет пересоздан с новыми версиями зависимостей — проверьте `git diff` перед коммитом; CI выполняет `composer validate`)
+2. Удаляет только папку `vendor` — `composer.lock` сохраняется, версии не меняются
 3. Перезапускает PHP контейнеры
-4. Переустанавливает зависимости с исправленными версиями
+4. Entrypoint php-fpm выполняет `composer install` по `composer.lock`
+
+Обновить версии зависимостей — `make composer-update` (затем проверить `git diff composer.lock`).
 
 ### 💻 Использование
 

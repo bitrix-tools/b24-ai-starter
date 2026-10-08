@@ -1,7 +1,12 @@
-.PHONY: help dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs logs-nginxproxy clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
+.PHONY: help dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
 
 # Variables
-DOCKER_COMPOSE = docker-compose
+# Compose v2 plugin (`docker compose`) if available, else the legacy v1 binary.
+DOCKER_COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo docker-compose)
+# Profiles per backend are computed from .env (DB_TYPE, ENABLE_RABBITMQ) in one place.
+PROFILES = ./scripts/compose-profiles.sh
+COMPOSE_PROD = $(DOCKER_COMPOSE) --env-file .env -f docker-compose.yml -f docker-compose.prod.yml
+ALL_PROFILES = frontend,cloudpub,php,php-cli,python,python-worker,node,queue,db-postgres,db-mysql
 CURRENT_UID := $(shell id -u):$(shell id -g)
 
 # Default target - show help
@@ -21,9 +26,9 @@ help: ## Show this help message
 	@echo "  dev-node          Start with Node.js backend"
 	@echo ""
 	@echo "🚀 Production:"
-	@echo "  prod-php          Deploy PHP backend to production"
-	@echo "  prod-python       Deploy Python backend to production"
-	@echo "  prod-node         Deploy Node.js backend to production"
+	@echo "  prod-php          Start PHP stack in production mode (docker-compose.prod.yml, detached)"
+	@echo "  prod-python       Start Python stack in production mode (docker-compose.prod.yml, detached)"
+	@echo "  prod-node         Start Node.js stack in production mode (docker-compose.prod.yml, detached)"
 	@echo ""
 	@echo "🐘 PHP Tools:"
 	@echo "  composer-install  Install PHP dependencies"
@@ -43,14 +48,14 @@ help: ## Show this help message
 	@echo "🧹 Cleanup:"
 	@echo "  down              Stop all containers and remove orphans"
 	@echo "  clean             Complete Docker cleanup (containers, networks, volumes)"
-	@echo "  down-all          Stop all containers including server compose"
+	@echo "  down-all          Stop all containers, dev and prod (docker-compose.prod.yml)"
 	@echo ""
 	@echo "📨 Queues:"
 	@echo "  queue-up          Start RabbitMQ only (profile queue)"
 	@echo "  queue-down        Stop RabbitMQ only"
 	@echo ""
 	@echo "🔧 Troubleshooting:"
-	@echo "  fix-php           Fix PHP backend dependencies"
+	@echo "  fix-php           Reinstall PHP vendor/ from composer.lock and restart"
 	@echo ""
 	@echo "🛡  Security:"
 	@echo "  security-scan     Run dependency vulnerability audit"
@@ -106,22 +111,12 @@ fix-php:
 # Development
 dev-front:
 	@echo "Starting frontend"
-	COMPOSE_PROFILES=frontend,cloudpub $(DOCKER_COMPOSE) --env-file .env up --build
+	COMPOSE_PROFILES=$$($(PROFILES) front) $(DOCKER_COMPOSE) --env-file .env up --build
 
 ## PHP
 dev-php:
 	@echo "Starting dev php"
-	@DB_TYPE_VALUE=$$(grep -E '^DB_TYPE=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$DB_TYPE_VALUE" ]; then DB_TYPE_VALUE=postgresql; fi; \
-	if [ "$$DB_TYPE_VALUE" = "mysql" ]; then DB_PROFILE="db-mysql"; else DB_PROFILE="db-postgres"; fi; \
-	ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
-	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
-	  PROFILES="frontend,php,cloudpub,queue,$$DB_PROFILE"; \
-	else \
-	  PROFILES="frontend,php,cloudpub,$$DB_PROFILE"; \
-	fi; \
-	COMPOSE_PROFILES=$$PROFILES $(DOCKER_COMPOSE) --env-file .env up --build
+	COMPOSE_PROFILES=$$($(PROFILES) php) $(DOCKER_COMPOSE) --env-file .env up --build
 
 # work with composer
 .PHONY: composer-install
@@ -344,45 +339,25 @@ dev-php-db-schema-validate:
 ## Python
 dev-python:
 	@echo "Starting dev python"
-	@DB_TYPE_VALUE=$$(grep -E '^DB_TYPE=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$DB_TYPE_VALUE" ]; then DB_TYPE_VALUE=postgresql; fi; \
-	if [ "$$DB_TYPE_VALUE" = "mysql" ]; then DB_PROFILE="db-mysql"; else DB_PROFILE="db-postgres"; fi; \
-	ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
-	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
-	  PROFILES="frontend,python,python-worker,cloudpub,queue,$$DB_PROFILE"; \
-	else \
-	  PROFILES="frontend,python,cloudpub,$$DB_PROFILE"; \
-	fi; \
-	COMPOSE_PROFILES=$$PROFILES $(DOCKER_COMPOSE) --env-file .env up --build
+	COMPOSE_PROFILES=$$($(PROFILES) python) $(DOCKER_COMPOSE) --env-file .env up --build
 
 ## NodeJs
 dev-node:
 	@echo "Starting dev node"
-	@DB_TYPE_VALUE=$$(grep -E '^DB_TYPE=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$DB_TYPE_VALUE" ]; then DB_TYPE_VALUE=postgresql; fi; \
-	if [ "$$DB_TYPE_VALUE" = "mysql" ]; then DB_PROFILE="db-mysql"; else DB_PROFILE="db-postgres"; fi; \
-	ENABLE_RABBITMQ_VALUE=$$(grep -E '^ENABLE_RABBITMQ=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
-	if [ -z "$$ENABLE_RABBITMQ_VALUE" ]; then ENABLE_RABBITMQ_VALUE=0; fi; \
-	if [ "$$ENABLE_RABBITMQ_VALUE" = "1" ]; then \
-	  PROFILES="frontend,node,cloudpub,queue,$$DB_PROFILE"; \
-	else \
-	  PROFILES="frontend,node,cloudpub,$$DB_PROFILE"; \
-	fi; \
-	COMPOSE_PROFILES=$$PROFILES $(DOCKER_COMPOSE) --env-file .env up --build
+	COMPOSE_PROFILES=$$($(PROFILES) node) $(DOCKER_COMPOSE) --env-file .env up --build
 
 # Production
 prod-php:
 	@echo "Starting prod php environment"
-	COMPOSE_PROFILES=php FRONTEND_TARGET=production $(DOCKER_COMPOSE) up --build -d
+	COMPOSE_PROFILES=$$($(PROFILES) php) $(COMPOSE_PROD) up --build -d
 
 prod-python:
 	@echo "Starting prod python environment"
-	COMPOSE_PROFILES=python FRONTEND_TARGET=production $(DOCKER_COMPOSE) up --build -d
+	COMPOSE_PROFILES=$$($(PROFILES) python) $(COMPOSE_PROD) up --build -d
 
 prod-node:
 	@echo "Starting prod node environment"
-	COMPOSE_PROFILES=node FRONTEND_TARGET=production $(DOCKER_COMPOSE) up --build -d
+	COMPOSE_PROFILES=$$($(PROFILES) node) $(COMPOSE_PROD) up --build -d
 
 # Utils
 status:
@@ -393,8 +368,7 @@ ps:
 
 down:
 	@echo "🛑 Останавливаем все контейнеры..."
-	COMPOSE_PROFILES=frontend,php,python,node,cloudpub,queue $(DOCKER_COMPOSE) down --remove-orphans || true
-	docker container stop $$(docker container ls -q --filter "name=b24" --filter "name=frontend" --filter "name=api" --filter "name=cloudpub") 2>/dev/null || true
+	COMPOSE_PROFILES=$(ALL_PROFILES) $(DOCKER_COMPOSE) down --remove-orphans || true
 
 queue-up:
 	@echo "▶️ Запускаем только RabbitMQ"
@@ -410,12 +384,12 @@ queue-down:
 	COMPOSE_PROFILES=queue $(DOCKER_COMPOSE) --env-file .env stop rabbitmq || true
 
 down-all:
-	$(DOCKER_COMPOSE) down --remove-orphans
-	$(DOCKER_COMPOSE) -f docker-compose.server.yml down --remove-orphans
+	@echo "🛑 Останавливаем все контейнеры (dev и prod)..."
+	COMPOSE_PROFILES=$(ALL_PROFILES) $(COMPOSE_PROD) down --remove-orphans || true
 
 clean:
 	@echo "🧹 Полная очистка Docker окружения..."
-	$(DOCKER_COMPOSE) down --remove-orphans --volumes || true
+	COMPOSE_PROFILES=$(ALL_PROFILES) $(DOCKER_COMPOSE) down --remove-orphans --volumes || true
 	docker container rm -f $$(docker container ls -aq --filter "name=b24") 2>/dev/null || true
 	docker network prune -f
 	docker volume prune -f
@@ -423,9 +397,6 @@ clean:
 
 logs:
 	$(DOCKER_COMPOSE) logs -f
-
-logs-nginxproxy:
-	$(DOCKER_COMPOSE) logs -f docker-compose.server.yml
 
 # Database operations
 db-backup:
