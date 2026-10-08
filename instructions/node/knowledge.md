@@ -10,9 +10,14 @@
 
 - Node 24 (Docker-образы `node:24-slim` / `node:24-alpine`), pnpm 12 (`packageManager: pnpm@12.9.1`), ES-модули, чистый JavaScript без сборки.
 - Зависимости: `express` 5.2, `cors`, `dotenv` 18, `jsonwebtoken` 9, `pg`, `mysql2`; dev — `nodemon`. **`@bitrix24/b24jssdk` не установлен** — добавьте его (`pnpm add @bitrix24/b24jssdk`), прежде чем использовать примеры с SDK.
-- `server.js` — все маршруты и пул БД (`DB_TYPE=postgresql|mysql`); `utils/verifyToken.js` — JWT-middleware (кладёт payload в `req.user`).
-- Маршруты: `GET /api/health`, `GET /api/enum`, `GET /api/list` (под JWT); `POST /api/install` (только логирует тело с маскировкой токенов), `POST /api/getToken` (выдаёт JWT только после проверки `AUTH_ID` OAuth-сервером Bitrix24 — `utils/verifyFrontendAuth.js`).
-- Тестов, линтера и TypeScript в Node-бэкенде нет; в CI выполняется только `node --check`.
+- `app.js` — `createApp({ accounts, clientId, jwtSecret, appUrl, fetchImpl, … })`: все маршруты, зависимости внедряются (в тестах — фейки); `server.js` — пул БД (`DB_TYPE=postgresql|mysql`) и `listen`.
+- `db/accounts.js` — репозиторий над общей таблицей `bitrix24account` (та же, что у PHP; схема — `infrastructure/database/init*.sql`), PostgreSQL и MySQL.
+- `utils/bitrix24Rest.js` — вызовы REST Bitrix24 через `fetch`; `utils/verifyFrontendAuth.js` — проверка `AUTH_ID` OAuth-сервером Bitrix24; `utils/verifyToken.js` — JWT-middleware (кладёт payload в `req.user`).
+- Публичные маршруты: `GET /api/health` (`{status:"healthy", backend, timestamp}`), `POST /api/install`, `POST /api/getToken`, `POST /api/app-events/`; под JWT — `GET /api/enum`, `GET /api/list`.
+- `POST /api/install` подтверждает `AUTH_ID` на OAuth-сервере, сохраняет аккаунт (статус `new`) и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL` к `${NUXT_PUBLIC_API_URL}/api/app-events/`; отвечает `{"message": "Installation successful"}`.
+- `POST /api/app-events/`: `ONAPPINSTALL` — `access_token` подтверждается на OAuth-сервере, сохраняется `application_token`, статус `active`; `ONAPPUNINSTALL` — только с сохранённым `application_token`, статус `deleted`.
+- `POST /api/getToken` сначала проверяет установленный аккаунт в локальной БД, затем `AUTH_ID` на OAuth-сервере, и только потом выдаёт JWT.
+- Тесты: `pnpm test` (`node --test`) — `test/verifyFrontendAuth.test.js`, `test/app.test.js` (полный жизненный цикл по HTTP), `test/accounts.db.test.js` (на реальных БД при заданных `TEST_PG_URL` / `TEST_MYSQL_URL`, иначе пропускается). Линтера и TypeScript нет; CI выполняет `node --check`.
 
 ---
 

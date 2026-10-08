@@ -273,9 +273,9 @@ make dev-php-db-migrate
 
 ### Шаг 8: Проверка работы
 
-1. **Проверьте health endpoint** (в Python и Node.js нужен JWT, в PHP эндпоинт публичный):
+1. **Проверьте health endpoint** (публичный во всех бэкендах, JWT не нужен):
    ```bash
-   curl -H "Authorization: Bearer $JWT" http://localhost:8000/api/health
+   curl http://localhost:8000/api/health
    ```
    
    Ожидаемый ответ:
@@ -368,7 +368,7 @@ make prod-node
 
 ### JWT токены
 
-Все API endpoints (кроме `/api/install`, `/api/getToken` и `/api/app-events/`) требуют JWT токен в заголовке:
+Все API endpoints (кроме `/api/health`, `/api/install`, `/api/getToken` и `/api/app-events/`; в PHP публичен также `/api/custom-b24-events/`) требуют JWT токен в заголовке:
 
 ```javascript
 Authorization: `Bearer ${tokenJWT}`
@@ -379,6 +379,7 @@ Authorization: `Bearer ${tokenJWT}`
 1. **Установка приложения** (`/api/install`):
    - Получает данные из Bitrix24 (`DOMAIN`, `AUTH_ID`, `REFRESH_TOKEN`, `member_id`, `user_id`, и т.д.)
    - Сохраняет данные установки в БД
+   - Отвечает JSON `{"message": "Installation successful"}` во всех бэкендах
    - **НЕ требует JWT**
 
 2. **Получение токена** (`/api/getToken`):
@@ -389,7 +390,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 3. **События Bitrix24** (`/api/app-events/`):
    - Принимает lifecycle-события приложения от Bitrix24
-   - Передает обработку в Celery worker
+   - Python передаёт обработку в Celery worker; Node.js обрабатывает синхронно (`ONAPPINSTALL` → `active`, `ONAPPUNINSTALL` → `deleted` только с сохранённым `application_token`); PHP пока только логирует `ONAPPUNINSTALL`
    - **НЕ требует JWT**
 
 4. **Защищенные endpoints**:
@@ -402,7 +403,7 @@ Authorization: `Bearer ${tokenJWT}`
 ### Базовые endpoints (реализованы во всех бэкендах)
 
 #### `/api/health` (GET)
-Проверка состояния бэкенда.
+Проверка состояния бэкенда. Публичный во всех бэкендах (JWT не нужен).
 
 **Ответ:**
 ```json
@@ -449,7 +450,7 @@ Authorization: `Bearer ${tokenJWT}`
 }
 ```
 
-**Ответ** (Python; Node.js отвечает `{"message": "All success"}`, PHP — текстом `OK`):
+**Ответ** (одинаковый в Python, Node.js и PHP):
 ```json
 {
   "message": "Installation successful"
@@ -763,7 +764,7 @@ client.call_batch([
 **PHP бэкенд:**
 - Контроллер: `backends/php/src/Bitrix24Core/Controller/AppLifecycleEventController.php`
 - Endpoint: `/api/app-events/` (POST)
-- Метод уже обрабатывает события `OnApplicationInstall` и `OnApplicationUninstall`
+- Метод уже обрабатывает события `OnApplicationInstall` и `OnApplicationUninstall` (известный пробел: `OnApplicationUninstall` пока только логируется, аккаунт не помечается удалённым)
 - Route зарегистрирован как публичный (не требует JWT) в `JwtAuthenticationListener`
 
 Пример обработки в PHP:
@@ -800,15 +801,7 @@ def app_events(request: EventRequest):
 Актуальная реализация находится в `backends/python/django/bitrix_events/views.py` и `backends/python/django/bitrix_events/event_processor.py`.
 
 **Node.js бэкенд:**
-Endpoint событий в Node-бэкенде пока не реализован — добавь его в `backends/node/api/server.js` (без `verifyToken`):
-```javascript
-app.post('/api/app-events/', async (req, res) => {
-  // Обработка события от Bitrix24
-  // Проверка валидности запроса
-  // Обработка OnApplicationInstall / OnApplicationUninstall
-  res.json({ status: 'OK' });
-});
-```
+Endpoint `/api/app-events/` уже реализован в `backends/node/api/app.js` (без `verifyToken`): `ONAPPINSTALL` подтверждает `access_token` на OAuth-сервере Bitrix24, сохраняет `application_token` и переводит аккаунт в `active`; `ONAPPUNINSTALL` принимается только с сохранённым `application_token` и помечает аккаунт `deleted`. Работа с таблицей `bitrix24account` — в `db/accounts.js`. Свои события добавляй новым публичным маршрутом в `createApp()` с аналогичной проверкой.
 
 **3. Важные моменты:**
 
@@ -923,8 +916,8 @@ make logs
 docker logs api --tail 50
 docker logs frontend --tail 50
 
-# Проверка health (в Python и Node.js нужен JWT, в PHP эндпоинт публичный)
-curl -H "Authorization: Bearer $JWT" http://localhost:8000/api/health
+# Проверка health (публичный во всех бэкендах)
+curl http://localhost:8000/api/health
 ```
 
 ### Частые проблемы

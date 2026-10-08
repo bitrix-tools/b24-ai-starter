@@ -73,7 +73,8 @@ await $b24.actions.v2.call.make({ method: 'event.bind', params: {
 * **Backend**: Create a public endpoint (e.g., `/api/events`) to receive event data.
   * PHP: example `B24EventsController` at `/api/custom-b24-events/` (validates with `RemoteEventsFactory`); app lifecycle events go to `/api/app-events/` (`AppLifecycleEventController`). New public routes must be added to `PUBLIC_ROUTES` in `JwtAuthenticationListener`.
   * Python: lifecycle events at `/api/app-events/` (`bitrix_events/`), processed via Celery.
-  * Node.js: no event endpoint yet — add a route in `server.js` without `verifyToken`.
+  * Node.js: lifecycle events at `/api/app-events/` in `app.js` (`ONAPPINSTALL` → `active`, `ONAPPUNINSTALL` → `deleted` only with the stored `application_token`). Add custom event routes in `createApp()` without `verifyToken`.
+  * PHP known gap: `ONAPPUNINSTALL` is only logged, the account is not marked deleted.
 * **Verification**: Verify the request comes from Bitrix24 (check `auth.application_token` against the value stored at install).
 
 ## Queues (RabbitMQ)

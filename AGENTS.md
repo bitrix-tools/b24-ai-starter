@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<sub>Last reviewed: 2026-10-07.</sub>
+<sub>Last reviewed: 2026-10-08.</sub>
 
 Единый источник правды для ИИ-агентов и людей, работающих с репозиторием `b24-ai-starter`. `CLAUDE.md` — ссылка на этот файл. Подробные руководства лежат в `.github/contributing/` и `instructions/` — загружай их только когда они относятся к задаче.
 
@@ -37,13 +37,13 @@ pnpm install --frozen-lockfile
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Бэкенды в CI: Node — `node --check`; Python — `manage.py check` + `makemigrations --check`; PHP — `composer validate`.
+Бэкенды в CI: Node — `node --check` + `pnpm test`; Python — `manage.py check` + `makemigrations --check` + `manage.py test`; PHP — `composer validate`.
 
 ## Ключевые соглашения
 
 - **Фронтенд**: только компоненты `B24*` из `@bitrix24/b24ui-nuxt` (+ `Prose*` для текста; `B24App` уже в `app.vue` — не вкладывать); страницы — `*.client.vue`, инициализация через `useAppInit` (`initApp`, `processErrorGlobal`); вызовы бэкенда — через `useApiStore`; строки — через i18n (`frontend/i18n/locales/`, эталон `en.json`).
 - **JS SDK 3**: `$b24.actions.v2|v3.*.make()` (нет `callMethod` / `callBatch`), логгер — `LoggerFactory.createForBrowser(name, isDev)`, вызовы `logger.info('message', { context })`.
-- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/install`, `/api/getToken` и `/api/app-events/` (в PHP публичны также `/api/health` и `/api/custom-b24-events/` — см. `PUBLIC_ROUTES` в `JwtAuthenticationListener`). `/api/getToken` выдаёт JWT только после проверки `AUTH_ID` OAuth-сервером Bitrix24 (`app.info`) (PHP — `FrontendAuthVerifier`, Node — `verifyFrontendAuth.js`, Python — `auth_required`); не ослаблять. Не логировать OAuth-токены и URL вебхуков: тело запроса — только через редактор (PHP `LogRedactor::redact()`, Node `redactSensitive()`).
+- **Бэкенд**: все эндпоинты защищены JWT, кроме `/api/health`, `/api/install`, `/api/getToken` и `/api/app-events/` (в PHP публичен также `/api/custom-b24-events/` — см. `PUBLIC_ROUTES` в `JwtAuthenticationListener`). `/api/install` во всех бэкендах отвечает `{"message": "Installation successful"}`. `/api/getToken` выдаёт JWT только после проверки `AUTH_ID` OAuth-сервером Bitrix24 (`app.info`) (PHP — `FrontendAuthVerifier`, Node — `verifyFrontendAuth.js`, Python — `auth_required`); не ослаблять. Не логировать OAuth-токены и URL вебхуков: тело запроса — только через редактор (PHP `LogRedactor::redact()`, Node `redactSensitive()`).
 - **Bitrix24**: виджеты — `placement.bind`, роботы — `bizproc.robot.add`, события — `event.bind`.
 - **Conventional Commits**: `feat`, `fix`, `perf`, `security`, `deps`, `refactor`, `build`, `docs`, `test`, `ci`, `chore`. Область — часть репозитория: `feat(frontend): …`, `deps(php): …`. Заголовок понятен без чтения диффа.
 - **CHANGELOG**: заметное изменение — запись в `## [Unreleased]` в [CHANGELOG.md](CHANGELOG.md) в том же PR.

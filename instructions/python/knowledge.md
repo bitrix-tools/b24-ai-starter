@@ -14,7 +14,7 @@
 ### Основные технологии
 - **Django** — веб-фреймворк, управляющий middleware, ORM, admin и точками входа WSGI/ASGI.
 - **Django 6.1** + **b24pysdk[signals,django] 1.3.0** — SDK для общения с Bitrix24 (OAuth, REST, события); extra `signals` нужен для сохранения обновленных OAuth-токенов, extra `django` даёт декораторы `collect_request_params` / `event_required`.
-- **Celery 5.6** (+ kombu) — асинхронная обработка событий `/api/app-events/` (`celery_app.py`, сервис `python-worker`).
+- **Celery 5.6** (+ kombu) — обработка событий `/api/app-events/` в очереди (`celery_app.py`, сервис `python-worker`) при `ENABLE_RABBITMQ=1`; при `0` события обрабатываются сразу в запросе (`bitrix_events/views.py: dispatch_event`).
 - **PostgreSQL + psycopg2-binary** — БД по умолчанию; при `DB_TYPE=mysql` используется MySQL через `PyMySQL`.
 - **PyJWT** — генерация и валидация внутренних JWT-токенов.
 - **django-cors-headers** — заголовки CORS/X-Frame для работы внутри интерфейса Bitrix24.
@@ -80,8 +80,8 @@ backends/python/django/
 Доп. переменные (например, `ENABLE_RABBITMQ`) читаются Makefile'ом при запуске docker compose.
 
 ### `settings.py`
-- `SECRET_KEY = config.jwt_secret`. `DEBUG` сейчас жёстко задан `True` (поле `config.debug`, вычисляемое из `BUILD_TARGET`, в `settings.py` не используется).
-- `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` автоматически формируются из `VIRTUAL_HOST`, запасные домены — `localhost`, `api-python`.
+- `SECRET_KEY = config.jwt_secret`. `DEBUG = config.debug` — `True` только при `BUILD_TARGET=dev`.
+- `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` автоматически формируются из `VIRTUAL_HOST`, внутренние имена — `localhost`, `127.0.0.1`, `api`, `api-python`; пустой `VIRTUAL_HOST` означает «только внутренние имена».
 - `INSTALLED_APPS` включает стандартный набор Django + `corsheaders` + `bitrix_auth` + `bitrix_events` + `main`.
 - `MIDDLEWARE` начинается с `CorsMiddleware`, чтобы корректно проставлять заголовки.
 - `DATABASES['default']` использует `django.db.backends.postgresql_psycopg2` или `django.db.backends.mysql` (по `DB_TYPE`) и параметры `Config`.
@@ -118,7 +118,7 @@ pip install -r requirements.txt
 python manage.py migrate --noinput
 python manage.py runserver 0.0.0.0:8000
 ```
-Конвейер в `Dockerfile` автоматически запускает `makemigrations`, `migrate` и `createsuperuser --noinput`, но локально эти команды можно выполнять вручную.
+При старте контейнер выполняет `migrate` и `createsuperuser --noinput` (ошибка `migrate` останавливает запуск). `makemigrations` при старте не запускается: миграции создаются вручную (`python manage.py makemigrations`) и коммитятся — CI проверяет `makemigrations --check`.
 
 ### Dockerfile (кратко)
 - **base**: `python:3.13-slim`, устанавливает `postgresql-client`, `default-mysql-client` и Python-зависимости.

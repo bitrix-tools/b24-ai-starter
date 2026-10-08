@@ -1,6 +1,6 @@
 # План проверки
 
-<sub>Last reviewed: 2026-10-07.</sub>
+<sub>Last reviewed: 2026-10-08.</sub>
 
 Что проверять и как — после обновления зависимостей (Nuxt 4.6, JS SDK 3, Symfony 7.4, Django 6.1, Node 24, pnpm 12) и фикса переустановки (#8). Уровни идут от дешёвых к дорогим: сначала автоматика, потом Docker, потом реальный портал.
 
@@ -9,8 +9,8 @@
 | Джоба | Что ловит | Чего **не** ловит |
 | --- | --- | --- |
 | Frontend | lint, typecheck, unit-тесты (`frontend/test/`), сборка | Поведение в iframe портала, вызовы REST |
-| Node backend | `pnpm install --frozen-lockfile`, синтаксис `server.js` | Запуск сервера, JWT, работу с БД |
-| Python backend | `manage.py check`, рассинхрон миграций | Запуск, OAuth, события |
+| Node backend | `pnpm install --frozen-lockfile`, синтаксис, `pnpm test` (жизненный цикл установки/событий по HTTP) | Запуск сервера, SQL на реальной БД (`test/accounts.db.test.js` пропускается без `TEST_PG_URL`/`TEST_MYSQL_URL`) |
+| Python backend | `manage.py check`, рассинхрон миграций, `manage.py test` (защита install, диспетчеризация событий) | Запуск, OAuth, работу с БД |
 | PHP backend | `composer validate` (lock ↔ composer.json) | Установку зависимостей, контейнер Symfony, тесты |
 | Repo lint | actionlint, markdownlint | — |
 
@@ -18,7 +18,7 @@
 
 - PHP: `composer install` + `bin/console lint:container` + `phpunit` (`backends/php/tests/`). Сейчас блокируется dev-зависимостями из GitHub — нужен `COMPOSER_AUTH` с токеном в секретах.
 - Сборка Docker-образов (`docker compose build`) — ловит ошибки Dockerfile, как пропущенный `pnpm-workspace.yaml`.
-- Smoke-запуск бэкенда с БД: `/api/health` отвечает 401 без токена.
+- Smoke-запуск бэкенда с БД: `/api/health` отвечает 200 без токена, `/api/enum` — 401.
 
 ## Уровень 1 — Docker локально (без портала)
 
@@ -29,7 +29,7 @@
 | Контейнеры поднимаются | `make ps`, `make logs` | Нет рестартов, нет ошибок старта |
 | Фронтенд собирается в dev | `make logs` (frontend) | `pnpm install --frozen-lockfile` проходит под pnpm 12, Nuxt стартует |
 | Бэкенд жив | `curl http://localhost:<порт>/` | 200 |
-| JWT обязателен | `curl .../api/health`, `.../api/enum`, `.../api/list` без токена | 401 |
+| JWT обязателен | `curl .../api/health`, `.../api/enum`, `.../api/list` без токена | `health` — 200 (публичный), `enum` / `list` — 401 |
 | Открытые эндпоинты | `POST /api/install` | Не 401 (ошибка валидации ок) |
 | `getToken` не выдаёт токен кому угодно | `POST /api/getToken` с выдуманными `DOMAIN`/`member_id`/`AUTH_ID` | `400`/`401`, **не** `200` с токеном |
 | Безопасность | `make security-tests` | Все проверки зелёные |
@@ -37,7 +37,7 @@
 | Миграции PHP | `make dev-php-db-migrate-status` | Нет непримененных / ошибок |
 | Prod-сборка | `make prod-php` / `prod-python` / `prod-node` | Собирается стадия `production`, исходники не смонтированы (`docker compose ... config`), приложение отвечает |
 
-Матрица БД: PHP и Python — PostgreSQL **и** MySQL (`DB_TYPE` в `.env`); Node — то, что поддерживает `server.js`.
+Матрица БД: PHP и Python — PostgreSQL **и** MySQL (`DB_TYPE` в `.env`); Node — PostgreSQL **и** MySQL (`db/accounts.js`; `pnpm test` с `TEST_PG_URL` / `TEST_MYSQL_URL`).
 
 ## Уровень 2 — реальный портал Bitrix24
 
@@ -61,7 +61,7 @@
 
 ## Известные риски, найденные при обновлении
 
-- **PHP** локально не запускался: только `composer validate` и разрешение зависимостей. Это первый кандидат на уровень 1.
+- **PHP** в CI проверяется только `composer validate`; тесты (`make test-php`, 346) и `lint:container` проверены вручную в `php:8.4-cli`, образ `php-fpm` не собирался — первый кандидат на уровень 1.
 - **pnpm 12** не ставит пакеты моложе суток (`minimumReleaseAge`) и требует решения по build-скриптам (`frontend/pnpm-workspace.yaml`, `allowBuilds`). Новый пакет с postinstall сломает `install` до явного разрешения.
 
 ## Найденные проблемы в коде (кандидаты в issues)
@@ -74,16 +74,16 @@
 | 2 | ✅ `make down-all` ссылается на несуществующий `docker-compose.server.yml` | `makefile` | `make down-all` |
 | 3 | ✅ `DOCKER_COMPOSE = docker-compose` (v1), а `dev-init.sh` / `security-tests.sh` используют `docker compose` (v2) — на хосте только с v2 make-цели падают | `makefile`, `scripts/fix-php.sh` | Запуск на чистой машине с Docker Compose v2 |
 | 4 | ✅ `make down` не останавливает профили `db-*` и `python-worker` | `makefile` | `make down` → `docker ps` |
-| 5 | `/api/health` публичный в PHP, но под JWT в Python и Node | бэкенды | `curl /api/health` без токена на каждом |
-| 6 | В Node нет `/api/app-events/`, хотя он описан как общий; у PHP есть лишний публичный `/api/custom-b24-events/` | `backends/node/api/server.js`, PHP-контроллеры | Сценарий 7 уровня 2 на Node |
-| 7 | Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
+| 5 | ✅ `/api/health` публичный в PHP, но под JWT в Python и Node | бэкенды | `curl /api/health` без токена на каждом |
+| 6 | ✅ В Node нет `/api/app-events/`, хотя он описан как общий; у PHP есть лишний публичный `/api/custom-b24-events/` | `backends/node/api/server.js`, PHP-контроллеры | Сценарий 7 уровня 2 на Node |
+| 7 | ✅ Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
 | 8 | ✅ `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
 | 9 | ✅ В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
 | 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
-| 11 | Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |
-| 12 | Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |
-| 13 | Python: `DEBUG = True` захардкожен; при пустом `VIRTUAL_HOST` в `ALLOWED_HOSTS` попадает `None` | `backends/python/django/settings.py` | Prod-запуск с пустым `VIRTUAL_HOST` |
-| 14 | Python Dockerfile выполняет `makemigrations` при старте (dev и prod) — миграции генерируются в рантайме | `backends/python/django/Dockerfile` | `git status` после `make dev-python` |
+| 11 | ✅ Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |
+| 12 | ✅ Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |
+| 13 | ✅ Python: `DEBUG = True` захардкожен; при пустом `VIRTUAL_HOST` в `ALLOWED_HOSTS` попадает `None` | `backends/python/django/settings.py` | Prod-запуск с пустым `VIRTUAL_HOST` |
+| 14 | ✅ Python Dockerfile выполняет `makemigrations` при старте (dev и prod) — миграции генерируются в рантайме | `backends/python/django/Dockerfile` | `git status` после `make dev-python` |
 | 15 | `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
 | 16 | Схема БД для PHP создаётся init-скриптами, а единственная Doctrine-миграция не содержит уникального индекса из #8 | `backends/php/migrations/`, `infrastructure/database/` | `make dev-php-db-migrate` на пустой БД без init-скриптов |
 | 17 | Смена домена портала не обрабатывается: после переименования PHP `/api/getToken` отвечает 401 «not installed» (в БД старый домен) | `backends/php` (нет обработчика `ONAPPDOMAINCHANGE`/`PortalDomainChanged`) | Переименовать тестовый портал |

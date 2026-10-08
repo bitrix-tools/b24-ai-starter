@@ -1,6 +1,6 @@
 # Ревью изменений
 
-<sub>Last reviewed: 2026-10-07.</sub>
+<sub>Last reviewed: 2026-10-08.</sub>
 
 Короткий чек-лист — в [AGENTS.md](../../AGENTS.md#pr-review-checklist). Здесь — что проверять по частям репозитория и почему.
 
@@ -14,7 +14,7 @@
 
 ## Бэкенды (`backends/*`)
 
-- Эндпоинты под JWT, кроме `/api/install`, `/api/getToken`, `/api/app-events/`.
+- Эндпоинты под JWT, кроме `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/` (в PHP — ещё `/api/custom-b24-events/`).
 - OAuth-токены, `application_token` и URL вебхуков не попадают в логи и ответы; тела запросов логируются только через `LogRedactor::redact()` (PHP) / `redactSensitive()` (Node).
 - JWT выдаётся только после проверки `AUTH_ID` OAuth-сервером Bitrix24 — эндпоинт `/api/getToken` не должен подписывать токен по одним лишь присланным `DOMAIN`/`member_id`.
 - Если поведение есть во всех трёх бэкендах (установка, события, `/api/enum`, `/api/list`), изменение сделано во всех или в PR объяснено, почему нет.

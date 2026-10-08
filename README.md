@@ -215,7 +215,7 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 - **PHP**: PHP 8.4, Symfony 7.4 LTS, Doctrine ORM 3, PHP SDK для Bitrix24
 - **Python**: Python 3.13, Django 6.1, Celery 5.6, Python SDK (b24pysdk 1.3) для Bitrix24
-- **Node.js**: Node 24, Express 5, PostgreSQL/MySQL, JWT, JS SDK для Bitrix24
+- **Node.js**: Node 24, Express 5, PostgreSQL/MySQL, JWT, REST Bitrix24 через `fetch` (`utils/bitrix24Rest.js`; для сложных сценариев рекомендуется подключить `@bitrix24/b24jssdk`)
 
 ### Infrastructure
 
@@ -295,7 +295,7 @@ DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Djan
 
 ### JWT токены
 
-Все API endpoints (кроме `/api/install`, `/api/getToken` и `/api/app-events/`) требуют JWT токен в заголовке:
+Все API endpoints (кроме `/api/health`, `/api/install`, `/api/getToken` и `/api/app-events/`; в PHP публичен также `/api/custom-b24-events/`) требуют JWT токен в заголовке:
 
 ```javascript
 Authorization: `Bearer ${tokenJWT}`
@@ -305,7 +305,8 @@ Authorization: `Bearer ${tokenJWT}`
 
 1. **Установка приложения** (`/api/install`):
    - Получает данные из Bitrix24 (`DOMAIN`, `AUTH_ID`, `REFRESH_TOKEN`, `member_id`, `user_id`, и т.д.)
-   - Сохраняет данные установки в БД
+   - Сохраняет данные установки в БД (таблица `bitrix24account`, статус `new`); Node.js предварительно проверяет `AUTH_ID` OAuth-сервером Bitrix24 и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL` к `${NUXT_PUBLIC_API_URL}/api/app-events/`
+   - Отвечает JSON `{"message": "Installation successful"}` во всех бэкендах
    - **НЕ требует JWT**
 
 2. **Получение токена** (`/api/getToken`):
@@ -318,7 +319,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 3. **События Bitrix24** (`/api/app-events/`):
    - Принимает lifecycle-события приложения от Bitrix24
-   - Реализован в PHP и Python бэкендах (в Node.js пока отсутствует); в Python обработка передаётся в Celery worker (`python-worker`, запускается при `ENABLE_RABBITMQ=1`)
+   - Реализован во всех бэкендах. `ONAPPINSTALL` сохраняет `application_token` и переводит аккаунт в `active`; `ONAPPUNINSTALL` в Node.js принимается только с сохранённым `application_token` и помечает аккаунт `deleted`, а PHP пока только логирует его (аккаунт не помечается удалённым). В Python обработка передаётся в Celery worker (`python-worker`, запускается при `ENABLE_RABBITMQ=1`)
    - **НЕ требует JWT**
 
 4. **Защищенные endpoints**:
@@ -330,7 +331,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 ### Общие принципы
 
-Все запросы (кроме `/api/install`, `/api/getToken`, `/api/app-events/`) передают JWT в заголовках.
+Все запросы (кроме `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/`) передают JWT в заголовках.
 
 Пример:
 
@@ -343,7 +344,7 @@ const {data, error} = await $fetch('/api/protected-route', {
 });
 ```
 
-Сервер проверяет каждый запрос (кроме `/api/install`, `/api/getToken`, `/api/app-events/`) на наличие действительного JWT токена.
+Сервер проверяет каждый запрос (кроме `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/`) на наличие действительного JWT токена.
 
 Сервер возвращает ответ в формате `JSON`.
 
@@ -357,7 +358,7 @@ const {data, error} = await $fetch('/api/protected-route', {
 
 ### `/api/health`
 
-Указывает статус бэкенда. В PHP endpoint публичный, в Python и Node.js требует JWT.
+Указывает статус бэкенда. Публичный во всех бэкендах (JWT не нужен).
 
 - **Метод**: `GET`
 - **Параметры**: нет
@@ -379,8 +380,7 @@ const {data, error} = await $fetch('/api/protected-route', {
 Тестирование:
 
 ```bash
-curl http://localhost:8000/api/health \
-  -H "Authorization: Bearer $JWT"  # для PHP заголовок не нужен
+curl http://localhost:8000/api/health
 ```
 
 ### `/api/enum`
@@ -549,8 +549,8 @@ def my_endpoint(request: AuthorizedRequest):
 
 ```javascript
 app.get('/api/my-endpoint', verifyToken, async (req, res) => {
-  // JWT payload доступен через:
-  const jwtPayload = req.jwtPayload;
+  // JWT payload кладёт verifyToken:
+  const jwtPayload = req.user;
   
   // Bitrix24 API вызовы...
   
@@ -795,7 +795,7 @@ const myMethod = async (): Promise<MyType> => {
 Для каждого PR GitHub Actions (`.github/workflows/ci.yml`) запускает:
 
 - **Frontend**: `pnpm install --frozen-lockfile`, затем `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` — перед коммитом выполните то же в `frontend/`
-- **Node.js**: `node --check` для `server.js` и `utils/verifyToken.js`
+- **Node.js**: `node --check` для `server.js` и утилит в `utils/`; тесты — `pnpm test` в `backends/node/api` (`node --test`)
 - **Python**: `python manage.py check` и `makemigrations --check --dry-run`
 - **PHP**: `composer validate`
 - **Repo lint**: actionlint и markdownlint

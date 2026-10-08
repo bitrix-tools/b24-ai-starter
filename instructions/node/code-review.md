@@ -825,7 +825,7 @@ const __dirname = dirname(__filename);
 
 ### Шаг 1: Предварительный анализ
 1. Определить тип проекта (API, CLI tool, библиотека)
-2. Проверить наличие package.json, конфигов линтера/форматтера (в Node-бэкенде стартера их нет; CI выполняет только `node --check server.js && node --check utils/verifyToken.js`)
+2. Проверить наличие package.json, конфигов линтера/форматтера (в Node-бэкенде стартера их нет; CI выполняет `node --check` и `pnpm test` (`node --test`) в `backends/node/api`)
 3. Определить используемый стиль модулей (CommonJS или ES6)
 
 ### Шаг 2: Анализ кода

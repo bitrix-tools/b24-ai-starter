@@ -28,7 +28,7 @@ b24-ai-starter/
 │   ├── python/               # Django 6.1 + b24pysdk
 │   │   └── django/           # Django project and Dockerfile
 │   └── node/                 # Express 5 (Node 24)
-│       └── api/              # Express app (server.js) and Dockerfile
+│       └── api/              # Express app (app.js, server.js, db/, utils/, test/) and Dockerfile
 │
 ├── infrastructure/           # Shared Infrastructure
 │   └── database/             # SQL init scripts (init.sql, init-mysql.sql)
@@ -60,7 +60,8 @@ b24-ai-starter/
 | **Python Events** | `backends/python/django/bitrix_events/` |
 | **PHP Auth (JWT)** | `backends/php/src/EventListener/JwtAuthenticationListener.php` |
 | **PHP Install/Lifecycle** | `backends/php/src/Bitrix24Core/` |
-| **Node.js Endpoints** | `backends/node/api/server.js` |
+| **Node.js Endpoints** | `backends/node/api/app.js` (`server.js` = pool + listen) |
+| **Node.js Accounts DB** | `backends/node/api/db/accounts.js` |
 | **Node.js Auth (JWT)** | `backends/node/api/utils/verifyToken.js` |
 | **Database Schema** | PHP: `backends/php/migrations/`; Python: Django migrations; Node: `infrastructure/database/init.sql` / `init-mysql.sql` |
 | **Env Variables** | `.env` (copied from `.env.example`) |

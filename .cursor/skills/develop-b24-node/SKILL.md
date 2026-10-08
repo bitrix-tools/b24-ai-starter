@@ -7,18 +7,23 @@ description: Develop backend applications for Bitrix24 using Node.js, Express, a
 
 ## Quick Start
 
-The Node.js backend runs on **Node 24** with **Express 5** (ES modules, `pnpm` 12). Bitrix24 calls are made with **@bitrix24/b24jssdk** 3.x.
+The Node.js backend runs on **Node 24** with **Express 5** (ES modules, `pnpm` 12). The starter calls Bitrix24 REST directly via `fetch` (`utils/bitrix24Rest.js`); for richer usage **@bitrix24/b24jssdk** 3.x is recommended.
 
-> `@bitrix24/b24jssdk` is **not** a dependency of `backends/node/api` yet. Add it before using the samples below: `pnpm add @bitrix24/b24jssdk` in `backends/node/api` (commit `pnpm-lock.yaml`).
+> `@bitrix24/b24jssdk` is **not** a dependency of `backends/node/api` yet. Add it before using the SDK samples below: `pnpm add @bitrix24/b24jssdk` in `backends/node/api` (commit `pnpm-lock.yaml`).
 
 ### Key Files
 
-* `backends/node/api/server.js`: Main entry point, DB pool and API routes (`/api/health`, `/api/enum`, `/api/list` under JWT; `/api/install`, `/api/getToken` public).
+* `backends/node/api/app.js`: `createApp({ accounts, clientId, jwtSecret, appUrl, fetchImpl, oauthServers, logger })` — all routes, dependencies injected (tests pass fakes). Public: `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/`; under JWT: `/api/enum`, `/api/list`.
+* `backends/node/api/server.js`: Entry point — creates the DB pool (`DB_TYPE`), wires `createApp()` and calls `listen`.
+* `backends/node/api/db/accounts.js`: Repository over the shared `bitrix24account` table (`infrastructure/database/init*.sql`, same as PHP), PostgreSQL and MySQL.
+* `backends/node/api/utils/bitrix24Rest.js`: Minimal Bitrix24 REST client (`callRest`).
+* `backends/node/api/utils/verifyFrontendAuth.js`: `AUTH_ID` / `access_token` confirmation on the Bitrix24 OAuth server.
 * `backends/node/api/utils/verifyToken.js`: JWT verification middleware.
+* `backends/node/api/test/`: `pnpm test` (`node --test`) — `verifyFrontendAuth.test.js`, `app.test.js` (full lifecycle over HTTP), `accounts.db.test.js` (real DBs when `TEST_PG_URL` / `TEST_MYSQL_URL` are set, skipped otherwise).
 
 ## Creating API Endpoints
 
-Use Express routing and the `verifyToken` middleware.
+Add routes inside `createApp()` in `app.js` and protect them with the `verifyToken` middleware.
 
 ```javascript
 import verifyToken from './utils/verifyToken.js';
@@ -84,15 +89,17 @@ const batchRes = await b24.actions.v2.batch.make({
 
 ## Authentication Flow
 
-1. **Installation**: `/api/install` receives OAuth data. In the starter it only logs the (redacted) body — persisting tokens and binding events is up to you.
-2. **Token Issue**: `/api/getToken` first calls `utils/verifyFrontendAuth.js`: the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/` on `oauth.bitrix.info` or `oauth.bitrix24.tech` — fixed trusted hosts, never the portal from the request; `B24_OAUTH_SERVER_URL` is asked first, then the other region). It must return our `CLIENT_ID`, the same `DOMAIN`/`member_id` and `install.installed: true`. Only then a JWT `{ domain, member_id }` (1h, `JWT_SECRET`) is issued. Errors: 400 (incomplete payload), 401 (not confirmed), 503 (OAuth server unreachable). The Node starter does not store installations, so unlike PHP it cannot also check that the portal completed `/api/install`. Tests: `pnpm test` (`node --test`, `test/`).
+1. **Installation**: `/api/install` confirms `AUTH_ID` on the Bitrix24 OAuth server, stores the account (status `new`) and binds `ONAPPINSTALL`/`ONAPPUNINSTALL` to `${NUXT_PUBLIC_API_URL}/api/app-events/`. Responds `{"message": "Installation successful"}`.
+   * `/api/app-events/` `ONAPPINSTALL`: the event's `access_token` is confirmed on the OAuth server, `application_token` is stored, status `active`.
+   * `/api/app-events/` `ONAPPUNINSTALL`: accepted only with the stored `application_token`, status `deleted`.
+2. **Token Issue**: `/api/getToken` first calls `utils/verifyFrontendAuth.js`: the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/` on `oauth.bitrix.info` or `oauth.bitrix24.tech` — fixed trusted hosts, never the portal from the request; `B24_OAUTH_SERVER_URL` is asked first, then the other region). It must return our `CLIENT_ID`, the same `DOMAIN`/`member_id` and `install.installed: true`. `/api/getToken` checks for an installed account (`new`/`active`) in the local DB before calling the OAuth server. Only then a JWT `{ domain, member_id }` (1h, `JWT_SECRET`) is issued. Errors: 400 (incomplete payload), 401 (not confirmed), 503 (OAuth server unreachable). Tests: `pnpm test` (`node --test`, `test/`).
 3. **Requests**: Frontend sends JWT in `Authorization` header. `verifyToken` middleware validates it.
 
 ## Database
 
 * **Drivers**: `pg` (PostgreSQL) or `mysql2` (MySQL).
 * **Configuration**: Based on `DB_TYPE` env var.
-* **Connection**: `pool` object in `server.js` (not used by the sample routes yet; there are no migrations in the Node backend).
+* **Connection**: `pool` in `server.js`, wrapped by `createDb()` and `createAccountsRepository()` (`db/accounts.js`). The schema comes from `infrastructure/database/init*.sql`; there are no migrations in the Node backend.
 
 ## Best Practices
 

@@ -15,6 +15,12 @@
 
 ### Fixed
 
+- Python: `DEBUG` берётся из `BUILD_TARGET` (был захардкожен `True`, в т.ч. в production); пустой `VIRTUAL_HOST` больше не ломает `ALLOWED_HOSTS`; разрешены внутренние имена `api`/`api-python`.
+- Python: контейнер не выполняет `makemigrations` при старте; ошибка `migrate` больше не маскируется.
+- Python: при `ENABLE_RABBITMQ=0` события `/api/app-events/` обрабатываются сразу (раньше уходили в Celery без брокера и терялись).
+- Python: `/api/install` не принимает JWT и требует администратора портала. Добавлены тесты (`manage.py test`, в CI).
+- `/api/health` публичный во всех бэкендах (раньше в Python и Node требовал JWT) и отвечает `{status, backend, timestamp}`.
+- `/api/install` во всех бэкендах отвечает JSON `{"message": "Installation successful"}` (PHP раньше — текст `OK`, Node — `{"message": "All success"}`).
 - `make prod-*` собирали образы в dev-режиме (передавался неиспользуемый `FRONTEND_TARGET`) и поднимали только бэкенд. Теперь подключается `docker-compose.prod.yml`: стадия `production` образов, без монтирования исходников, тот же набор профилей (фронтенд, БД, очередь), что в `dev-*`. Стадия Python-образа переименована `prod` → `production`.
 - Профили для `dev-*` / `prod-*` вычисляются в одном месте — `scripts/compose-profiles.sh`.
 - make выбирает `docker compose` (v2), если он есть, иначе `docker-compose` (v1).
@@ -34,6 +40,7 @@
 
 ### Changed
 
+- Node: бэкенд больше не заглушка — `app.js` (`createApp()` с внедряемыми зависимостями), `server.js` (пул БД + `listen`), `db/accounts.js` (общая таблица `bitrix24account`, PostgreSQL и MySQL). `/api/install` проверяет `AUTH_ID` OAuth-сервером, сохраняет аккаунт и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL`; добавлен `/api/app-events/` (`ONAPPUNINSTALL` — только с сохранённым `application_token`); `/api/getToken` сначала ищет установленный аккаунт локально. Тесты — `pnpm test` (`node --test`).
 - frontend: `LoggerBrowser` → `LoggerFactory.createForBrowser()` (JS SDK 3); состояние загрузки — локальный `ref` вместо удалённого `useDashboard().isLoading`.
 
 ### Docs

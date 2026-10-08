@@ -76,9 +76,9 @@ foreach ($crm->deal()->batch->list([], [], ['ID', 'TITLE']) as $deal) {
 
 ## Authentication Flow
 
-1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data.
+1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data and responds `{"message": "Installation successful"}`. Lifecycle events go to `/api/app-events/`; known gap: `ONAPPUNINSTALL` is only logged, the account is not marked deleted.
 2. **Token Issue**: `/api/getToken` (`ApiController`) calls `App\Bitrix24Core\FrontendAuthVerifier`: first the portal must have an installed account here (`member_id` + `DOMAIN`, status `new`/`active`) — checked locally, no network call; then the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/`; the SDK's `DefaultOAuthServerUrl` first, then the other region — fixed trusted hosts, never the portal from the request). It must return our `client_id`, the same `DOMAIN`/`member_id` and `install.installed: true`. Errors: 400 / 401 / 503 (OAuth server unreachable). The refresh token is never sent, so verification cannot renew the stored tokens. Only then a JWT is issued. Never log request bodies directly — wrap them in `App\Service\LogRedactor::redact()`. Tests: `tests/Security/`.
-3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload`, `jwt_domain`, `jwt_member_id` in request attributes. Note: in PHP `/api/health` is also public.
+3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload`, `jwt_domain`, `jwt_member_id` in request attributes. Public routes: `/api/health`, `/api/install`, `/api/getToken`, `/api/app-events/` (same as other backends) plus PHP-only `/api/custom-b24-events/`; `/api/enum`, `/api/list`, `/api/telemetry/*` need JWT.
 
 ## Database
 
