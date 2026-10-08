@@ -215,7 +215,7 @@ onUnmounted(() => {
 #### i18n
 
 - Все строки интерфейса — через `t('…')` / `$t('…')`; ключи в `frontend/i18n/locales/<code>.json` (`page.<name>.*`, `components.<name>.*`).
-- Список локалей — `frontend/i18n/i18n.map.ts` (19 штук: en, de, la, br, fr, it, pl, ru, ua, tr, sc, tc, ja, vn, id, ms, th, ar, kz). Источник истины и fallback — `en.json`; новые ключи добавляйте как минимум в `en.json` и `ru.json` (недостающие ключи берутся из английского).
+- Список локалей — `frontend/i18n/i18n.map.ts` (19 штук: en, de, la, br, fr, it, pl, ru, ua, tr, sc, tc, ja, vn, id, ms, th, ar, kz). Источник истины и fallback — `en.json`.
 - Все 19 локалей обязаны содержать ровно ключи `en.json` — это проверяет тест `frontend/test/i18n.spec.ts` (`pnpm test`, CI). Новый ключ добавляйте во все файлы `frontend/i18n/locales/` с переводом.
 - Строки на русском в рецептах ниже оставлены для краткости; в коде проекта выносите их в локали.
 

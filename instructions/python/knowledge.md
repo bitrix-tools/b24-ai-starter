@@ -108,7 +108,7 @@ INSTALLED_APPS = [
 
 ### Docker / Makefile
 - `make dev-python` — основной сценарий, поднимает профили `frontend,python,cloudpub` и профиль БД (`db-postgres`/`db-mysql`); при `ENABLE_RABBITMQ=1` добавляются `queue` и `python-worker`.
-- `make prod-python` — собирает и запускает только Python backend в production-режиме.
+- `make prod-python` — тот же набор профилей в production-режиме (`docker-compose.prod.yml`: стадия `production`, без монтирования исходников, в фоне).
 
 ### Без Docker
 ```bash
@@ -123,7 +123,7 @@ python manage.py runserver 0.0.0.0:8000
 ### Dockerfile (кратко)
 - **base**: `python:3.13-slim`, устанавливает `postgresql-client`, `default-mysql-client` и Python-зависимости.
 - **dev**: монтирует проект как volume и запускает `runserver` после миграций.
-- **prod**: копирует код в образ и стартует Gunicorn (`gunicorn wsgi:application --bind 0.0.0.0:8000`).
+- **production**: копирует код в образ и стартует Gunicorn (`gunicorn wsgi:application --bind 0.0.0.0:8000`).
 
 ---
 

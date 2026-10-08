@@ -155,7 +155,7 @@ Notes:
 ## Bitrix24 JS SDK
 
 > The canonical API is `$b24.actions.v{2,3}.*.make()`. The legacy helpers
-> `callMethod` / `callBatch` / `callListMethod` / `fetchListMethod` are deprecated.
+> `callMethod` / `callBatch` / `callListMethod` / `fetchListMethod` were removed in JS SDK 3.
 
 ```typescript
 // Single method
@@ -202,7 +202,7 @@ Methods: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `em
 ## i18n
 
 * All UI strings via `t('…')` in script / `$t('…')` in templates. Keys live in `frontend/i18n/locales/<code>.json`, grouped as `page.<name>.*`, `components.<name>.*`, etc.
-* Locales are listed in `frontend/i18n/i18n.map.ts` (19: `en`, `de`, `la`, `br`, `fr`, `it`, `pl`, `ru`, `ua`, `tr`, `sc`, `tc`, `ja`, `vn`, `id`, `ms`, `th`, `ar`, `kz`). `en.json` is the source of truth and the fallback locale; add every new key to `en.json` and `ru.json` at least (missing keys fall back to English). The locale is set from `$b24.getLang()` by `initApp`/`initLang`.
+* Locales are listed in `frontend/i18n/i18n.map.ts` (19: `en`, `de`, `la`, `br`, `fr`, `it`, `pl`, `ru`, `ua`, `tr`, `sc`, `tc`, `ja`, `vn`, `id`, `ms`, `th`, `ar`, `kz`). `en.json` is the source of truth and the fallback locale. The locale is set from `$b24.getLang()` by `initApp`/`initLang`.
 * Every locale must have exactly the keys of `en.json` — enforced by `frontend/test/i18n.spec.ts` (`pnpm test`, CI). When you add a key, add it with a translation to all files in `frontend/i18n/locales/`.
 
 ## Code style and tests

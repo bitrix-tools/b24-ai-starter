@@ -22,16 +22,17 @@ b24-ai-starter/
 ├── backends/                 # Backend Implementations
 │   ├── php/                  # Symfony 7.4 LTS + PHP SDK
 │   │   ├── src/              # Source code
+│   │   ├── tests/            # PHPUnit (Security, Telemetry)
 │   │   ├── config/           # Symfony config, Doctrine mappings
 │   │   ├── migrations/       # Doctrine migrations
 │   │   └── docker/           # PHP-specific Docker config
 │   ├── python/               # Django 6.1 + b24pysdk
-│   │   └── django/           # Django project and Dockerfile
+│   │   └── django/           # Django project (main/, bitrix_auth/, bitrix_events/, tests/) and Dockerfile
 │   └── node/                 # Express 5 (Node 24)
 │       └── api/              # Express app (app.js, server.js, db/, utils/, test/) and Dockerfile
 │
 ├── infrastructure/           # Shared Infrastructure
-│   └── database/             # SQL init scripts (init.sql, init-mysql.sql)
+│   └── database/             # SQL init scripts (init.sql, init-mysql.sql) + upgrades/ (make db-upgrade)
 │
 ├── instructions/             # AI Agent Instructions (Source of Truth)
 │   ├── knowledge.md          # Central Knowledge Base
@@ -40,8 +41,9 @@ b24-ai-starter/
 │   ├── queues/               # RabbitMQ / Celery guides
 │   └── versioning/           # Versioning guides
 │
-├── scripts/                  # Helper scripts (dev-init, versioning)
+├── scripts/                  # Helper scripts (dev-init, compose-profiles, versioning, security)
 ├── docker-compose.yml        # Main Docker Compose file
+├── docker-compose.prod.yml   # Production overrides (make prod-*)
 ├── makefile                  # Development commands
 └── README.md                 # Project Overview
 ```

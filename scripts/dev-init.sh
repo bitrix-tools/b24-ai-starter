@@ -703,13 +703,12 @@ if [ ! -z "$CLOUDPUB_DOMAIN" ]; then
             print_warning "Ждем инициализации PHP контейнера..."
             sleep 10
             
-            print_warning "Очистка и переустановка PHP зависимостей..."
-            # Удаляем проблемные зависимости и переустанавливаем
-            docker exec -i $(docker ps | grep api | awk '{print $1}') rm -rf /var/www/vendor /var/www/composer.lock 2>/dev/null || true
-            
+            print_warning "Установка PHP зависимостей из composer.lock..."
+            # composer.lock — источник версий: удаляем только vendor/, lock не трогаем
+            docker exec -i $(docker ps | grep api | awk '{print $1}') rm -rf /var/www/vendor 2>/dev/null || true
+
             if make composer-install 2>&1 | grep -q "Installation failed\|Fatal error\|Error:"; then
-                print_warning "Стандартная установка не удалась, пробуем принудительную переустановку..."
-                make composer-install --ignore-platform-reqs 2>/dev/null || true
+                print_warning "Установка зависимостей не удалась — см. вывод 'make composer-install'"
             fi
             
             # Проверяем, что composer install прошел успешно
@@ -799,6 +798,6 @@ echo "Для остановки контейнеров используйте:"
 echo "   ${YELLOW}make down${NC}"
 echo ""
 echo "Для просмотра логов используйте:"
-echo "   ${YELLOW}docker-compose logs -f${NC}"
+echo "   ${YELLOW}make logs${NC}"
 echo ""
 print_success "Удачной разработки! 🚀"

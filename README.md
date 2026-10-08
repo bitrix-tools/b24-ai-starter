@@ -112,7 +112,7 @@ Skills покрывают навигацию по проекту, работу �
 
 Текущий проект содержит полнофункциональную заготовку приложения, которую можно использовать как в качестве локального приложения, так и в качестве тиражного решения Маркетплейс.
 
-**Требования:** Docker с Docker Compose (makefile вызывает `docker-compose`, `dev-init.sh` — `docker compose`, поэтому нужны обе команды), Bash (macOS, Linux или WSL), API-ключ CloudPub. Для работы с фронтендом вне Docker — Node 24 и pnpm 12; бэкенды в контейнерах используют PHP 8.4 / Python 3.13 / Node 24.
+**Требования:** Docker с Docker Compose v2 (`docker compose`; make при его отсутствии откатывается на `docker-compose` v1, но `dev-init.sh`, `security-tests.sh` и `make prod-*` требуют v2), Bash (macOS, Linux или WSL), API-ключ CloudPub. Для работы с фронтендом вне Docker — Node 24 и pnpm 12; бэкенды в контейнерах используют PHP 8.4 / Python 3.13 / Node 24.
 
 Последовательность действий для запуска разработки:
 
@@ -188,17 +188,18 @@ make help
 
 Для использования в production-среде настоятельно рекомендуется внести свои значения в переменные окружения:
 
-JWT_SECRET - для шифрования JWT-токенов обмена данными между frontend и backend.
-DB_TYPE - тип СУБД (`postgresql` или `mysql`)
-DB_USER - имя пользователя базы данных
-DB_PASSWORD - пароль пользователя базы данных
-DB_NAME - имя базы данных
-DB_PORT - порт выбранной СУБД (`5432` для PostgreSQL, `3306` для MySQL)
-DATABASE_URL - DSN для PHP/Doctrine (автоматически настраивается через `make dev-init`)
-`make prod-*` запускает стек в production-режиме: поверх `docker-compose.yml` подключается `docker-compose.prod.yml` — собирается стадия `production` образов фронтенда, Node и Python, исходники в контейнеры не монтируются (код и зависимости уже в образе), запуск в фоне (`-d`). Профили (БД, RabbitMQ) берутся из `.env` так же, как в `make dev-*` (`scripts/compose-profiles.sh`). Остановить — `make down-all`. Нужен Docker Compose v2.24.4+ (`!reset`/`!override`); make сам выбирает `docker compose` (v2) или `docker-compose` (v1).
-DJANGO_SUPERUSER_USERNAME - имя суперпользователя Django в случае backend на Python
-DJANGO_SUPERUSER_EMAIL - email суперпользователя Django.
-DJANGO_SUPERUSER_PASSWORD - пароль суперпользователя Django.
+- `JWT_SECRET` — для шифрования JWT-токенов обмена данными между frontend и backend.
+- `DB_TYPE` — тип СУБД (`postgresql` или `mysql`)
+- `DB_USER` — имя пользователя базы данных
+- `DB_PASSWORD` — пароль пользователя базы данных
+- `DB_NAME` — имя базы данных
+- `DB_PORT` — порт выбранной СУБД (`5432` для PostgreSQL, `3306` для MySQL)
+- `DATABASE_URL` — DSN для PHP/Doctrine (автоматически настраивается через `make dev-init`)
+- `DJANGO_SUPERUSER_USERNAME` — имя суперпользователя Django в случае backend на Python
+- `DJANGO_SUPERUSER_EMAIL` — email суперпользователя Django.
+- `DJANGO_SUPERUSER_PASSWORD` — пароль суперпользователя Django.
+
+`make prod-*` запускает стек в production-режиме: поверх `docker-compose.yml` подключается `docker-compose.prod.yml` — собирается стадия `production` образов фронтенда, Node и Python (PHP не переопределяется: одностадийный образ `php-fpm` обслуживает смонтированный `backends/php`), исходники в контейнеры не монтируются (код и зависимости уже в образе), запуск в фоне (`-d`). Профили (БД, RabbitMQ) берутся из `.env` так же, как в `make dev-*` (`scripts/compose-profiles.sh`). Остановить — `make down-all`. Нужен Docker Compose v2.24.4+ (`!reset`/`!override`); make сам выбирает `docker compose` (v2) или `docker-compose` (v1).
 
 ## 🛠️ Технологический стек
 
@@ -319,7 +320,7 @@ Authorization: `Bearer ${tokenJWT}`
 
 3. **События Bitrix24** (`/api/app-events/`):
    - Принимает lifecycle-события приложения от Bitrix24
-   - Реализован во всех бэкендах. `ONAPPINSTALL` сохраняет `application_token` и переводит аккаунт в `active`; `ONAPPUNINSTALL` в Node.js принимается только с сохранённым `application_token` и помечает аккаунт `deleted`, а PHP пока только логирует его (аккаунт не помечается удалённым). В Python обработка передаётся в Celery worker (`python-worker`, запускается при `ENABLE_RABBITMQ=1`)
+   - Реализован во всех бэкендах. `ONAPPINSTALL` сохраняет `application_token` и переводит аккаунт в `active`; `ONAPPUNINSTALL` в Node.js принимается только с сохранённым `application_token` и помечает аккаунт `deleted`, а PHP пока только логирует его (аккаунт не помечается удалённым). В Python при `ENABLE_RABBITMQ=1` обработка передаётся в Celery worker (`python-worker`), при `0` — выполняется сразу в запросе
    - **НЕ требует JWT**
 
 4. **Защищенные endpoints**:
@@ -635,9 +636,7 @@ const enumData = await apiStore.getEnum()
 // В app/stores/api.ts:
 const myMethod = async (): Promise<MyType> => {
   return await $api('/api/my-endpoint', {
-    headers: {
-      Authorization: `Bearer ${tokenJWT.value}`
-    }
+    headers: authHeaders()
   })
 }
 ```
@@ -795,10 +794,11 @@ const myMethod = async (): Promise<MyType> => {
 Для каждого PR GitHub Actions (`.github/workflows/ci.yml`) запускает:
 
 - **Frontend**: `pnpm install --frozen-lockfile`, затем `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` — перед коммитом выполните то же в `frontend/`
-- **Node.js**: `node --check` для `server.js` и утилит в `utils/`; тесты — `pnpm test` в `backends/node/api` (`node --test`)
-- **Python**: `python manage.py check` и `makemigrations --check --dry-run`
-- **PHP**: `composer validate`
-- **Repo lint**: actionlint и markdownlint
+- **Node.js**: `pnpm install --frozen-lockfile`, `node --check` для `server.js` и утилит в `utils/`; тесты — `pnpm test` в `backends/node/api` (`node --test`)
+- **Python**: `python manage.py check`, `makemigrations --check --dry-run` и `python manage.py test`
+- **PHP**: `composer validate`, `composer install`, `bin/console lint:container --env=prod` и `vendor/bin/phpunit` (= `make test-php`)
+- **Repo lint**: actionlint (+shellcheck) и markdownlint
+- **Docker**: сборка production-образов и smoke-тест Node + PostgreSQL (`/api/health`, `/api/enum`, `/api/getToken`)
 
 Зависимости обновляет Dependabot (`.github/dependabot.yml`) еженедельно.
 

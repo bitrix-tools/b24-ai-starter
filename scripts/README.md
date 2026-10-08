@@ -13,6 +13,7 @@
 | `security-scan.sh` | 🔍 Быстрый аудит зависимостей (composer/pnpm audit) | `make security-scan` |
 | `create-version.sh` | ♻️ Создание копии проекта в `versions/<имя>` | `make create-version VERSION=v2` |
 | `delete-version.sh` | 🗑 Удаление версии из `versions/` | `make delete-version VERSION=v2` |
+| `compose-profiles.sh` | 🧩 Вычисляет `COMPOSE_PROFILES` по `.env` (`DB_TYPE`, `ENABLE_RABBITMQ`) | вызывается целями `make dev-*` / `prod-*` |
 
 ---
 
@@ -193,7 +194,7 @@ make logs              # Просмотр логов
 
 ## 🔧 Системные требования
 
-- **Docker & Docker Compose v2**: makefile вызывает `docker-compose`, а `dev-init.sh` — `docker compose`, поэтому должны быть доступны обе команды
+- **Docker & Docker Compose v2** (`docker compose`; для `make prod-*` — v2.24.4+): make при отсутствии v2 откатывается на `docker-compose` v1, но `dev-init.sh` и `security-tests.sh` вызывают только `docker compose`
 - **CloudPub API ключ**: Для создания публичных туннелей ([получить здесь](https://cloudpub.ru/))
 - **Bash shell**: macOS, Linux, WSL на Windows
 - **Свободные порты**: 8000 (API), 5432 (PostgreSQL) или 3306 (MySQL), 5672/15672 (RabbitMQ, если включён). Порт фронтенда 3000 наружу не публикуется — доступ через CloudPub
@@ -288,8 +289,8 @@ make dev-init
 # Автоматическое исправление
 make fix-php
 
-# Или ручная очистка
-rm -rf backends/php/vendor backends/php/composer.lock
+# Или ручная очистка (composer.lock не удаляйте — версии фиксируются им)
+rm -rf backends/php/vendor
 make dev-php
 ```
 

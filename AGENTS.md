@@ -13,7 +13,7 @@
 | Фронтенд | `frontend/` | Nuxt 4.6, Vue 3, `@bitrix24/b24ui-nuxt` 2.14, `@bitrix24/b24jssdk-nuxt` 3.x, Pinia 4, i18n, Tailwind 4 |
 | PHP | `backends/php/` | Symfony 7.4 LTS, Doctrine ORM 3, `bitrix24/b24phpsdk`, OpenTelemetry |
 | Python | `backends/python/django/` | Django 6.1, `b24pysdk` 1.3, Celery |
-| Node.js | `backends/node/api/` | Node 24, Express 5, `@bitrix24/b24jssdk` |
+| Node.js | `backends/node/api/` | Node 24, Express 5, `pg` / `mysql2`, REST Bitrix24 через `fetch` (`@bitrix24/b24jssdk` не установлен) |
 | Инфраструктура | `docker-compose.yml`, `infrastructure/` | PostgreSQL / MySQL, RabbitMQ, Cloudpub |
 
 Тулчейн: Node 24, pnpm 12 (поле `packageManager`), TypeScript 6.0, PHP 8.4, Python 3.13.
@@ -37,7 +37,7 @@ pnpm install --frozen-lockfile
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Бэкенды в CI: Node — `node --check` + `pnpm test`; Python — `manage.py check` + `makemigrations --check` + `manage.py test`; PHP — `composer validate`.
+Бэкенды в CI: Node — `node --check` + `pnpm test`; Python — `manage.py check` + `makemigrations --check` + `manage.py test`; PHP — `composer validate` + `composer install` + `lint:container --env=prod` + `phpunit`; Docker — сборка production-образов и smoke Node + PostgreSQL.
 
 ## Ключевые соглашения
 
@@ -61,7 +61,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `develop-b24-frontend` | Страницы, компоненты, JS SDK |
 | `develop-b24-php` / `develop-b24-python` / `develop-b24-node` | Бэкенд на выбранном языке |
 | `implement-b24-features` | Виджеты, роботы, события, очереди |
-| `Bitrix24 MCP server` | Поиск методов REST API через MCP |
+| `bitrix24-mcp-server` | Поиск методов REST API через MCP |
 
 ## Документация
 

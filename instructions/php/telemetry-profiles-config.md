@@ -70,7 +70,7 @@ OTEL_TELEMETRY_PROFILE=integration-with-migration
 **Исключения**: 
 - `session.*` — выключает `session.id`, `session.start_time`, `session.duration_ms` (3 атрибута)
 - `external.*` — выключает 7 `external.*` атрибутов
-- `ui.screen.*`, `ui.widget.*`, `ui.form.*` — **не совпадают** ни с одним атрибутом ([UIProfile называет их](../../../backends/php/src/Service/Telemetry/Profiles/UIProfile.php) `screen.*`, `widget.*`, `form.*` без префикса `ui.`)
+- `ui.screen.*`, `ui.widget.*`, `ui.form.*` — **не совпадают** ни с одним атрибутом ([UIProfile называет их](../../backends/php/src/Service/Telemetry/Profiles/UIProfile.php) `screen.*`, `widget.*`, `form.*` без префикса `ui.`)
 
 **Атрибуты**: 171 (Lifecycle: 27 + UI: 45 вкл. отфильтрованных + Migration: 109, минус 10)
 
@@ -257,5 +257,5 @@ vendor/bin/phpunit tests/Telemetry/Config/TelemetryConfigTest.php
 ## См. также
 
 - [AttributeGroupManager](../../backends/php/src/Service/Telemetry/AttributeGroupManager.php) - менеджер композиции профилей
-- [Profile System Architecture](../../PROFILE_ARCHITECTURE.md) - архитектура системы профилей
-- [Telemetry Integration Guide](../../DEVELOPER_GUIDE_TELEMETRY.md) - интеграция телеметрии
+- [Точки интеграции телеметрии](telemetry-integration-points.md) - интеграция телеметрии
+- [Быстрый старт](telemetry-quickstart.md)

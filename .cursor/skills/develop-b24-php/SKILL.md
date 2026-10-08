@@ -13,7 +13,7 @@ The PHP backend is built with **Symfony 7.4 LTS** (PHP 8.4, Doctrine ORM 3) and 
 
 * `backends/php/src/Controller/`: API endpoints (`ApiController`: `/api/getToken`, `/api/list`, `/api/enum`, `/api/health`; `B24EventsController`: `/api/custom-b24-events/`; `TelemetryController`).
 * `backends/php/src/Service/`: Business logic (`JwtService`, `Telemetry/`).
-* `backends/php/src/Bitrix24Core/`: Core integration logic (`AppLifecycleController` for `/api/install`, `AppLifecycleEventController` for `/api/app-events/`, `Bitrix24ServiceBuilderFactory`).
+* `backends/php/src/Bitrix24Core/`: Core integration logic (`Controller/AppLifecycleController` for `/api/install`, `Controller/AppLifecycleEventController` for `/api/app-events/`, `Bitrix24ServiceBuilderFactory`, `FrontendAuthVerifier`).
 * `backends/php/src/EventListener/JwtAuthenticationListener.php`: JWT check; public routes are listed in `PUBLIC_ROUTES` (prefix match).
 
 ## Creating API Endpoints

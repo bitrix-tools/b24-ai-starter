@@ -64,7 +64,7 @@ client.call_batch([
 ## Authentication Flow
 
 1. **Installation**: `/api/install` (protected by `@auth_required`, which validates the Bitrix24 OAuth data) receives OAuth data, creates or updates `Bitrix24Account`, creates a new `ApplicationInstallation`, and registers lifecycle events.
-2. **Token Issue**: `/api/getToken` issues a JWT for the frontend via `Bitrix24Account.create_jwt_token()`.
+2. **Token Issue**: `/api/getToken` is also behind `@auth_required` — the caller's Bitrix24 auth data is verified through b24pysdk before a JWT is issued via `Bitrix24Account.create_jwt_token()`.
 3. **Requests**: Frontend sends JWT in `Authorization` header. `@auth_required` validates it and populates `request.bitrix24_account`.
 4. **Events**: `/api/app-events/` receives Bitrix24 lifecycle events; with `ENABLE_RABBITMQ=1` they are queued through Celery (`python-worker`), otherwise processed inline (`bitrix_events/views.py: dispatch_event`).
 5. **Install guards**: `/api/install` rejects a Bearer JWT (needs fresh Bitrix24 auth data) and requires a portal administrator.

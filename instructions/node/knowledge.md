@@ -17,7 +17,7 @@
 - `POST /api/install` подтверждает `AUTH_ID` на OAuth-сервере, сохраняет аккаунт (статус `new`) и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL` к `${NUXT_PUBLIC_API_URL}/api/app-events/`; отвечает `{"message": "Installation successful"}`.
 - `POST /api/app-events/`: `ONAPPINSTALL` — `access_token` подтверждается на OAuth-сервере, сохраняется `application_token`, статус `active`; `ONAPPUNINSTALL` — только с сохранённым `application_token`, статус `deleted`.
 - `POST /api/getToken` сначала проверяет установленный аккаунт в локальной БД, затем `AUTH_ID` на OAuth-сервере, и только потом выдаёт JWT.
-- Тесты: `pnpm test` (`node --test`) — `test/verifyFrontendAuth.test.js`, `test/app.test.js` (полный жизненный цикл по HTTP), `test/accounts.db.test.js` (на реальных БД при заданных `TEST_PG_URL` / `TEST_MYSQL_URL`, иначе пропускается). Линтера и TypeScript нет; CI выполняет `node --check`.
+- Тесты: `pnpm test` (`node --test`) — `test/verifyFrontendAuth.test.js`, `test/app.test.js` (полный жизненный цикл по HTTP), `test/accounts.db.test.js` (на реальных БД при заданных `TEST_PG_URL` / `TEST_MYSQL_URL`, иначе пропускается). Линтера и TypeScript нет; CI выполняет `node --check` и `pnpm test`.
 
 ---
 
