@@ -11,14 +11,11 @@
 | Frontend | lint, typecheck, unit-тесты (`frontend/test/`), сборка | Поведение в iframe портала, вызовы REST |
 | Node backend | `pnpm install --frozen-lockfile`, синтаксис, `pnpm test` (жизненный цикл установки/событий по HTTP) | Запуск сервера, SQL на реальной БД (`test/accounts.db.test.js` пропускается без `TEST_PG_URL`/`TEST_MYSQL_URL`) |
 | Python backend | `manage.py check`, рассинхрон миграций, `manage.py test` (защита install, диспетчеризация событий) | Запуск, OAuth, работу с БД |
-| PHP backend | `composer validate` (lock ↔ composer.json) | Установку зависимостей, контейнер Symfony, тесты |
-| Repo lint | actionlint, markdownlint | — |
+| PHP backend | `composer validate`, `composer install`, `lint:container` (prod), PHPUnit (346: security + telemetry) | Работу с БД и Bitrix24 (тесты на моках) |
+| Repo lint | actionlint (+shellcheck), markdownlint | — |
+| Docker | Сборка production-образов всех сервисов + PHP; smoke Node + PostgreSQL: `/api/health` 200, `/api/enum` 401, `/api/getToken` с выдуманными данными 401 | Python/PHP smoke, MySQL, работу внутри портала |
 
-**Пробелы, которые стоит закрыть в CI** (по одному PR, по мере надобности):
-
-- PHP: `composer install` + `bin/console lint:container` + `phpunit` (`backends/php/tests/`). Сейчас блокируется dev-зависимостями из GitHub — нужен `COMPOSER_AUTH` с токеном в секретах.
-- Сборка Docker-образов (`docker compose build`) — ловит ошибки Dockerfile, как пропущенный `pnpm-workspace.yaml`.
-- Smoke-запуск бэкенда с БД: `/api/health` отвечает 200 без токена, `/api/enum` — 401.
+**Чего CI по-прежнему не делает:** smoke для PHP и Python, прогон с MySQL, всё, что требует реального портала Bitrix24 (уровень 2).
 
 ## Уровень 1 — Docker локально (без портала)
 

@@ -44,6 +44,7 @@
 
 ### Changed
 
+- CI: PHP — `composer install`, `lint:container` (prod) и все тесты; новая джоба Docker — сборка production-образов и smoke-тест Node + PostgreSQL; Python — `manage.py test`; Node — `pnpm test`.
 - `useUserStore`: поле `login` (хранило полное имя) переименовано в `fullName`.
 - Удалены нерабочий скрипт `translate-ui` и навык `bitrix24-static-local-app` (инструментов статической сборки нет; стартер работает с бэкендом).
 - Node: бэкенд больше не заглушка — `app.js` (`createApp()` с внедряемыми зависимостями), `server.js` (пул БД + `listen`), `db/accounts.js` (общая таблица `bitrix24account`, PostgreSQL и MySQL). `/api/install` проверяет `AUTH_ID` OAuth-сервером, сохраняет аккаунт и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL`; добавлен `/api/app-events/` (`ONAPPUNINSTALL` — только с сохранённым `application_token`); `/api/getToken` сначала ищет установленный аккаунт локально. Тесты — `pnpm test` (`node --test`).

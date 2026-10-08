@@ -200,7 +200,7 @@ jobs:
         run: |
           COMPOSE_PROFILES=node,db-postgres BUILD_TARGET=production \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait database-postgres api-node
-          for i in $(seq 1 30); do curl -fsS http://localhost:8000/api/health && break; sleep 2; done
+          for _ in $(seq 1 30); do curl -fsS http://localhost:8000/api/health && break; sleep 2; done
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/health)" = 200
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/enum)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \

@@ -29,7 +29,7 @@ when@test:
                 channels: ["!event"]
             nested:
                 type: stream
-                path: "/var/log/php/symfony/%kernel.environment%.log"
+                path: "%kernel.logs_dir%/%kernel.environment%.log" # tests run outside Docker too (CI)
                 level: debug
 
 when@prod:
