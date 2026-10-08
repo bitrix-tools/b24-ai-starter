@@ -1,4 +1,8 @@
+FROM mlocati/php-extension-installer:2.4 AS php-extension-installer
+
 FROM php:8.4-fpm
+
+COPY --from=php-extension-installer /usr/bin/install-php-extensions /usr/bin/install-php-extensions
 
 RUN apt-get update && apt-get install -y \
     nginx \
@@ -17,6 +21,10 @@ RUN apt-get update && apt-get install -y \
       pdo_mysql \
       pdo_pgsql \
       pgsql
+
+# amqp: Symfony Messenger AMQP transport (RabbitMQ, ENABLE_RABBITMQ=1) from web
+# requests — the php-cli image already has it; same installer as php-cli.
+RUN install-php-extensions amqp
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 

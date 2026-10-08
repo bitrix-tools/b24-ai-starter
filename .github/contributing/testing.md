@@ -33,7 +33,7 @@
 | Открытые эндпоинты | `POST /api/install` | Не 401 (ошибка валидации ок) |
 | `getToken` не выдаёт токен кому угодно | `POST /api/getToken` с выдуманными `DOMAIN`/`member_id`/`AUTH_ID` | `400`/`401`, **не** `200` с токеном |
 | Безопасность | `make security-tests` | Все проверки зелёные |
-| PHP-телеметрия | `make test-telemetry` | Тесты проходят на Symfony 7.4 |
+| PHP-тесты | `make test-php` | Все тесты проходят (346 на момент обновления: security + telemetry) |
 | Миграции PHP | `make dev-php-db-migrate-status` | Нет непримененных / ошибок |
 | Prod-сборка | `make prod-php` / `prod-python` / `prod-node` | Собирается стадия `production`, исходники не смонтированы (`docker compose ... config`), приложение отвечает |
 
@@ -78,7 +78,7 @@
 | 6 | В Node нет `/api/app-events/`, хотя он описан как общий; у PHP есть лишний публичный `/api/custom-b24-events/` | `backends/node/api/server.js`, PHP-контроллеры | Сценарий 7 уровня 2 на Node |
 | 7 | Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
 | 8 | ✅ `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
-| 9 | В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
+| 9 | ✅ В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
 | 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
 | 11 | Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |
 | 12 | Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |

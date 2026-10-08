@@ -1,4 +1,4 @@
-.PHONY: help dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
+.PHONY: help test-php dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
 
 # Variables
 # Compose v2 plugin (`docker compose`) if available, else the legacy v1 binary.
@@ -62,6 +62,8 @@ help: ## Show this help message
 	@echo "  security-tests    Run orchestrated security test suite"
 	@echo ""
 	@echo "🧪 Testing:"
+	@echo "  test-php                    Run all PHP unit tests (security + telemetry)"
+	@echo "  test-php-security           Run PHP security tests"
 	@echo "  test-telemetry              Run all telemetry tests"
 	@echo "  test-telemetry-null         Run NullTelemetryService tests"
 	@echo "  test-telemetry-real         Run RealTelemetryService tests"
@@ -174,7 +176,15 @@ security-scan:
 security-tests:
 	@./scripts/security-tests.sh $(SECURITY_TESTS_ARGS)
 
-# Telemetry Testing
+# PHP tests
+.PHONY: test-php
+test-php: ## Run all PHP unit tests (tests/Security + tests/Telemetry, without E2E)
+	COMPOSE_PROFILES=php-cli $(DOCKER_COMPOSE) run --rm --workdir /var/www php-cli vendor/bin/phpunit
+
+.PHONY: test-php-security
+test-php-security: ## Run PHP security tests (/api/getToken verification, log redaction)
+	COMPOSE_PROFILES=php-cli $(DOCKER_COMPOSE) run --rm --workdir /var/www php-cli vendor/bin/phpunit --testsuite security
+
 .PHONY: test-telemetry
 test-telemetry: ## Run all telemetry tests
 	COMPOSE_PROFILES=php-cli $(DOCKER_COMPOSE) run --workdir /var/www php-cli vendor/bin/phpunit --configuration phpunit.xml.dist --testsuite telemetry-all

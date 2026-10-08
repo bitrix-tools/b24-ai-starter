@@ -20,6 +20,8 @@
 - make выбирает `docker compose` (v2), если он есть, иначе `docker-compose` (v1).
 - `make down` останавливает все профили (включая БД и `python-worker`); `down-all` больше не ссылается на несуществующий `docker-compose.server.yml`; удалена цель `logs-nginxproxy`.
 - `make fix-php` больше не удаляет `composer.lock`.
+- PHP: `phpunit` без параметров падал из-за пересекающихся testsuite и `failOnWarning`; добавлен suite по умолчанию `all` (security + telemetry, 346 тестов) и цели `make test-php`, `make test-php-security`; аннотации тестов переведены на атрибуты PHPUnit.
+- PHP: в образ `php-fpm` добавлено расширение `amqp` (было только в `php-cli`) — Messenger/AMQP из веб-запросов.
 - PHP не запускался после обновления зависимостей: убраны опции `proxy_dir`/`proxy_auto_generate`, которых нет в doctrine-bundle 3; `bitrix24/b24phpsdk` закреплён на коммите, совместимом с `mesilov/bitrix24-php-lib` 0.5.2; добавлен обязательный `OTEL_TELEMETRY_PROFILE=simple-ui`; `.env` снова парсится (значение с пробелом без кавычек).
 
 ### Dependencies

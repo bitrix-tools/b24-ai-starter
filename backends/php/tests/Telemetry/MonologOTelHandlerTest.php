@@ -8,13 +8,13 @@ use App\Service\Telemetry\MonologOTelHandler;
 use App\Service\Telemetry\TelemetryInterface;
 use Monolog\Level;
 use Monolog\LogRecord;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Тесты для MonologOTelHandler.
- *
- * @covers \App\Service\Telemetry\MonologOTelHandler
  */
+#[CoversClass(MonologOTelHandler::class)]
 class MonologOTelHandlerTest extends TestCase
 {
     /**

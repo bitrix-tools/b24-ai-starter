@@ -77,7 +77,7 @@ foreach ($crm->deal()->batch->list([], [], ['ID', 'TITLE']) as $deal) {
 ## Authentication Flow
 
 1. **Installation**: `/api/install` (handled by `AppLifecycleController`) receives OAuth data.
-2. **Token Issue**: `/api/getToken` (`ApiController`) calls `App\Bitrix24Core\FrontendAuthVerifier`: first the portal must have an installed account here (`member_id` + `DOMAIN`, status `new`/`active`) — checked locally, no network call; then the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/`; the SDK's `DefaultOAuthServerUrl` first, then the other region — fixed trusted hosts, never the portal from the request). It must return our `client_id`, the same `DOMAIN`/`member_id` and `install.installed: true`. Errors: 400 / 401 / 503 (OAuth server unreachable). The refresh token is never sent, so verification cannot renew the stored tokens. Only then a JWT is issued; otherwise 400/401. Never log request bodies directly — wrap them in `App\Service\LogRedactor::redact()`. Tests: `tests/Security/`.
+2. **Token Issue**: `/api/getToken` (`ApiController`) calls `App\Bitrix24Core\FrontendAuthVerifier`: first the portal must have an installed account here (`member_id` + `DOMAIN`, status `new`/`active`) — checked locally, no network call; then the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/`; the SDK's `DefaultOAuthServerUrl` first, then the other region — fixed trusted hosts, never the portal from the request). It must return our `client_id`, the same `DOMAIN`/`member_id` and `install.installed: true`. Errors: 400 / 401 / 503 (OAuth server unreachable). The refresh token is never sent, so verification cannot renew the stored tokens. Only then a JWT is issued. Never log request bodies directly — wrap them in `App\Service\LogRedactor::redact()`. Tests: `tests/Security/`.
 3. **Requests**: Frontend sends JWT in `Authorization` header. `JwtAuthenticationListener` validates it and sets `jwt_payload`, `jwt_domain`, `jwt_member_id` in request attributes. Note: in PHP `/api/health` is also public.
 
 ## Database
@@ -85,6 +85,12 @@ foreach ($crm->deal()->batch->list([], [], ['ID', 'TITLE']) as $deal) {
 * **ORM**: Doctrine.
 * **Migrations**: `backends/php/migrations/`; run `make dev-php-db-migrate` (or `php bin/console doctrine:migrations:migrate` inside the container).
 * **Entities**: Bitrix24 account/installation entities come from `mesilov/bitrix24-php-lib` (mapping in `config/doctrine/`); there is no `src/Entity/` yet — create it for custom entities.
+
+## Tests
+
+* `make test-php` runs every PHPUnit test (`phpunit.xml.dist` default suite `all` = `tests/Security` + `tests/Telemetry`, E2E excluded); `make test-php-security`, `make test-telemetry-*` run single suites.
+* The named suites overlap on purpose; with `failOnWarning` you must run one suite at a time (`--testsuite`), never all of them together.
+* Use PHPUnit attributes (`#[Test]`, `#[DataProvider]`, `#[CoversClass]`) — doc-comment annotations are deprecated in PHPUnit 11 and removed in 12.
 
 ## Best Practices
 

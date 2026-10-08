@@ -27,6 +27,7 @@ make down                     # остановить окружение
 make logs
 make security-tests
 make php-cli-lint-phpstan     # PHP: phpstan / rector / cs-fixer — см. make help
+make test-php                 # PHP: все unit-тесты (tests/Security + tests/Telemetry)
 ```
 
 Фронтенд (в `frontend/`) — те же шаги, что в CI:

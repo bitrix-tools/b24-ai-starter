@@ -157,6 +157,7 @@
 
 ```bash
 make php-cli-lint-phpstan   # PHPStan, конфиг phpstan.dist.neon (level 6: bin/, config/, public/, src/)
+make test-php               # PHPUnit: tests/Security + tests/Telemetry (suite `all` по умолчанию)
 make lint-rector            # Rector --dry-run, конфиг rector.php (make lint-rector-fix — применить)
 make lint-cs-fixer          # PHP CS Fixer check, конфиг .php-cs-fixer.dist.php (@Symfony + @PSR12)
 make lint-cs-fixer-fix      # применить исправления
