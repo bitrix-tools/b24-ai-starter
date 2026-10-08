@@ -15,22 +15,22 @@ if config.db_type == "mysql":
 BASE_DIR = Path(__file__).resolve().parent
 
 SECRET_KEY = config.jwt_secret
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+DEBUG = config.debug  # True only when BUILD_TARGET=dev
 
-VIRTUAL_HOST = config.app_base_url
+# Hosts the backend is reached by: the public VIRTUAL_HOST (via the frontend proxy)
+# and the internal Docker names (service `api-python`, container `api`).
+INTERNAL_HOSTS = ["localhost", "127.0.0.1", "api", "api-python"]
 
-if not VIRTUAL_HOST.startswith(("http://", "https://")):
+VIRTUAL_HOST = config.app_base_url.strip()
+if VIRTUAL_HOST and not VIRTUAL_HOST.startswith(("http://", "https://")):
     VIRTUAL_HOST = f"https://{VIRTUAL_HOST}"
 
 if VIRTUAL_HOST:
     CSRF_TRUSTED_ORIGINS = [VIRTUAL_HOST]
-
-    domain = urlparse(VIRTUAL_HOST).hostname
-    ALLOWED_HOSTS = [domain, "localhost", "127.0.0.1", "api-python"]
+    ALLOWED_HOSTS = [urlparse(VIRTUAL_HOST).hostname, *INTERNAL_HOSTS]
 else:
     CSRF_TRUSTED_ORIGINS = []
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api-python"]
+    ALLOWED_HOSTS = INTERNAL_HOSTS
 
 INSTALLED_APPS = [
     "django.contrib.admin",

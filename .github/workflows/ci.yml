@@ -113,7 +113,7 @@ jobs:
         run: composer validate --no-check-publish
 
   backend-python:
-    name: Python backend (install · Django check)
+    name: Python backend (install · Django check · test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -136,6 +136,9 @@ jobs:
 
       - name: Migrations are in sync with models
         run: python manage.py makemigrations --check --dry-run
+
+      - name: Unit tests (no database needed)
+        run: python manage.py test
 
   repo-lint:
     name: Repo lint (actionlint · markdownlint)
