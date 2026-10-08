@@ -71,7 +71,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `instructions/front/` | Фронтенд: JS SDK, UI Kit, рецепты компонентов |
 | `instructions/{php,python,node}/` | Бэкенды, включая `code-review.md` для каждого |
 | `instructions/bitrix24/`, `instructions/queues/` | Виджеты, роботы, MCP; очереди |
-| `.github/contributing/` | Процессы: ревью, зависимости, [план проверки](.github/contributing/testing.md) и известные проблемы кода |
+| `.github/contributing/` | Процессы: ревью, зависимости, [план проверки](.github/contributing/testing.md) и [план живой проверки](.github/contributing/live-test-plan.md) и известные проблемы кода |
 
 Документация обновляется **в том же PR**, что и код. Устаревшая документация — такой же баг, как упавший тест: агенты копируют примеры из `instructions/` дословно.
 
