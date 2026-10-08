@@ -166,7 +166,7 @@ jobs:
           /tmp/actionlint -color
 
       - name: Lint agent & contributor guides (markdownlint)
-        uses: DavidAnson/markdownlint-cli2-action@4580e1612f6407034edd6c0e4e316d725920867b # v24.2.0
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: |
             AGENTS.md
