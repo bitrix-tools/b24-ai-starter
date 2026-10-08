@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace App\Bitrix24Core\Controller;
 
+use App\Service\LogRedactor;
 use App\Bitrix24Core\Bitrix24ServiceBuilderFactory;
 use App\Bitrix24Core\FrontendPayload;
 use App\Service\Telemetry\TelemetryInterface;
@@ -48,7 +49,7 @@ class AppLifecycleController extends AbstractController
     public function install(Request $request): Response
     {
         $this->logger->debug('AppLifecycleController.install.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -59,12 +60,14 @@ class AppLifecycleController extends AbstractController
         }
 
         $this->logger->debug('AppLifecycleController.install.payload', [
-            'payload' => print_r($payload, true),
+            'payload' => LogRedactor::redact($payload),
         ]);
         $frontendPayload = FrontendPayload::initFromArray($payload);
 
         $this->logger->debug('AppLifecycleController.install.frontendPayload', [
-            'payload' => print_r($frontendPayload, true),
+            'domain' => $frontendPayload->domain,
+            'member_id' => $frontendPayload->memberId,
+            'user_id' => $frontendPayload->b24UserId,
         ]);
 
         try {

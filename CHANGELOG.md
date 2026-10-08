@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+### Security
+
+- `/api/getToken` (PHP, Node) больше не выдаёт JWT по одним лишь присланным `DOMAIN`/`member_id`: `AUTH_ID` проверяется OAuth-сервером Bitrix24 (`app.info` — должен вернуть `client_id` приложения и те же домен и `member_id`), PHP дополнительно требует установленное приложение на портале. Та же проверка, что в Python (b24pysdk).
+- PHP: тела запросов в логах проходят через `LogRedactor` — OAuth-токены и `application_token` маскируются.
+- PHP: из `backends/php/.env` удалён закоммиченный заголовок авторизации OTEL-экспортёра; значение задаётся в `.env.local`. Токен остаётся в истории git — его владелец должен его отозвать.
+- Node: `redactSensitive()` маскирует ключи без учёта регистра, список совпадает с PHP `LogRedactor`.
+
+### Fixed
+
+- PHP не запускался после обновления зависимостей: убраны опции `proxy_dir`/`proxy_auto_generate`, которых нет в doctrine-bundle 3; `bitrix24/b24phpsdk` закреплён на коммите, совместимом с `mesilov/bitrix24-php-lib` 0.5.2; добавлен обязательный `OTEL_TELEMETRY_PROFILE=simple-ui`; `.env` снова парсится (значение с пробелом без кавычек).
+
 ### Dependencies
 
 - frontend: `@bitrix24/b24jssdk` / `-nuxt` 3.0, `@bitrix24/b24ui-nuxt` 2.14, Nuxt 4.6, Pinia 4, ESLint 10, Vitest 5, TypeScript 6.0 (TS 7 пока не поддерживается `vue-tsc` и `typescript-eslint`).

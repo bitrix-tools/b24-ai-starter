@@ -56,7 +56,7 @@ jobs:
         run: pnpm build
 
   backend-node:
-    name: Node backend (install · syntax)
+    name: Node backend (install · syntax · test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -81,7 +81,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Syntax check
-        run: node --check server.js && node --check utils/verifyToken.js
+        run: node --check server.js && node --check utils/verifyToken.js && node --check utils/verifyFrontendAuth.js
+
+      - name: Unit tests
+        run: pnpm test
 
   backend-php:
     name: PHP backend (composer validate)

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ac42ae5a4598a51a19702cc628bfb682",
+    "content-hash": "6face27cd727c0c0714e9573009a1c8d",
     "packages": [
         {
             "name": "bitrix24/b24phpsdk",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/bitrix24/b24phpsdk.git",
-                "reference": "063e256cfe992d7f258eb297722e07fad1ae3fab"
+                "reference": "6ed9de37b296086bd371a79f0509f5db76adf967"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bitrix24/b24phpsdk/zipball/063e256cfe992d7f258eb297722e07fad1ae3fab",
-                "reference": "063e256cfe992d7f258eb297722e07fad1ae3fab",
+                "url": "https://api.github.com/repos/bitrix24/b24phpsdk/zipball/6ed9de37b296086bd371a79f0509f5db76adf967",
+                "reference": "6ed9de37b296086bd371a79f0509f5db76adf967",
                 "shasum": ""
             },
             "require": {
@@ -12630,6 +12630,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "bitrix24/b24phpsdk": 20,
         "firebase/php-jwt": 20,
         "nelmio/cors-bundle": 20,
         "roave/security-advisories": 20

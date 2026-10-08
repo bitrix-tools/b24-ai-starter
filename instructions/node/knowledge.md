@@ -11,7 +11,7 @@
 - Node 24 (Docker-образы `node:24-slim` / `node:24-alpine`), pnpm 12 (`packageManager: pnpm@12.9.1`), ES-модули, чистый JavaScript без сборки.
 - Зависимости: `express` 5.2, `cors`, `dotenv` 18, `jsonwebtoken` 9, `pg`, `mysql2`; dev — `nodemon`. **`@bitrix24/b24jssdk` не установлен** — добавьте его (`pnpm add @bitrix24/b24jssdk`), прежде чем использовать примеры с SDK.
 - `server.js` — все маршруты и пул БД (`DB_TYPE=postgresql|mysql`); `utils/verifyToken.js` — JWT-middleware (кладёт payload в `req.user`).
-- Маршруты: `GET /api/health`, `GET /api/enum`, `GET /api/list` (под JWT); `POST /api/install` (только логирует тело с маскировкой токенов), `POST /api/getToken` (выдаёт JWT без проверки данных Битрикс24 — заглушка).
+- Маршруты: `GET /api/health`, `GET /api/enum`, `GET /api/list` (под JWT); `POST /api/install` (только логирует тело с маскировкой токенов), `POST /api/getToken` (выдаёт JWT только после проверки `AUTH_ID` OAuth-сервером Bitrix24 — `utils/verifyFrontendAuth.js`).
 - Тестов, линтера и TypeScript в Node-бэкенде нет; в CI выполняется только `node --check`.
 
 ---

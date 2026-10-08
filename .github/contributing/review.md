@@ -15,7 +15,8 @@
 ## Бэкенды (`backends/*`)
 
 - Эндпоинты под JWT, кроме `/api/install`, `/api/getToken`, `/api/app-events/`.
-- OAuth-токены, `application_token` и URL вебхуков не попадают в логи и ответы.
+- OAuth-токены, `application_token` и URL вебхуков не попадают в логи и ответы; тела запросов логируются только через `LogRedactor::redact()` (PHP) / `redactSensitive()` (Node).
+- JWT выдаётся только после проверки `AUTH_ID` OAuth-сервером Bitrix24 — эндпоинт `/api/getToken` не должен подписывать токен по одним лишь присланным `DOMAIN`/`member_id`.
 - Если поведение есть во всех трёх бэкендах (установка, события, `/api/enum`, `/api/list`), изменение сделано во всех или в PR объяснено, почему нет.
 - Языковые стандарты — в `instructions/{php,python,node}/code-review.md`.
 

@@ -85,7 +85,7 @@ const batchRes = await b24.actions.v2.batch.make({
 ## Authentication Flow
 
 1. **Installation**: `/api/install` receives OAuth data. In the starter it only logs the (redacted) body — persisting tokens and binding events is up to you.
-2. **Token Issue**: `/api/getToken` issues a JWT (`{ id: 1 }`, 1h, `JWT_SECRET`) using `jsonwebtoken`. The starter does **not** validate Bitrix24 auth data here — add that check before production.
+2. **Token Issue**: `/api/getToken` first calls `utils/verifyFrontendAuth.js`: the caller's `AUTH_ID` is checked by the Bitrix24 OAuth server (`/rest/app.info/` on `oauth.bitrix.info` or `oauth.bitrix24.tech` — fixed trusted hosts, never the portal from the request; `B24_OAUTH_SERVER_URL` is asked first, then the other region). It must return our `CLIENT_ID`, the same `DOMAIN`/`member_id` and `install.installed: true`. Only then a JWT `{ domain, member_id }` (1h, `JWT_SECRET`) is issued. Errors: 400 (incomplete payload), 401 (not confirmed), 503 (OAuth server unreachable). The Node starter does not store installations, so unlike PHP it cannot also check that the portal completed `/api/install`. Tests: `pnpm test` (`node --test`, `test/`).
 3. **Requests**: Frontend sends JWT in `Authorization` header. `verifyToken` middleware validates it.
 
 ## Database

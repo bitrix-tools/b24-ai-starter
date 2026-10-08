@@ -21,6 +21,9 @@
         <env name="JWT_ALGORITHM" value="HS256" force="true"/>
     </php>
     <testsuites>
+        <testsuite name="security">
+            <directory>tests/Security</directory>
+        </testsuite>
         <testsuite name="telemetry-all">
             <directory>tests/Telemetry</directory>
             <exclude>tests/Telemetry/E2E</exclude>

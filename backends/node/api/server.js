@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import mysql from 'mysql2/promise';
 import jwt from 'jsonwebtoken';
 import verifyToken from './utils/verifyToken.js';
+import { verifyFrontendAuth, FrontendAuthError } from './utils/verifyFrontendAuth.js';
 
 const app = express();
 app.use(cors());
@@ -13,9 +14,8 @@ app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Keys that carry Bitrix24 OAuth tokens — never write these to logs.
-const SENSITIVE_KEYS = [
-  'AUTH_ID', 'REFRESH_ID', 'REFRESH_TOKEN', 'access_token', 'refresh_token', 'application_token'
-];
+// Same list as App\Service\LogRedactor in the PHP backend; matched case-insensitively.
+const SENSITIVE_KEYS = ['auth_id', 'refresh_id', 'refresh_token', 'access_token', 'application_token'];
 
 /**
  * Return a shallow copy of a request body with token fields masked,
@@ -27,7 +27,7 @@ function redactSensitive(value) {
   }
   const clone = Array.isArray(value) ? [...value] : { ...value };
   for (const key of Object.keys(clone)) {
-    if (SENSITIVE_KEYS.includes(key)) {
+    if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
       clone[key] = '***';
     } else if (clone[key] && typeof clone[key] === 'object') {
       clone[key] = redactSensitive(clone[key]);
@@ -101,16 +101,18 @@ app.post('/api/install', async (req, res) => {
 });
 
 app.post('/api/getToken', async (req, res) => {
-  console.log('/api/getToken', redactSensitive(req.body));
-  const appInfo = {
-    id: 1
-  };
+  try {
+    // Issue a JWT only after the Bitrix24 OAuth server confirms the caller's token belongs to this app.
+    const { domain, memberId } = await verifyFrontendAuth(req.body, { clientId: process.env.CLIENT_ID });
+    const token = jwt.sign({ domain, member_id: memberId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-  const token = jwt.sign(appInfo, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-  res.json({
-    token: token
-  });
+    console.log('/api/getToken issued', { domain, member_id: memberId });
+    res.json({ token });
+  } catch (error) {
+    const status = error instanceof FrontendAuthError ? error.status : 500;
+    console.warn('/api/getToken rejected', { status, reason: error.message, cause: error.cause?.message });
+    res.status(status).json({ error: status === 500 ? 'Internal error' : error.message });
+  }
 });
 
 const PORT = process.env.PORT || 8000;

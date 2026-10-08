@@ -30,7 +30,8 @@
 | Фронтенд собирается в dev | `make logs` (frontend) | `pnpm install --frozen-lockfile` проходит под pnpm 12, Nuxt стартует |
 | Бэкенд жив | `curl http://localhost:<порт>/` | 200 |
 | JWT обязателен | `curl .../api/health`, `.../api/enum`, `.../api/list` без токена | 401 |
-| Открытые эндпоинты | `POST /api/install`, `POST /api/getToken` | Не 401 (ошибка валидации ок) |
+| Открытые эндпоинты | `POST /api/install` | Не 401 (ошибка валидации ок) |
+| `getToken` не выдаёт токен кому угодно | `POST /api/getToken` с выдуманными `DOMAIN`/`member_id`/`AUTH_ID` | `400`/`401`, **не** `200` с токеном |
 | Безопасность | `make security-tests` | Все проверки зелёные |
 | PHP-телеметрия | `make test-telemetry` | Тесты проходят на Symfony 7.4 |
 | Миграции PHP | `make dev-php-db-migrate-status` | Нет непримененных / ошибок |
@@ -46,6 +47,7 @@
 2. **Переустановка (#8)** — удалить приложение и установить снова. Ожидание: без `SQLSTATE[23505]` / 500. Повторить на PostgreSQL и MySQL.
    - ⚠️ Индекс из #8 создаётся только на **пустом** томе БД (init-скрипты). Существующую базу нужно пересоздать (`make down` + удалить volume) или мигрировать вручную.
 3. **Главная страница** — `index`: кнопки «enum» / «list» возвращают данные с бэкенда (JWT через `/api/getToken` работает), смена языка портала меняет язык UI.
+   - После фикса выдачи JWT: токен выдаётся сразу после установки (PHP принимает аккаунт в статусе `new`), `/api/getToken` проверяет `AUTH_ID` через OAuth-серверы Bitrix24 (`oauth.bitrix.info`, `oauth.bitrix24.tech`) — убедиться, что они доступны из контейнера бэкенда (сеть/прокси); при недоступности ответ `503`.
 4. **Слайдер настроек** — `slider/app-options`: сохранение настроек приложения, закрытие слайдера, pull-событие `reload.options`.
 5. **Вкладка сделки** — `handler/placement-crm-deal-detail-tab` в карточке сделки CRM: открывается, `B24*`-компоненты рендерятся, индикатор загрузки (после замены `useDashboard().isLoading` на локальный `ref`).
 6. **Пользовательское поле** — `handler/uf.demo`: значение `placement.options.VALUE` читается и сохраняется (после явного приведения типов).
@@ -84,6 +86,7 @@
 | 14 | Python Dockerfile выполняет `makemigrations` при старте (dev и prod) — миграции генерируются в рантайме | `backends/python/django/Dockerfile` | `git status` после `make dev-python` |
 | 15 | `pnpm translate-ui` ссылается на несуществующий `frontend/tools/`; инструментов сборки статического приложения нет | `frontend/package.json` | `pnpm translate-ui` |
 | 16 | Схема БД для PHP создаётся init-скриптами, а единственная Doctrine-миграция не содержит уникального индекса из #8 | `backends/php/migrations/`, `infrastructure/database/` | `make dev-php-db-migrate` на пустой БД без init-скриптов |
+| 17 | Смена домена портала не обрабатывается: после переименования PHP `/api/getToken` отвечает 401 «not installed» (в БД старый домен) | `backends/php` (нет обработчика `ONAPPDOMAINCHANGE`/`PortalDomainChanged`) | Переименовать тестовый портал |
 
 ### Фронтенд
 

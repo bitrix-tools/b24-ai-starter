@@ -309,9 +309,11 @@ Authorization: `Bearer ${tokenJWT}`
    - **НЕ требует JWT**
 
 2. **Получение токена** (`/api/getToken`):
-   - Принимает данные аутентификации Bitrix24
+   - Принимает данные аутентификации Bitrix24 и **проверяет их на портале** до выдачи токена
+     (`AUTH_ID` проверяется OAuth-сервером Bitrix24 — `oauth.bitrix.info` или `oauth.bitrix24.tech`, `/rest/app.info`: он должен вернуть
+     `client_id` этого приложения и те же домен и `member_id`; PHP дополнительно требует, чтобы приложение
+     было установлено на портале. Python делает ту же проверку через b24pysdk)
    - Генерирует JWT токен (TTL: 1 час)
-   - Сохраняет связь с Bitrix24 аккаунтом
    - **НЕ требует JWT**
 
 3. **События Bitrix24** (`/api/app-events/`):
@@ -471,7 +473,8 @@ curl -X POST http://localhost:8000/api/install \
 
 Вызывается фронтендом для получения JWT токена от бэкенда.
 
-На вход передаются данные авторизации от Bitrix24.
+На вход передаются данные авторизации от Bitrix24. Бэкенд выдаёт токен, только если
+OAuth-сервер Bitrix24 подтверждает `AUTH_ID` (см. выше); иначе — `400` (неполные данные), `401` (не подтверждён) или `503` (OAuth-сервер недоступен).
 
 Время жизни токена: **1 час**.
 
@@ -499,12 +502,13 @@ curl -X POST http://localhost:8000/api/install \
 }
 ```
 
-Тестирование:
+Тестирование (без реального `AUTH_ID` установленного приложения ожидается `400`/`401` —
+это проверка того, что токен не выдаётся кому угодно):
 
 ```bash
 curl -X POST http://localhost:8000/api/getToken \
   -H "Content-Type: application/json" \
-  -d '{"AUTH_ID":"27exx66815","AUTH_EXPIRES":3600,"REFRESH_ID":"176xxxe","member_id":"a3xxx22","user_id":1}'
+  -d '{"DOMAIN":"example.bitrix24.ru","AUTH_ID":"27exx66815","AUTH_EXPIRES":3600,"REFRESH_ID":"176xxxe","member_id":"a3xxx22","user_id":1}'
 ```
 
 ### Пример добавления нового endpoint

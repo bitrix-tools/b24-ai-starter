@@ -13,6 +13,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\LogRedactor;
+use App\Bitrix24Core\FrontendAuthException;
+use App\Bitrix24Core\FrontendAuthVerifier;
 use App\Service\JwtService;
 use App\Service\Telemetry\SessionContextTrait;
 use App\Service\Telemetry\TelemetryInterface;
@@ -28,6 +31,7 @@ class ApiController extends AbstractController
 
     public function __construct(
         private readonly JwtService $jwtService,
+        private readonly FrontendAuthVerifier $frontendAuthVerifier,
         private readonly LoggerInterface $logger,
         private readonly TelemetryInterface $telemetry,
     ) {
@@ -36,25 +40,18 @@ class ApiController extends AbstractController
     #[Route('/api/getToken', name: 'api_get_token', methods: ['POST'])]
     public function getToken(Request $request): JsonResponse
     {
-        $this->logger->debug('ApiController.getToken.start', [
-            'request' => $request->request->all(),
-            'baseUrl' => $request->getBaseUrl(),
-        ]);
-
         try {
-            // Parse JSON request body
             $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-
-            if (!isset($data['DOMAIN'])) {
-                return new JsonResponse([
-                    'error' => 'Missing required parameter: domain',
-                ], 400);
+            if (!is_array($data)) {
+                return new JsonResponse(['error' => 'Invalid JSON payload'], 400);
             }
 
-            $domain = $data['DOMAIN'];
-            $memberId = $data['member_id'] ?? null;
+            // Never log $data: it carries the portal's OAuth tokens.
+            $account = $this->frontendAuthVerifier->verify($data);
 
-            // Generate JWT token
+            $domain = FrontendAuthVerifier::normalizeDomain($account->getDomainUrl());
+            $memberId = $account->getMemberId();
+
             $jsonResponse = new JsonResponse([
                 'token' => $this->jwtService->generateToken($domain, $memberId),
             ], 200);
@@ -66,13 +63,26 @@ class ApiController extends AbstractController
             ]);
 
             return $jsonResponse;
+        } catch (FrontendAuthException $frontendAuthException) {
+            $status = $frontendAuthException->getCode();
+            $status = $status >= 400 && $status < 600 ? $status : 500;
+
+            $this->logger->warning('ApiController.getToken.rejected', [
+                'status' => $status,
+                'reason' => $frontendAuthException->getMessage(),
+                'cause' => $frontendAuthException->getPrevious()?->getMessage(),
+            ]);
+
+            return new JsonResponse(['error' => $frontendAuthException->getMessage()], $status);
+        } catch (\JsonException) {
+            return new JsonResponse(['error' => 'Invalid JSON payload'], 400);
         } catch (\Throwable $throwable) {
             $this->logger->error('ApiController.getToken.error', [
                 'message' => $throwable->getMessage(),
                 'trace' => $throwable->getTraceAsString(),
             ]);
 
-            return new JsonResponse(['error' => $throwable->getMessage()], 500);
+            return new JsonResponse(['error' => 'Internal error'], 500);
         }
     }
 
@@ -80,7 +90,7 @@ class ApiController extends AbstractController
     public function getList(Request $request): JsonResponse
     {
         $this->logger->debug('ApiController.getList.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -134,7 +144,7 @@ class ApiController extends AbstractController
     public function getDefaultRoute(Request $request): JsonResponse
     {
         $this->logger->debug('ApiController.getDefaultRoute.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -163,7 +173,7 @@ class ApiController extends AbstractController
     public function getEnum(Request $request): JsonResponse
     {
         $this->logger->debug('ApiController.getEnum.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
@@ -201,7 +211,7 @@ class ApiController extends AbstractController
     public function health(Request $request): JsonResponse
     {
         $this->logger->debug('ApiController.health.start', [
-            'request' => $request->request->all(),
+            'request' => LogRedactor::redact($request->request->all()),
             'baseUrl' => $request->getBaseUrl(),
         ]);
 
