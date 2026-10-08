@@ -1,4 +1,4 @@
-.PHONY: help test-php dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
+.PHONY: help db-upgrade test-php dev-init create-version delete-version dev-front dev-php dev-python dev-node prod-php prod-python prod-node status ps down down-all logs clean composer-install composer-update composer-dumpautoload composer db-create db-migrate db-migrate-create db-schema-update db-schema-validate queue-up queue-down test-telemetry test-telemetry-null test-telemetry-real test-telemetry-config test-telemetry-factory test-telemetry-di test-telemetry-integration test-telemetry-profiles test-telemetry-attribute-groups test-telemetry-filtering test-telemetry-monolog test-telemetry-monolog-e2e test-telemetry-profiles-e2e test-telemetry-e2e test-telemetry-app-events test-telemetry-app-lifecycle test-telemetry-ui-events test-telemetry-action-events test-telemetry-api-calls test-telemetry-error-tracking test-telemetry-session-context test-telemetry-frontend-events test-telemetry-frontend-e2e
 
 # Variables
 # Compose v2 plugin (`docker compose`) if available, else the legacy v1 binary.
@@ -48,6 +48,7 @@ help: ## Show this help message
 	@echo "🧹 Cleanup:"
 	@echo "  down              Stop all containers and remove orphans"
 	@echo "  clean             Complete Docker cleanup (containers, networks, volumes)"
+	@echo "  db-upgrade        Apply infrastructure/database/upgrades to an existing DB (idempotent)"
 	@echo "  down-all          Stop all containers, dev and prod (docker-compose.prod.yml)"
 	@echo ""
 	@echo "📨 Queues:"
@@ -409,6 +410,23 @@ logs:
 	$(DOCKER_COMPOSE) logs -f
 
 # Database operations
+# Apply infrastructure/database/upgrades/*.<postgres|mysql>.sql to an EXISTING database
+# (init*.sql only runs on an empty volume). Scripts are idempotent; run after pulling.
+db-upgrade:
+	@DB_TYPE_VALUE=$$(grep -E '^DB_TYPE=' .env 2>/dev/null | tail -n1 | cut -d= -f2 | tr -d "\"'"); \
+	if [ "$$DB_TYPE_VALUE" = "mysql" ]; then \
+	  for f in infrastructure/database/upgrades/*.mysql.sql; do \
+	    echo "▶ $$f"; \
+	    COMPOSE_PROFILES=db-mysql $(DOCKER_COMPOSE) exec -T database-mysql sh -lc 'exec mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE"' < $$f || exit 1; \
+	  done; \
+	else \
+	  for f in infrastructure/database/upgrades/*.postgres.sql; do \
+	    echo "▶ $$f"; \
+	    COMPOSE_PROFILES=db-postgres $(DOCKER_COMPOSE) exec -T database-postgres sh -lc 'exec psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' < $$f || exit 1; \
+	  done; \
+	fi
+	@echo "✓ Database upgraded"
+
 db-backup:
 	@DB_TYPE_VALUE=$$(grep -E '^DB_TYPE=' .env 2>/dev/null | tail -n1 | cut -d= -f2); \
 	if [ -z "$$DB_TYPE_VALUE" ]; then DB_TYPE_VALUE=postgresql; fi; \

@@ -45,7 +45,7 @@
 
 1. **Установка** — открыть приложение впервые: страница `/install` проходит все шаги (placement, userfield), `/api/install` сохраняет аккаунт.
 2. **Переустановка (#8)** — удалить приложение и установить снова. Ожидание: без `SQLSTATE[23505]` / 500. Повторить на PostgreSQL и MySQL.
-   - ⚠️ Индекс из #8 создаётся только на **пустом** томе БД (init-скрипты). Существующую базу нужно пересоздать (`make down` + удалить volume) или мигрировать вручную.
+   - На базе, созданной до #23, сначала `make db-upgrade` (скрипты `infrastructure/database/upgrades/`, проверены на старой схеме PostgreSQL 17 и MySQL 8.4).
 3. **Главная страница** — `index`: кнопки «enum» / «list» возвращают данные с бэкенда (JWT через `/api/getToken` работает), смена языка портала меняет язык UI.
    - После фикса выдачи JWT: токен выдаётся сразу после установки (PHP принимает аккаунт в статусе `new`), `/api/getToken` проверяет `AUTH_ID` через OAuth-серверы Bitrix24 (`oauth.bitrix.info`, `oauth.bitrix24.tech`) — убедиться, что они доступны из контейнера бэкенда (сеть/прокси); при недоступности ответ `503`.
 4. **Слайдер настроек** — `slider/app-options`: сохранение настроек приложения, закрытие слайдера, pull-событие `reload.options`.
@@ -79,7 +79,7 @@
 | 7 | ✅ Python при `ENABLE_RABBITMQ=0`: `python-worker` не стартует, события в Celery не обрабатываются | `docker-compose.yml`, `bitrix_events` | Отправить событие с выключенным RabbitMQ |
 | 8 | ✅ `fix-php.sh` удаляет `composer.lock` — противоречит политике lock-файлов | `scripts/fix-php.sh` | Код-ревью |
 | 9 | ✅ В образе `php-fpm` нет расширения `amqp` (есть только в `php-cli`) — публикация в Messenger из веб-запроса упадёт | `backends/php/docker/php-fpm/Dockerfile` | `docker compose exec api php -m \| grep amqp` |
-| 10 | Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
+| 10 | ✅ Для #8 нет миграции существующих БД — только init-скрипты | `infrastructure/database/` | Переустановка на старом томе PostgreSQL и MySQL |
 | 11 | ✅ Node `/api/install` — заглушка: токены не сохраняются, события не привязываются; пул БД создаётся, но не используется | `backends/node/api/server.js` | Сценарий 1 уровня 2 на Node |
 | 12 | ✅ Ответ `/api/install` различается: Python — JSON `Installation successful`, Node — JSON `All success`, PHP — текст `OK` | бэкенды | `curl -X POST /api/install` |
 | 13 | ✅ Python: `DEBUG = True` захардкожен; при пустом `VIRTUAL_HOST` в `ALLOWED_HOSTS` попадает `None` | `backends/python/django/settings.py` | Prod-запуск с пустым `VIRTUAL_HOST` |

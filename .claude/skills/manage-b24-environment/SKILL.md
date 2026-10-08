@@ -72,6 +72,7 @@ The project uses Cloudpub to expose the local environment to Bitrix24.
 * **Access**:
   * PostgreSQL/MySQL runs as the `database-postgres` / `database-mysql` service (network alias `database`).
   * Backups: `make db-backup` / `make db-restore`.
+  * Schema upgrades for an existing DB: `make db-upgrade` applies `infrastructure/database/upgrades/NNN-*.{postgres,mysql}.sql` (idempotent; init*.sql only run on an empty volume). A schema change goes into BOTH init*.sql (new installs) AND a new numbered upgrade script (existing DBs).
   * Credentials in `.env` (`DB_USER`, `DB_PASSWORD`, `DB_NAME`).
 
 ## Troubleshooting

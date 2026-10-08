@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- Переустановка (#8) на базе, созданной до исправления: `make db-upgrade` применяет идемпотентные скрипты `infrastructure/database/upgrades/` (PostgreSQL и MySQL), без потери данных.
 - Python: `DEBUG` берётся из `BUILD_TARGET` (был захардкожен `True`, в т.ч. в production); пустой `VIRTUAL_HOST` больше не ломает `ALLOWED_HOSTS`; разрешены внутренние имена `api`/`api-python`.
 - Python: контейнер не выполняет `makemigrations` при старте; ошибка `migrate` больше не маскируется.
 - Python: при `ENABLE_RABBITMQ=0` события `/api/app-events/` обрабатываются сразу (раньше уходили в Celery без брокера и терялись).
