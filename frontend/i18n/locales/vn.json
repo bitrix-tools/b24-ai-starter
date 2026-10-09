@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "Trang chủ",
+      "settings": "Cài đặt"
+    },
+    "search": {
+      "goTo": "Đi tới"
+    }
+  },
   "page": {
     "index": {
       "seo": {

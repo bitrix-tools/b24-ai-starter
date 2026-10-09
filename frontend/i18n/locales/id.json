@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "Beranda",
+      "settings": "Pengaturan"
+    },
+    "search": {
+      "goTo": "Buka"
+    }
+  },
   "page": {
     "index": {
       "seo": {

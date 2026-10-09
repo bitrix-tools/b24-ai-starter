@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "الرئيسية",
+      "settings": "الإعدادات"
+    },
+    "search": {
+      "goTo": "انتقل إلى"
+    }
+  },
   "page": {
     "index": {
       "seo": {

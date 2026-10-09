@@ -8,6 +8,10 @@ import { withoutTrailingSlash } from 'ufo'
 import Logo from '~/components/Logo.vue'
 import CloudErrorIcon from '@bitrix24/b24icons-vue/main/CloudErrorIcon'
 
+definePageMeta({
+  layout: 'clear'
+})
+
 const { t, locales: localesI18n, setLocale } = useI18n()
 
 useHead({
@@ -330,7 +334,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-3 flex flex-col items-center justify-center gap-1 h-dvh">
+  <B24DashboardPanel id="install" :b24ui="{ body: 'p-4 items-center justify-center gap-1 sm:gap-1 scrollbar-transparent' }">
+    <template #body>
     <Logo
       class="size-[208px]"
       :class="[
@@ -356,5 +361,6 @@ onMounted(async () => {
     <ProsePre v-if="isShowDebug">
       {{ stepsData }}
     </ProsePre>
-  </div>
+    </template>
+  </B24DashboardPanel>
 </template>

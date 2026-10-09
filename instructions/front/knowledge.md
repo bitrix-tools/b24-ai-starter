@@ -11,10 +11,11 @@
 frontend/
 ├── app/
 │   ├── app.config.ts          # Конфигурация B24UI (colorMode и т.д.)
-│   ├── app.vue                # Корневой компонент (B24App + B24DashboardGroup)
+│   ├── app.vue                # Корневой компонент (B24App + NuxtLayout)
 │   ├── error.vue              # Страница ошибки
 │   ├── assets/css/main.css    # Единственный CSS-вход (Tailwind + b24ui)
 │   ├── components/            # Компоненты приложения
+│   │   ├── AppFooterBar.vue   # Нижняя панель кнопок (slider, placement)
 │   │   ├── BackendStatus.vue
 │   │   └── Logo.vue
 │   ├── composables/           # Переиспользуемая логика
@@ -22,7 +23,8 @@ frontend/
 │   │   ├── useBackend.ts      # Проверка состояния бэкенда
 │   │   └── useTelemetry.ts    # Телеметрия
 │   ├── layouts/              # Шаблоны страниц
-│   │   ├── default.vue        # B24SidebarLayout (базовый)
+│   │   ├── default.vue        # Боковое меню + поиск ⌘K (B24DashboardSidebar)
+│   │   ├── clear.vue          # Без бокового меню (установка)
 │   │   ├── placement.vue      # Для виджетов (placement)
 │   │   ├── slider.vue         # Для слайдеров
 │   │   └── uf-placement.vue   # Для пользовательских типов полей
@@ -73,11 +75,9 @@ export default defineNuxtConfig({
 <template>
   <B24App :locale="locales[locale]">
     <NuxtLoadingIndicator color="var(--ui-color-design-filled-warning-bg)" :height="3" />
-    <B24DashboardGroup>
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
-    </B24DashboardGroup>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </B24App>
 </template>
 ```
@@ -86,7 +86,7 @@ export default defineNuxtConfig({
 
 ### 1. B24App уже подключён — не добавляйте его повторно
 
-`<B24App>` (провайдер Toast, Tooltip, Modal и программных оверлеев) и `<B24DashboardGroup>` уже стоят в `app/app.vue` и оборачивают всё приложение. **Не оборачивайте** страницы, layouts и компоненты в `<B24App>` — вложенный `B24App` является ошибкой. Точно так же `<B24SidebarLayout>` уже находится в `layouts/*.vue`: страница рендерит только свой контент.
+`<B24App>` (провайдер Toast, Tooltip, Modal и программных оверлеев) уже стоит в `app/app.vue` и оборачивает всё приложение. **Не оборачивайте** страницы, layouts и компоненты в `<B24App>` — вложенный `B24App` является ошибкой. `<B24DashboardGroup>` (и в `default` — боковое меню `B24DashboardSidebar` с поиском `B24DashboardSearch`) уже находится в `layouts/*.vue`: страница рендерит один `<B24DashboardPanel>` — шапка `B24DashboardNavbar` (+ `B24DashboardToolbar`) в слоте `#header`, содержимое в `#body`.
 
 📖 [Компонент B24App](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/App.vue)
 
@@ -124,18 +124,19 @@ import RocketIcon from '@bitrix24/b24icons-vue/main/RocketIcon'
 - handler/placement-crm-deal-detail-tab.client.vue — пример страницы для встройки в карточку сделки
 - handler/uf.demo.client.vue — пример страницы для встройки пользовательского типа поля
 - handler/background-some-problem.client.vue — страница `errorHandlerUrl` для встройки (показывается Bitrix24 при ошибке обработчика)
-- telemetry-test.client.vue — демо телеметрии (кнопка на главной при `NUXT_PUBLIC_TELEMETRY_ENABLED=true`)
+- telemetry-test.client.vue — демо телеметрии (пункт бокового меню при `NUXT_PUBLIC_TELEMETRY_ENABLED=true`)
 
 Важно: все страницы выполняются ТОЛЬКО на клиенте, поскольку frontend будет собираться в виде статики для показа внутри фрейма Bitrix24. Поэтому все файлы страниц имеют суффикс `.client.vue`.
 
-При создании новых страниц подбирай подходящий шаблон из `layouts/` для консистентного внешнего вида. Все шаблоны уже содержат `B24SidebarLayout`.
+При создании новых страниц подбирай подходящий шаблон из `layouts/` для консистентного внешнего вида. Новый раздел приложения — страница + пункт в `links[0]` в `layouts/default.vue` (он же попадает в поиск ⌘K). Больший пример такого каркаса (графики, таблицы, вкладки настроек) — [bitrix24/templates-dashboard](https://github.com/bitrix24/templates-dashboard).
 
 | Layout | Для чего | Как выбрать |
 | --- | --- | --- |
-| `default.vue` | обычные страницы приложения (`index`, `telemetry-test`, `install`) | ничего не указывать |
-| `placement.vue` | виджеты-встройки (`handler/placement-crm-deal-detail-tab`) | `definePageMeta({ layout: 'placement' })` |
+| `default.vue` | обычные страницы приложения (`index`, `telemetry-test`): боковое меню + поиск | ничего не указывать |
+| `clear.vue` | полноэкранные страницы без меню (`install`) | `definePageMeta({ layout: 'clear' })` |
+| `placement.vue` | виджеты-встройки (`handler/placement-crm-deal-detail-tab`): `B24SidebarLayout` без меню, кнопки — слот `#footer` | `definePageMeta({ layout: 'placement' })` |
 | `uf-placement.vue` | пользовательские типы полей (`handler/uf.demo`). [Подробности про этот тип встройки](https://github.com/bitrix-tools/b24-rest-docs/blob/main/api-reference/widgets/user-field/index.md?plain=1) | `definePageMeta({ layout: 'uf-placement' })` |
-| `slider.vue` | слайдеры, открывающиеся вне iframe приложения (`slider/app-options`): заголовок/описание из `usePageStore()`, кнопки в слоте `#footer` | `definePageMeta({ layout: false })` и `<NuxtLayout name="slider">…</NuxtLayout>` в шаблоне страницы (чтобы заполнять именованные слоты) |
+| `slider.vue` | слайдеры, открывающиеся вне iframe приложения (`slider/app-options`): заголовок/описание из `usePageStore()` в `B24DashboardNavbar`, слоты `#top-actions-start`/`#top-actions-end`, кнопки в слоте `#footer` | `definePageMeta({ layout: false })` и `<NuxtLayout name="slider">…</NuxtLayout>` в шаблоне страницы (чтобы заполнять именованные слоты) |
 
 #### Шаблон страницы (как в `app/pages/*`)
 
@@ -191,10 +192,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <B24Card v-if="isInit">
-    <B24Button :label="$t('page.myPage.action.reload')" loading-auto @click="reload" />
-    <B24Table :data="items.map(name => ({ name }))" :loading="isLoading" />
-  </B24Card>
+  <B24DashboardPanel id="my-page" :b24ui="{ body: 'p-4 sm:p-5 scrollbar-transparent' }">
+    <template #header>
+      <B24DashboardNavbar :title="$t('page.myPage.seo.title')" />
+      <B24DashboardToolbar v-if="isInit">
+        <template #left>
+          <B24Button :label="$t('page.myPage.action.reload')" color="air-secondary" loading-auto @click="reload" />
+        </template>
+      </B24DashboardToolbar>
+    </template>
+    <template #body>
+      <B24Skeleton v-if="isLoading" class="h-[120px] w-full" />
+      <B24Table v-else-if="isInit" :data="items.map(name => ({ name }))" />
+    </template>
+  </B24DashboardPanel>
 </template>
 ```
 
@@ -415,17 +426,22 @@ onUnmounted(() => {
 
 ### Макеты (Layouts)
 
-**B24SidebarLayout** — основной layout с боковой панелью  
+**B24DashboardGroup / B24DashboardSidebar / B24DashboardPanel** — каркас приложения (layouts `default`, `clear`, `slider`)  
+📖 [DashboardPanel](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/DashboardPanel.vue), [DashboardNavbar](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/DashboardNavbar.vue), [DashboardToolbar](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/DashboardToolbar.vue), [DashboardSidebar](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/DashboardSidebar.vue), [DashboardSearch](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/DashboardSearch.vue)
+
+`B24DashboardGroup` и боковое меню УЖЕ есть в layout'ах — страница не добавляет их повторно, а рендерит один `B24DashboardPanel`.
+
+**B24SidebarLayout** — layout виджетов (`placement`, `uf-placement`, страница ошибки)  
 📖 [Исходный код](https://github.com/bitrix24/b24ui/blob/main/src/runtime/components/SidebarLayout.vue)  
 📖 [Theme](https://github.com/bitrix24/b24ui/blob/main/src/theme/sidebar-layout.ts)
 
-Этот компонент УЖЕ используется в качестве основы базовой страницы в шаблоне layouts/default.vue проекта. Если страница приложения создается на базе этого шаблона, НЕЛЬЗЯ использовать B24SidebarLayout внутри страницы повторно.
+Используется в `layouts/placement.vue` и `layouts/uf-placement.vue`. Страница-виджет НЕ использует B24SidebarLayout внутри себя повторно.
 
-**Правила размещения контента в B24SidebarLayout**
-- Компоненты страницы рендерятся внутри `<slot>` компонента `B24SidebarLayout` через активный `layout`.
+**Правила размещения контента**
+- Компоненты страницы рендерятся внутри `<slot>` layout'а (в приложении — в `#body` своего `B24DashboardPanel`).
 - Размещайте контент непосредственно в `slot` — без дополнительных обёрток для центрирования (`flex items-center justify-center`, `min-h-screen`, `min-h-dvh`, `max-w-*` контейнеры).
 - Layout уже обеспечивает корректные отступы, фон и поведение прокрутки.
-- Используйте `B24Card` (или другие компоненты B24) напрямую как корневой элемент шаблона страницы.
+- В виджетах используйте `B24Card` (или другие компоненты B24) напрямую как корневой элемент; в страницах приложения корень — `B24DashboardPanel`.
 - Для состояний загрузки используйте `B24Skeleton` вместо скрытия всей страницы.
 - ❌ Неправильно: `<div class="flex items-center justify-center min-h-screen"><B24Card class="max-w-md">…</B24Card></div>`
 - ✅ Правильно: `<B24Card>…</B24Card>` (или `<div class="flex flex-col gap-4 p-6"><B24Card>…</B24Card></div> `для страниц с несколькими карточками)
