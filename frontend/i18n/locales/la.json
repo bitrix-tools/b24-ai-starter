@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Finalización"
         }
+      },
+      "toast": {
+        "errorTitle": "Error de instalación"
       }
     },
     "app-options": {

@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Penamatan"
         }
+      },
+      "toast": {
+        "errorTitle": "Pemasangan gagal"
       }
     },
     "app-options": {

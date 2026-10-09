@@ -6,6 +6,7 @@ import { ref, onMounted } from 'vue'
 import { sleepAction } from '~/utils/sleep'
 import { withoutTrailingSlash } from 'ufo'
 import Logo from '~/components/Logo.vue'
+import CloudErrorIcon from '@bitrix24/b24icons-vue/main/CloudErrorIcon'
 
 const { t, locales: localesI18n, setLocale } = useI18n()
 
@@ -17,7 +18,7 @@ useHead({
 const config = useRuntimeConfig()
 const appUrl = withoutTrailingSlash(config.public.appUrl)
 
-const { $logger, initLang, processErrorGlobal } = useAppInit('Install')
+const { $logger, initLang } = useAppInit('Install')
 const { $initializeB24Frame } = useNuxtApp()
 const $b24: B24Frame = await $initializeB24Frame()
 await initLang($b24, localesI18n, setLocale)
@@ -31,6 +32,7 @@ $logger.debug('Installation started', {
 })
 
 const confetti = useConfetti()
+const toast = useToast()
 
 const isShowDebug = ref(false)
 
@@ -92,112 +94,11 @@ const steps = ref<Record<string, IStep>>({
   // },
   placement: {
     caption: t('page.install.step.placement.caption'),
-    action: async () => {
-      const key = {
-        placement: 'CRM_DEAL_DETAIL_TAB',
-        handler: `${appUrl}/handler/placement-crm-deal-detail-tab`
-      }
-      const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement)
-
-      // Логируем для отладки
-      $logger.debug('Placement registration', {
-        appUrl,
-        placement: key.placement,
-        handler: key.handler,
-        exists,
-        existingPlacements: steps.value.init?.data?.placementList
-      })
-
-      // Всегда делаем unbind если placement существует, затем bind с новым handler
-      if (exists) {
-        await $b24.actions.v2.batch.make({ calls: [
-          {
-            method: 'placement.unbind',
-            params: {
-              PLACEMENT: key.placement
-            }
-          },
-          {
-            method: 'placement.bind',
-            params: {
-              PLACEMENT: key.placement,
-              HANDLER: key.handler,
-              TITLE: '[demo] Some Tab',
-              OPTIONS: {
-                errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-              }
-            }
-          }
-        ] })
-
-        return
-      }
-
-      await $b24.actions.v2.batch.make({ calls: [
-        {
-          method: 'placement.bind',
-          params: {
-            PLACEMENT: key.placement,
-            HANDLER: key.handler,
-            TITLE: '[demo] Some Tab',
-            OPTIONS: {
-              errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-            }
-          }
-        }
-      ] })
-    }
+    action: makePlacement
   },
   userFields: {
     caption: t('page.install.step.userFields.caption'),
-    action: async () => {
-      const typeId = `some_type_${import.meta.dev ? 'dev' : 'prod'}`
-
-      const exists = (steps.value.init?.data?.userFieldTypeList as { USER_TYPE_ID: string }[]).some(item => item.USER_TYPE_ID === typeId)
-
-      // Логируем для отладки
-      $logger.debug('UserField registration', {
-        appUrl,
-        typeId,
-        handler: `${appUrl}/handler/uf.demo`,
-        exists,
-        existingUserFieldTypes: steps.value.init?.data?.userFieldTypeList
-      })
-
-      if (exists) {
-        await $b24.actions.v2.batch.make({ calls: [
-          {
-            method: 'userfieldtype.update',
-            params: {
-              USER_TYPE_ID: typeId,
-              HANDLER: `${appUrl}/handler/uf.demo`,
-              TITLE: `[${import.meta.dev ? 'dev' : 'prod'}] Some Type`,
-              DESCRIPTION: `Some Description`,
-              OPTIONS: {
-                height: 105
-              }
-            }
-          }
-        ], options: { isHaltOnError: false } })
-
-        return
-      }
-
-      await $b24.actions.v2.batch.make({ calls: [
-        {
-          method: 'userfieldtype.add',
-          params: {
-            USER_TYPE_ID: typeId,
-            HANDLER: `${appUrl}/handler/uf.demo`,
-            TITLE: `[${import.meta.dev ? 'dev' : 'prod'}] Some Type`,
-            DESCRIPTION: `Some Description`,
-            OPTIONS: {
-              height: 105
-            }
-          }
-        }
-      ], options: { isHaltOnError: false } })
-    }
+    action: makeUserFields
   },
   // crm: {
   //   caption: t('page.install.step.crm.caption'),
@@ -254,6 +155,79 @@ const stepCode = ref<string>('init' as const)
 // endregion ////
 
 // region Actions ////
+/**
+ * Handler URLs registered in Bitrix24 must be absolute; without NUXT_PUBLIC_APP_URL
+ * (VIRTUAL_HOST) the portal would store a relative URL and the widget would break silently.
+ */
+function requireAppUrl(): string {
+  if (!appUrl) {
+    throw new Error('NUXT_PUBLIC_APP_URL (VIRTUAL_HOST) is not set — cannot register handlers')
+  }
+  return appUrl
+}
+
+/** Runs a batch and fails the step if any call failed (batch errors are not thrown by the SDK). */
+async function runBatch(calls: { method: string, params?: Record<string, unknown> }[], isHaltOnError = true): Promise<void> {
+  const response = await $b24.actions.v2.batch.make({ calls, options: { isHaltOnError } })
+  if (!response.isSuccess) {
+    throw new Error(response.getErrorMessages().join('; '))
+  }
+}
+
+/**
+ * Binds the demo CRM deal tab. Idempotent: any existing binding of this placement
+ * (even one with a stale handler after a domain change) is removed first.
+ */
+async function makePlacement(): Promise<void> {
+  const url = requireAppUrl()
+  const placement = 'CRM_DEAL_DETAIL_TAB'
+  const placementList = (steps.value.init?.data?.placementList ?? []) as { placement: string }[]
+  const exists = placementList.some(item => item.placement === placement)
+
+  $logger.debug('Placement registration', { placement, exists })
+
+  await runBatch([
+    ...(exists ? [{ method: 'placement.unbind', params: { PLACEMENT: placement } }] : []),
+    {
+      method: 'placement.bind',
+      params: {
+        PLACEMENT: placement,
+        HANDLER: `${url}/handler/placement-crm-deal-detail-tab`,
+        TITLE: '[demo] Some Tab',
+        OPTIONS: {
+          errorHandlerUrl: `${url}/handler/background-some-problem`
+        }
+      }
+    }
+  ])
+}
+
+/** Adds the demo user-field type, or updates it on reinstall. */
+async function makeUserFields(): Promise<void> {
+  const url = requireAppUrl()
+  const env = import.meta.dev ? 'dev' : 'prod'
+  const typeId = `some_type_${env}`
+  const typeList = (steps.value.init?.data?.userFieldTypeList ?? []) as { USER_TYPE_ID: string }[]
+  const exists = typeList.some(item => item.USER_TYPE_ID === typeId)
+
+  $logger.debug('UserField registration', { typeId, exists })
+
+  await runBatch([
+    {
+      method: exists ? 'userfieldtype.update' : 'userfieldtype.add',
+      params: {
+        USER_TYPE_ID: typeId,
+        HANDLER: `${url}/handler/uf.demo`,
+        TITLE: `[${env}] Some Type`,
+        DESCRIPTION: 'Some Description',
+        OPTIONS: {
+          height: 105
+        }
+      }
+    }
+  ])
+}
+
 async function makeInit(): Promise<void> {
   if (steps.value.init) {
     const response = await $b24.actions.v2.batch.make({
@@ -262,7 +236,9 @@ async function makeInit(): Promise<void> {
         profile: { method: 'profile' },
         userFieldTypeList: { method: 'userfieldtype.list' },
         placementList: { method: 'placement.get' }
-      }
+      },
+      // The four reads are independent: run them all, then report every failure at once.
+      options: { isHaltOnError: false }
     })
 
     // A failed sub-command is silently omitted from the batch result, so guard
@@ -336,8 +312,18 @@ onMounted(async () => {
       stepCode.value = key
       await step.action()
     }
-  } catch (error: any) {
-    processErrorGlobal(error)
+  } catch (error: unknown) {
+    // Stay on the page: the progress bar turns red and the reason is shown,
+    // so the admin can fix it (e.g. VIRTUAL_HOST) and reopen the app.
+    progressColor.value = 'air-primary-alert'
+    $logger.error('Install failed', { step: stepCode.value, error })
+    toast.add({
+      title: t('page.install.toast.errorTitle'),
+      description: error instanceof Error ? error.message : String(error),
+      icon: CloudErrorIcon,
+      color: 'air-primary-alert',
+      duration: 0
+    })
   }
 })
 // endregion ////

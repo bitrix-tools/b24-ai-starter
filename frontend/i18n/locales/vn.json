@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Hoàn tất"
         }
+      },
+      "toast": {
+        "errorTitle": "Cài đặt thất bại"
       }
     },
     "app-options": {

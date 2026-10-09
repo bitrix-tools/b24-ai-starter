@@ -1,6 +1,21 @@
 import tailwindcss from '@tailwindcss/vite'
 import { contentLocales } from './i18n/i18n.map'
 
+/**
+ * Hosts the Vite dev server accepts besides localhost: the tunnel host from
+ * NUXT_PUBLIC_APP_URL (VIRTUAL_HOST) plus any extra ones from NUXT_ALLOWED_HOSTS
+ * (comma-separated). Without it Vite answers "Blocked request. This host is not allowed".
+ */
+function devAllowedHosts(): string[] {
+  const hosts = (process.env.NUXT_ALLOWED_HOSTS ?? '').split(',').map(s => s.trim()).filter(Boolean)
+  try {
+    hosts.push(new URL(process.env.NUXT_PUBLIC_APP_URL ?? '').hostname)
+  } catch {
+    // no or invalid app URL: localhost only
+  }
+  return [...new Set(hosts)]
+}
+
 export default defineNuxtConfig({
   modules: [
     '@bitrix24/b24ui-nuxt',
@@ -49,6 +64,7 @@ export default defineNuxtConfig({
       tailwindcss()
     ],
     server: {
+      allowedHosts: devAllowedHosts(),
       proxy: {
         '/api': { target: process.env.SERVER_HOST || 'http://api:8000', changeOrigin: true }
       }

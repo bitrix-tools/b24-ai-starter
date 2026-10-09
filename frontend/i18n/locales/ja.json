@@ -93,6 +93,9 @@
         "finish": {
           "caption": "完了"
         }
+      },
+      "toast": {
+        "errorTitle": "インストールに失敗しました"
       }
     },
     "app-options": {

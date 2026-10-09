@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Penyelesaian"
         }
+      },
+      "toast": {
+        "errorTitle": "Instalasi gagal"
       }
     },
     "app-options": {
