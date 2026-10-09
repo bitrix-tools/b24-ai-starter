@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Завершення"
         }
+      },
+      "toast": {
+        "errorTitle": "Помилка встановлення"
       }
     },
     "app-options": {

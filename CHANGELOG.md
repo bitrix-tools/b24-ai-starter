@@ -31,6 +31,8 @@
 
 ### Changed
 
+- Фронтенд, установка: шаги `placement` и `userFields` проверяют результат batch (ошибки больше не проглатываются); перед регистрацией обработчиков проверяется `NUXT_PUBLIC_APP_URL`; при ошибке прогресс краснеет и показывается toast вместо страницы ошибки. Начальные запросы выполняются с `isHaltOnError: false` и сообщают обо всех сбоях сразу. Подход взят из [bitrix24/templates-dashboard](https://github.com/bitrix24/templates-dashboard).
+- Фронтенд: dev-сервер принимает хост из `VIRTUAL_HOST` (`vite.server.allowedHosts`), дополнительные хосты — через `NUXT_ALLOWED_HOSTS`.
 - Node: бэкенд больше не заглушка — `app.js` (`createApp()` с внедряемыми зависимостями), `server.js` (пул БД + `listen`), `db/accounts.js` (общая таблица `bitrix24account`, PostgreSQL и MySQL). `/api/install` проверяет `AUTH_ID` OAuth-сервером, сохраняет аккаунт и привязывает `ONAPPINSTALL`/`ONAPPUNINSTALL`; добавлен `/api/app-events/` (`ONAPPUNINSTALL` — только с сохранённым `application_token`). Тесты — `pnpm test` (`node --test`).
 - Профили для `dev-*` / `prod-*` вычисляются в одном месте — `scripts/compose-profiles.sh`. Стадия Python-образа переименована `prod` → `production`.
 - frontend: `LoggerBrowser` → `LoggerFactory.createForBrowser()` (JS SDK 3); состояние загрузки — локальный `ref` вместо удалённого `useDashboard().isLoading`; в `useUserStore` поле `login` (хранило полное имя) переименовано в `fullName`.

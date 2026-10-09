@@ -93,6 +93,9 @@
         "finish": {
           "caption": "Tamamlama"
         }
+      },
+      "toast": {
+        "errorTitle": "Kurulum başarısız"
       }
     },
     "app-options": {

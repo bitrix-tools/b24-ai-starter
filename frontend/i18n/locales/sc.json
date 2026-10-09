@@ -93,6 +93,9 @@
         "finish": {
           "caption": "完成"
         }
+      },
+      "toast": {
+        "errorTitle": "安装失败"
       }
     },
     "app-options": {

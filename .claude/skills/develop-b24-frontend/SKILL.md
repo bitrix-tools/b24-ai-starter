@@ -139,6 +139,8 @@ Notes:
 
 * File-based routes in `app/pages/`; every page file ends with `.client.vue` (`ssr: false`).
 * Handlers registered in Bitrix24 point to `${appUrl}/handler/<name>`; put those pages in `app/pages/handler/` and register them in the install steps (`placement.bind`, `userfieldtype.add`).
+* Install steps must be idempotent (reinstall, domain change): unbind an existing placement before `placement.bind`, use `userfieldtype.update` when the type exists. Run each batch through `runBatch()` in `install.client.vue` — the SDK does not throw on failed batch calls. A failed step turns the progress red and shows a toast; it does not replace the page.
+* Tunnel host for `nuxt dev`: the host of `VIRTUAL_HOST` is allowed automatically; add others (a second tunnel) via `NUXT_ALLOWED_HOSTS` in `.env`.
 * `app/middleware/01.app.page.or.slider.global.ts` runs on every navigation: initializes the frame and, if `$b24.placement.options.place === 'app-options'`, redirects to `/slider/app-options`. Add new `place` → route mappings there. Slider pages are opened with `$b24.slider.openSliderAppPage({ place: 'app-options', bx24_width: 650 })`.
 
 ## Bitrix24 UI Kit
@@ -218,4 +220,5 @@ Methods: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `em
 3. **Error Handling**: `try/catch` + `processErrorGlobal(error)` for fatal init errors; `useToast()` for recoverable ones; log with `$logger.error(msg, { error })`.
 4. **Loading state**: keep it in a local `ref(false)` and pass to `:loading` (or use `loading-auto` on buttons). `useDashboard()` from b24ui no longer provides `isLoading`/`load`.
 5. **Placement options** are typed as `unknown` values — convert explicitly (`String($b24.placement.options?.VALUE ?? '')`).
-6. **Docs**: detailed guides live in `instructions/front/` (`knowledge.md`, `bitrix24-js-sdk.md`, component recipes). SDK v2→v3 migration: <https://bitrix24.github.io/b24jssdk/docs/getting-started/migration/v3/>
+6. **Dashboard UI example**: for charts (`@unovis/vue`), tables (`@tanstack/vue-table`), sidebar + command palette and a data-composable layout (`api.ts`/`formatters.ts`/`helpers.ts`/`mocks.ts` with unit tests) see <https://github.com/bitrix24/templates-dashboard>. Copy patterns, not the whole template: it is client-only and has no backend.
+7. **Docs**: detailed guides live in `instructions/front/` (`knowledge.md`, `bitrix24-js-sdk.md`, component recipes). SDK v2→v3 migration: <https://bitrix24.github.io/b24jssdk/docs/getting-started/migration/v3/>
