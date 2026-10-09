@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Стартер",
+    "nav": {
+      "home": "Басты бет",
+      "settings": "Баптаулар"
+    },
+    "search": {
+      "goTo": "Өту"
+    }
+  },
   "page": {
     "index": {
       "seo": {

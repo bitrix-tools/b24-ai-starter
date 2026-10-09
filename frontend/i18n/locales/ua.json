@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Стартер",
+    "nav": {
+      "home": "Головна",
+      "settings": "Налаштування"
+    },
+    "search": {
+      "goTo": "Перейти"
+    }
+  },
   "page": {
     "index": {
       "seo": {

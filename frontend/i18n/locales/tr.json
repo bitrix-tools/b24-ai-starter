@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "Ana sayfa",
+      "settings": "Ayarlar"
+    },
+    "search": {
+      "goTo": "Git"
+    }
+  },
   "page": {
     "index": {
       "seo": {

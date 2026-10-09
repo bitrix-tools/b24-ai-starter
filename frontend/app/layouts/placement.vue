@@ -2,12 +2,6 @@
 import { usePageStore } from '~/stores/page'
 
 // region Init ////
-useHead({
-  bodyAttrs: {
-    class: `light` // 'dark' | 'light' | 'edge-dark' | 'edge-light'
-  }
-})
-
 const slots = defineSlots()
 
 const page = usePageStore()
@@ -34,11 +28,9 @@ useSeoMeta({
     <slot />
 
     <template v-if="!!slots['footer']" #content-bottom>
-      <div class="absolute inset-x-0 bottom-0 light bg-(--popup-window-background-color) fixed flex items-center justify-center gap-3 border-t-1 border-t-(--ui-color-divider-less) shadow-top-md py-[9px] px-2 pr-(--scrollbar-width)">
-        <div class="flex flex-row gap-[10px]">
-          <slot name="footer" />
-        </div>
-      </div>
+      <AppFooterBar>
+        <slot name="footer" />
+      </AppFooterBar>
     </template>
   </B24SidebarLayout>
 </template>

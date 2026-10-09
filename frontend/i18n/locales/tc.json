@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "首頁",
+      "settings": "設定"
+    },
+    "search": {
+      "goTo": "前往"
+    }
+  },
   "page": {
     "index": {
       "seo": {

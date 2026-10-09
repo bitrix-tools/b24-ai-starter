@@ -40,7 +40,7 @@ CI (`.github/workflows/ci.yml`) runs exactly these steps — run them before com
 ### Key Directories
 
 * `frontend/app/pages/`: Application pages (must end with `.client.vue` for client-side rendering).
-* `frontend/app/layouts/`: Page layouts (`default.vue` wraps `B24SidebarLayout`; also `placement.vue`, `slider.vue`, `uf-placement.vue`).
+* `frontend/app/layouts/`: Page layouts (`default.vue` — sidebar + ⌘K search; `clear.vue` — no sidebar; `slider.vue`; `placement.vue`, `uf-placement.vue` for widgets).
 * `frontend/app/components/`: Reusable components (e.g., `BackendStatus.vue`, `Logo.vue`).
 * `frontend/app/stores/`: Pinia stores (`api`, `appSettings`, `userSettings`, `user`, `page`).
 * `frontend/app/composables/`: Shared logic (`useAppInit`, `useBackend`, `useTelemetry`).
@@ -53,17 +53,22 @@ CI (`.github/workflows/ci.yml`) runs exactly these steps — run them before com
 
 ## App shell (already in place — do not duplicate)
 
-* `app/app.vue` renders `<B24App :locale>` → `<B24DashboardGroup>` → `<NuxtLayout>` → `<NuxtPage>` for the whole app. **Never** add `<B24App>` to a page, layout or component — nesting it is a bug.
-* Layouts already contain `<B24SidebarLayout>`; pages only render their content.
+* `app/app.vue` renders `<B24App :locale>` → `<NuxtLayout>` → `<NuxtPage>` for the whole app. **Never** add `<B24App>` to a page, layout or component — nesting it is a bug.
+* App layouts (`default`, `clear`, `slider`) contain `<B24DashboardGroup>` (`default` also the `B24DashboardSidebar` + `B24DashboardSearch`). A page renders **one** `<B24DashboardPanel>`: `#header` = `B24DashboardNavbar` (title, actions on the right) + optional `B24DashboardToolbar` (buttons, filters, tabs); `#body` = content. Do not add another `B24DashboardGroup`/`B24SidebarLayout`.
+* New section of the app → a page + one item in `links[0]` of `layouts/default.vue` (it is also listed in the ⌘K search).
+* Widget layouts (`placement`, `uf-placement`) stay on `<B24SidebarLayout>` without sidebar/navbar: a widget lives inside a CRM card. Bottom buttons → `#footer` slot (rendered by `AppFooterBar`).
+* Theme: `app.config.ts` (`colorModeTypeLight`); do not set body classes in layouts (only `uf-placement` overrides the background).
+* Larger example of this shell (charts, tables, settings tabs): <https://github.com/bitrix24/templates-dashboard>.
 
 | Layout | Used by | How it is selected |
 | --- | --- | --- |
-| `default` | standalone app pages (`index`, `telemetry-test`) | nothing (default) |
+| `default` | standalone app pages (`index`, `telemetry-test`): sidebar + search | nothing (default) |
+| `clear` | full-screen pages without sidebar (`install`) | `definePageMeta({ layout: 'clear' })` |
 | `placement` | widget pages, e.g. `handler/placement-crm-deal-detail-tab` | `definePageMeta({ layout: 'placement' })` |
 | `uf-placement` | user-field type handler `handler/uf.demo` | `definePageMeta({ layout: 'uf-placement' })` |
-| `slider` | slider pages, e.g. `slider/app-options` (header from `usePageStore`, `#footer` slot for buttons) | `definePageMeta({ layout: false })` + `<NuxtLayout name="slider">` in the template, so the page can fill its named slots |
+| `slider` | slider pages, e.g. `slider/app-options` (navbar title/description from `usePageStore`, slots `#top-actions-start`/`#top-actions-end`, `#footer` for buttons) | `definePageMeta({ layout: false })` + `<NuxtLayout name="slider">` in the template, so the page can fill its named slots |
 
-`install.client.vue` uses the default layout but renders a full-screen progress screen.
+`install.client.vue` uses the `clear` layout and renders a full-screen progress screen in a `B24DashboardPanel`.
 
 ## Page pattern
 
@@ -120,10 +125,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <B24Card v-if="isInit">
-    <B24Button :label="$t('page.myPage.action.reload')" loading-auto @click="reload" />
-    <B24Table :data="items.map(name => ({ name }))" :loading="isLoading" />
-  </B24Card>
+  <B24DashboardPanel id="my-page" :b24ui="{ body: 'p-4 sm:p-5 scrollbar-transparent' }">
+    <template #header>
+      <B24DashboardNavbar :title="$t('page.myPage.seo.title')" />
+      <B24DashboardToolbar v-if="isInit">
+        <template #left>
+          <B24Button :label="$t('page.myPage.action.reload')" color="air-secondary" loading-auto @click="reload" />
+        </template>
+      </B24DashboardToolbar>
+    </template>
+    <template #body>
+      <B24Skeleton v-if="isLoading" class="h-[120px] w-full" />
+      <B24Table v-else-if="isInit" :data="items.map(name => ({ name }))" />
+    </template>
+  </B24DashboardPanel>
 </template>
 ```
 
@@ -216,7 +231,7 @@ Methods: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `em
 ## Best Practices
 
 1. **Client-only**: All pages must be `.client.vue` as the app runs in an iframe.
-2. **No extra shells**: `B24App` and `B24SidebarLayout` come from `app.vue` and the layouts.
+2. **No extra shells**: `B24App` comes from `app.vue`, `B24DashboardGroup`/sidebar from the layouts; a page adds only its `B24DashboardPanel`.
 3. **Error Handling**: `try/catch` + `processErrorGlobal(error)` for fatal init errors; `useToast()` for recoverable ones; log with `$logger.error(msg, { error })`.
 4. **Loading state**: keep it in a local `ref(false)` and pass to `:loading` (or use `loading-auto` on buttons). `useDashboard()` from b24ui no longer provides `isLoading`/`load`.
 5. **Placement options** are typed as `unknown` values — convert explicitly (`String($b24.placement.options?.VALUE ?? '')`).

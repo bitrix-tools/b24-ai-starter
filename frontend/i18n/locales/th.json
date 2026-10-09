@@ -1,5 +1,14 @@
 {
-  "layout": {},
+  "layout": {
+    "appTitle": "Starter",
+    "nav": {
+      "home": "หน้าแรก",
+      "settings": "การตั้งค่า"
+    },
+    "search": {
+      "goTo": "ไปที่"
+    }
+  },
   "page": {
     "index": {
       "seo": {

@@ -183,7 +183,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 p-4 max-w-[900px] mx-auto">
+  <B24DashboardPanel id="telemetry-test" :b24ui="{ body: 'scrollbar-transparent' }">
+    <template #body>
+  <div class="flex flex-col gap-4 max-w-[900px]">
 
     <!-- Header -->
     <div class="flex flex-row items-center gap-3">
@@ -308,4 +310,6 @@ onMounted(async () => {
 
     </div>
   </div>
+    </template>
+  </B24DashboardPanel>
 </template>
