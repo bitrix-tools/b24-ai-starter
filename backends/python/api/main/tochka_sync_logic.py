@@ -262,3 +262,35 @@ def run_tochka_sync(
         "lastSync": last_sync_utc.isoformat().replace("+00:00", "Z"),
         "new_payment_ids": new_payment_ids,
     }
+
+
+def run_post_sync_processing(member_id: str, result: dict) -> None:
+    """Пост-обработка после run_tochka_sync — общая для HTTP-эндпоинта и фонового крона.
+
+    Выполняет: дедуп эквайринга, авто-сопоставление счетов (→ уведомления
+    «Платёж разнесён») и уведомления «Не удалось разнести» по новым платежам.
+    Раньше жила только в tochka_sync() (ручной синк), из-за чего фоновая
+    синхронизация затягивала платежи молча. Каждый шаг изолирован в try, чтобы
+    сбой одного не ронял остальные. Импорты ленивые — разрываем циклы.
+    """
+    try:
+        from .views_tochka import _run_acquiring_dedupe_after_sync
+        _run_acquiring_dedupe_after_sync(member_id)
+    except Exception as e:
+        print(f"[SYNC_DEDUPE] {e}")
+
+    try:
+        from .invoice_crm import try_auto_match_invoices_for_member
+        try_auto_match_invoices_for_member(member_id)
+    except Exception as e:
+        print(f"[INVOICE_AUTO_MATCH] {e}")
+
+    try:
+        from .payment_notifications import notify_payment_unmatched_new
+
+        for pid in result.get("new_payment_ids") or []:
+            p = TochkaPayment.objects.filter(pk=pid, member_id=member_id).first()
+            if p and p.status == "pending" and p.credit_debit == "credit":
+                notify_payment_unmatched_new(member_id, p)
+    except Exception as e:
+        print(f"[PAYMENT_NOTIFY] {e}")

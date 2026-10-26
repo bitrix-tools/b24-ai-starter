@@ -784,22 +784,8 @@ def tochka_sync(request: AuthorizedRequest):
             days = max(days, 1)
             result = run_tochka_sync(member_id, days=days)
 
-        _run_acquiring_dedupe_after_sync(member_id)
-        try:
-            from .invoice_crm import try_auto_match_invoices_for_member
-            try_auto_match_invoices_for_member(member_id)
-        except Exception as e:
-            print(f"[INVOICE_AUTO_MATCH] {e}")
-
-        try:
-            from .payment_notifications import notify_payment_unmatched_new
-
-            for pid in result.get("new_payment_ids") or []:
-                p = TochkaPayment.objects.filter(pk=pid, member_id=member_id).first()
-                if p and p.status == "pending" and p.credit_debit == "credit":
-                    notify_payment_unmatched_new(member_id, p)
-        except Exception as e:
-            print(f"[PAYMENT_NOTIFY] {e}")
+        from .tochka_sync_logic import run_post_sync_processing
+        run_post_sync_processing(member_id, result)
 
         return JsonResponse(result)
 

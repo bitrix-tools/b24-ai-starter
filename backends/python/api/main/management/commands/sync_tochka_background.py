@@ -3,7 +3,11 @@ from django.utils import timezone
 
 from main.background_sync_schedule import is_background_sync_due
 from main.models import TochkaCredentials, TochkaPortalPreferences
-from main.tochka_sync_logic import _get_tochka_client, run_tochka_sync
+from main.tochka_sync_logic import (
+    _get_tochka_client,
+    run_post_sync_processing,
+    run_tochka_sync,
+)
 
 
 class Command(BaseCommand):
@@ -60,6 +64,10 @@ class Command(BaseCommand):
             try:
                 TochkaCredentials.objects.filter(pk=creds.pk).update(updated_at=timezone.now())
                 result = run_tochka_sync(member_id, days=days)
+                # Те же уведомления, что и при ручном синке: авто-сопоставление
+                # и карточки в групповой чат по новым платежам. Без этого
+                # фоновый крон затягивал платежи молча (бот «молчал»).
+                run_post_sync_processing(member_id, result)
                 self.stdout.write(self.style.SUCCESS(f"  {member_id}: synced {result['synced']}"))
             except Exception as e:
                 error_msg = str(e)
