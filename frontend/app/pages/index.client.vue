@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { onMounted } from 'vue'
-import AppLaunchSplash from '~/components/AppLaunchSplash.vue'
 
 definePageMeta({ layout: 'setup' })
 
@@ -125,10 +124,9 @@ onMounted(async () => {
 <template>
   <div
     v-if="!isInit"
-    class="fixed inset-0 z-[100] flex items-center justify-center min-h-[100dvh] bg-white"
-  >
-    <AppLaunchSplash />
-  </div>
+    class="fixed inset-0 z-[100] min-h-[100dvh] bg-white"
+    aria-hidden="true"
+  />
 
   <div v-else class="setup-page min-h-screen bg-white w-full">
     <SetupStepper :current-step="currentStep" :steps="steps" />

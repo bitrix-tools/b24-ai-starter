@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
-import AppLaunchSplash from '~/components/AppLaunchSplash.vue'
 import {
   defaultDealMatchingPreferences,
   defaultDealCategoryStageRule,
@@ -1910,10 +1909,9 @@ onBeforeUnmount(() => {
 <template>
   <div
     v-if="!isInit"
-    class="fixed inset-0 z-[100] flex items-center justify-center min-h-[100dvh] bg-white"
-  >
-    <AppLaunchSplash />
-  </div>
+    class="fixed inset-0 z-[100] min-h-[100dvh] bg-white"
+    aria-hidden="true"
+  />
 
   <div v-else class="min-h-screen bg-white w-full min-w-0 max-w-full overflow-x-hidden">
     <!-- Tabs -->

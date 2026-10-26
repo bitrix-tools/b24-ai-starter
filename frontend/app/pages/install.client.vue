@@ -4,7 +4,6 @@ import type { B24Frame } from '@bitrix24/b24jssdk'
 import { ref, onMounted } from 'vue'
 import { sleepAction } from '~/utils/sleep'
 import { withoutTrailingSlash } from 'ufo'
-import AppLaunchSplash from '~/components/AppLaunchSplash.vue'
 
 const { t, locales: localesI18n, setLocale } = useI18n()
 
@@ -271,5 +270,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppLaunchSplash class="min-h-dvh bg-white" />
+  <div class="min-h-dvh bg-white" aria-hidden="true" />
 </template>
