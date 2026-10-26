@@ -685,20 +685,20 @@ def _group_chat_main_plain_and_attach(
 
     # ---- ATTACH-карточка (fallback без чат-бота) ----
     grid: list[dict[str, Any]] = [
-        _attach_grid_row("📅 Дата", date_s),
-        _attach_grid_row("🏦 Ордер", f"№ {slip}"),
+        _attach_grid_row("Дата", date_s),
+        _attach_grid_row("Ордер", f"№ {slip}"),
     ]
     if payer_bb:
-        grid.append(_attach_grid_row("👤 Плательщик", payer_bb))
+        grid.append(_attach_grid_row("Плательщик", payer_bb))
     if inn:
-        grid.append(_attach_grid_row("🧾 ИНН", inn))
+        grid.append(_attach_grid_row("ИНН", inn))
     if matched:
         if doc_bb:
-            grid.append(_attach_grid_row("📄 Счёт", doc_bb))
+            grid.append(_attach_grid_row("Счёт", doc_bb))
         if deal_bb:
-            grid.append(_attach_grid_row("📁 Сделка", deal_bb))
+            grid.append(_attach_grid_row("Сделка", deal_bb))
     else:
-        grid.append(_attach_grid_row("💳 На счёт", acc))
+        grid.append(_attach_grid_row("На счёт", acc))
 
     blocks: list[dict[str, Any]] = [
         {"MESSAGE": f"[B]{emoji} {title}[/B]"},
