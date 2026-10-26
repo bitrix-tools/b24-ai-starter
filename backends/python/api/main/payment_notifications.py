@@ -995,11 +995,14 @@ def _send_group_chat_payment_messages(
     """Чат-бот: imbot.v2.Chat.Message.send. Иначе im.message.add + ATTACH (одно сообщение — без дубля «Платеж обработан»)."""
     dlg = _chat_dialog_id(chat_id)
     if chat_bot_id:
+        # От имени бота: белый фон + статус «Платеж обработан». Та же ATTACH-карточка
+        # (message — zero-width, иначе продублируется текстом над карточкой).
         r = imbot_v2_chat_message_send(
             account,
             bot_id=int(chat_bot_id),
             dialog_id=dlg,
-            message=main_plain,
+            message="​",
+            attach=card_attach,
         )
         if r.get("error"):
             logger.warning(
