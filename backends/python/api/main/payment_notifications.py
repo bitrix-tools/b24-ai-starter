@@ -618,16 +618,126 @@ def build_group_chat_card_attach(
     return _group_chat_card_attach_from_bb(bb)
 
 
+def _fmt_amount_card(amount: Decimal | float, currency: str = "RUB") -> str:
+    """Сумма для карточки: с группировкой тысяч, без ,00 у целых (16 200 ₽)."""
+    s = _fmt_money(amount, currency)
+    return s.replace(",00 ", " ", 1) if ",00 " in s else s
+
+
 def _group_chat_main_plain_and_attach(
     account: Bitrix24Account,
     payment: TochkaPayment,
     *,
     matched: bool,
 ) -> tuple[str, dict[str, Any]]:
-    """Текст как в референсе (\\n) + ATTACH для fallback без бота."""
-    lines = _collect_group_chat_lines(account, payment, matched=matched)
-    main_plain = "\n".join(lines)
-    card = _group_chat_card_attach_from_bb(_group_chat_lines_to_bbcode(lines))
+    """Структурная карточка платежа: цветная полоса (success/warning), заголовок с
+    эмодзи, крупная сумма, реквизиты в GRID, назначение отдельным блоком.
+    main_plain — текст для чат-бота; card — ATTACH для im.message.add (fallback без бота)."""
+    base = _portal(account)
+    cur = payment.currency or "RUB"
+    amount_s = _fmt_amount_card(payment.amount, cur)
+    date_s = _fmt_dt_date_only(payment.transaction_date)
+    slip = (payment.payment_slip_number or "").strip() or "—"
+    acc = (payment.counterparty_account or payment.account_id or "").strip() or "—"
+    purpose_raw = (payment.purpose or "").strip()
+
+    inv_id = payment.matched_invoice_id
+    deal_id = payment.matched_deal_id
+    if inv_id and not deal_id:
+        rd = resolve_deal_id_from_invoice_spa(account, int(inv_id))
+        if rd:
+            deal_id = rd
+
+    inn = (payment.counterparty_inn or "").strip()
+    name = (payment.counterparty_name or "").strip()
+    payer_label = _format_payer_display_name(inn, name)
+    hit = find_crm_entity_by_inn(account, inn) if inn else None
+    if hit:
+        kind, eid = hit
+        path = crm_company_public_path(eid) if kind == "company" else crm_contact_public_path(eid)
+        payer_plain = payer_label if payer_label != "—" else (name or "—")
+        payer_bb = _bb_link(base, path, payer_plain)
+    else:
+        payer_plain = payer_label if (payer_label != "—" or name) else ""
+        payer_bb = _bb_sanitize_attach_grid_value(payer_plain) if payer_plain else ""
+
+    doc_bb = None
+    if inv_id:
+        num = (payment.invoice_number or "").strip() or str(inv_id)
+        inv_title = (payment.invoice_title or "").strip() or f"Счет № {num}"
+        doc_bb = _bb_link(base, crm_invoice_spa_public_path(int(inv_id)), inv_title)
+    deal_bb = None
+    if deal_id:
+        deal_title = (payment.deal_title or "").strip() or f"Сделка #{deal_id}"
+        deal_bb = _bb_link(base, crm_deal_public_path(int(deal_id)), deal_title)
+
+    exp = _expected_match_amount(payment)
+    over = matched and _is_overpayment(payment) and exp is not None
+    exp_s = _fmt_amount_card(exp, cur) if exp is not None else ""
+
+    if matched:
+        emoji, title, color = "✅", "Платёж разнесён", "success"
+    else:
+        emoji, title, color = "⚠️", "Не удалось разнести", "warning"
+
+    purpose_safe = _bb_sanitize_attach_grid_value(purpose_raw) if purpose_raw else ""
+    qr_lines = _qr_extra_lines(account, payment, base)
+
+    # ---- ATTACH-карточка (fallback без чат-бота) ----
+    grid: list[dict[str, Any]] = [
+        _attach_grid_row("📅 Дата", date_s),
+        _attach_grid_row("🏦 Ордер", f"№ {slip}"),
+    ]
+    if payer_bb:
+        grid.append(_attach_grid_row("👤 Плательщик", payer_bb))
+    if inn:
+        grid.append(_attach_grid_row("🧾 ИНН", inn))
+    if matched:
+        if doc_bb:
+            grid.append(_attach_grid_row("📄 Счёт", doc_bb))
+        if deal_bb:
+            grid.append(_attach_grid_row("📁 Сделка", deal_bb))
+    else:
+        grid.append(_attach_grid_row("💳 На счёт", acc))
+
+    blocks: list[dict[str, Any]] = [
+        {"MESSAGE": f"[B]{emoji} {title}[/B]"},
+        {"MESSAGE": f"[B]{amount_s}[/B]"},
+    ]
+    if over:
+        blocks.append({"MESSAGE": f"⚠️ Переплата: получено [B]{amount_s}[/B], ожидалось {exp_s}"})
+    blocks.append({"GRID": grid})
+    if purpose_safe:
+        blocks.append({"MESSAGE": f"📝 [B]Назначение[/B][br]{purpose_safe}"})
+    if qr_lines:
+        blocks.append({"MESSAGE": "[br]".join(qr_lines)})
+
+    card = {"ID": 1, "COLOR_TOKEN": color, "BLOCKS": blocks}
+
+    # ---- plain-текст (путь чат-бота) ----
+    pl: list[str] = [f"{emoji} [B]{title}[/B]", "", f"[B]{amount_s}[/B]"]
+    if over:
+        pl.append(f"⚠️ Переплата: получено {amount_s}, ожидалось {exp_s}")
+    pl.append("")
+    pl.append(f"📅 {date_s}")
+    pl.append(f"🏦 Ордер № {slip}")
+    if payer_plain:
+        pl.append(f"👤 {payer_plain}")
+    if inn:
+        pl.append(f"🧾 ИНН {inn}")
+    if matched:
+        if doc_bb:
+            pl.append(f"📄 {doc_bb}")
+        if deal_bb:
+            pl.append(f"📁 {deal_bb}")
+    else:
+        pl.append(f"💳 {acc}")
+    if purpose_raw:
+        pl.append("")
+        pl.append(f"📝 {purpose_raw}")
+    pl.extend(qr_lines)
+    main_plain = "\n".join(pl)
+
     return main_plain, card
 
 
