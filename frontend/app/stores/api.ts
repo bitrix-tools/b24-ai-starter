@@ -69,6 +69,24 @@ export const useApiStore = defineStore(
       })
     }
 
+    const sendSupportMessage = async (data: {
+      message: string
+      userName?: string
+      contact?: string
+    }): Promise<{ id: string }> => {
+      return await $api('/api/support', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        },
+        body: JSON.stringify({
+          message: data.message,
+          userName: data.userName || '',
+          contact: data.contact || ''
+        }),
+      })
+    }
+
     const init = async (b24: B24Frame) => {
       $b24 = b24
       await reinitToken()
@@ -113,7 +131,8 @@ export const useApiStore = defineStore(
       init,
       getEnum,
       getList,
-      postInstall
+      postInstall,
+      sendSupportMessage
     }
   }
 )

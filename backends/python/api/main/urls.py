@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import *
+from .views_support import support_submit, support_contact
 from .views_acquiring import (
     tochka_acquiring_create_payment_link,
     tochka_acquiring_refresh_statuses,
@@ -55,4 +56,7 @@ urlpatterns = [
     path('api/tochka/acquiring/refresh-statuses', tochka_acquiring_refresh_statuses, name='tochka_acquiring_refresh_statuses'),
     path('api/tochka/acquiring/operations/<uuid:operation_id>/unlink', tochka_acquiring_unlink, name='tochka_acquiring_unlink'),
     path('api/tochka/acquiring/operations/<uuid:operation_id>/refund', tochka_acquiring_refund, name='tochka_acquiring_refund'),
+    # Поддержка
+    path('api/support', support_submit, name='support_submit'),
+    path('api/support/<uuid:ticket_id>/contact', support_contact, name='support_contact'),
 ]

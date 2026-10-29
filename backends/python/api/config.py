@@ -44,6 +44,10 @@ class Config:
     tochka_webhook_jwk_url: str
     tochka_webhook_dev_secret: str
 
+    # Форма поддержки → общий Telegram-канал 1daa (TG_BOT_TOKEN / TG_CHAT_ID)
+    support_telegram_token: str
+    support_telegram_chat_id: str
+
 
 def load_config() -> Config:
     build_target = env.str("BUILD_TARGET", "dev")  # dev or production
@@ -74,6 +78,8 @@ def load_config() -> Config:
             "https://enter.tochka.com/doc/openapi/static/keys/public",
         ),
         tochka_webhook_dev_secret=env.str("TOCHKA_WEBHOOK_DEV_SECRET", ""),
+        support_telegram_token=env.str("TG_BOT_TOKEN", ""),
+        support_telegram_chat_id=env.str("TG_CHAT_ID", ""),
     )
 
 

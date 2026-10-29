@@ -320,3 +320,36 @@ class TochkaPayment(models.Model):
         managed = False
         db_table = "tochka_payments"
         unique_together = ("member_id", "transaction_id")
+
+
+class SupportTicket(models.Model):
+    """Обращение в поддержку из приложения.
+
+    Хранится у нас, а не только уходит в Telegram: канал доставки может быть не
+    настроен или отвалиться, и тогда обращение клиента исчезло бы бесследно.
+    Таблицу создаёт миграция (managed), в отличие от внешних таблиц портала/банка.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member_id = models.CharField(max_length=64, db_index=True)
+    domain_url = models.CharField(max_length=255, blank=True, default="")
+
+    user_id = models.IntegerField(null=True, blank=True)
+    user_name = models.CharField(max_length=255, blank=True, default="")
+    contact = models.CharField(max_length=255, blank=True, default="")
+    message = models.TextField()
+
+    attachment_name = models.CharField(max_length=255, blank=True, default="")
+    attachment_size = models.IntegerField(default=0)
+
+    delivered = models.BooleanField(default=False)
+    delivery_error = models.TextField(blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "support_tickets"
+        indexes = [models.Index(fields=["member_id", "-created_at"], name="support_member_created_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.domain_url or self.member_id}: {self.message[:40]}"

@@ -31,8 +31,9 @@ const isBackgroundSyncing = ref(false)
 const syncError = ref('')
 const activeTab = ref<'payments' | 'accounts' | 'settings' | 'help'>('payments')
 
+const isSupportOpen = ref(false)
 function openSupport() {
-  window.open('mailto:info@1daa.ru?subject=Поддержка — Точка Банк. Интеграция', '_blank')
+  isSupportOpen.value = true
 }
 const dealStages = ref<DealStageOption[]>([])
 const dealCategories = ref<DealCategoryOption[]>([])
@@ -3898,6 +3899,8 @@ onBeforeUnmount(() => {
       </div>
 
     </div>
+
+    <TochkaSupport v-model:open="isSupportOpen" />
   </div>
 </template>
 
