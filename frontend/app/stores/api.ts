@@ -1,6 +1,15 @@
 import type { B24Frame } from '@bitrix24/b24jssdk'
 import { withoutTrailingSlash } from 'ufo'
 
+export interface SupportMessage {
+  id: string
+  author: 'user' | 'support'
+  authorName: string
+  text: string
+  attachment?: string
+  createdAt: string
+}
+
 export const useApiStore = defineStore(
   'api',
   () => {
@@ -72,18 +81,41 @@ export const useApiStore = defineStore(
     const sendSupportMessage = async (data: {
       message: string
       userName?: string
+      contact?: string
       file?: File | null
-    }): Promise<{ id: string }> => {
-      const form = new FormData()
-      form.append('message', data.message)
-      if (data.userName) form.append('userName', data.userName)
-      if (data.file) form.append('file', data.file)
-      return await $fetch(`${apiUrl}/api/support`, {
+      ticketId?: string
+    }): Promise<{ id: string, status?: string, message?: SupportMessage }> => {
+      // С файлом — multipart (Content-Type проставит браузер с boundary),
+      // без файла — обычный JSON ($api). Продолжение треда идёт по ticketId.
+      if (data.file) {
+        const form = new FormData()
+        form.append('message', data.message)
+        if (data.userName) form.append('userName', data.userName)
+        if (data.contact) form.append('contact', data.contact)
+        form.append('file', data.file)
+        return await $fetch(`${apiUrl}/api/support`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenJWT.value}` },
+          body: form,
+        })
+      }
+      return await $api('/api/support', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokenJWT.value}`
-        },
-        body: form,
+        headers: { Authorization: `Bearer ${tokenJWT.value}` },
+        body: JSON.stringify({
+          message: data.message,
+          userName: data.userName || '',
+          contact: data.contact || '',
+          ticketId: data.ticketId || undefined
+        }),
+      })
+    }
+
+    const loadSupportThread = async (
+      ticketId: string
+    ): Promise<{ id: string, contact: string, messages: SupportMessage[] }> => {
+      return await $api(`/api/support/thread/${encodeURIComponent(ticketId)}`, {
+        headers: { Authorization: `Bearer ${tokenJWT.value}` },
       })
     }
 
@@ -146,6 +178,7 @@ export const useApiStore = defineStore(
       getList,
       postInstall,
       sendSupportMessage,
+      loadSupportThread,
       addSupportContact
     }
   }

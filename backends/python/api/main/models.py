@@ -353,3 +353,35 @@ class SupportTicket(models.Model):
 
     def __str__(self) -> str:
         return f"{self.domain_url or self.member_id}: {self.message[:40]}"
+
+
+class SupportMessage(models.Model):
+    """Сообщение в переписке по обращению (тред поддержки).
+
+    Обращение (SupportTicket) — корень треда: его первый текст показан как
+    первая реплика клиента, а всё, что написано потом, лежит здесь. Ответы
+    поддержки приходят из общего командного центра по токен-API; клиент видит
+    их, пока окно поддержки опрашивает тред.
+    """
+
+    AUTHOR_USER = "user"
+    AUTHOR_SUPPORT = "support"
+    AUTHOR_CHOICES = [(AUTHOR_USER, "Клиент"), (AUTHOR_SUPPORT, "Поддержка")]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ticket = models.ForeignKey(
+        SupportTicket, on_delete=models.CASCADE, related_name="messages",
+    )
+    author = models.CharField(max_length=16, choices=AUTHOR_CHOICES, default=AUTHOR_SUPPORT)
+    author_name = models.CharField(max_length=255, blank=True, default="")
+    text = models.TextField(blank=True, default="")
+    attachment = models.CharField(max_length=128, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "support_message"
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["ticket", "created_at"], name="support_msg_ticket_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.get_author_display()}: {self.text[:40]}"

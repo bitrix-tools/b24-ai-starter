@@ -14,7 +14,7 @@ from django.conf import settings as django_settings
 from django.http import JsonResponse
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from . import support
 from .models import SupportTicket
@@ -67,6 +67,22 @@ def support_submit(request: AuthorizedRequest):
             "Слишком длинное сообщение. Напишите на info@1daa.ru — там можно с вложениями"
         )
 
+    # Продолжение существующего треда: клиент дослал реплику.
+    ticket_id = str(payload.get("ticketId") or "").strip()
+    if ticket_id:
+        ticket = SupportTicket.objects.filter(
+            id=ticket_id, member_id=account.member_id,
+        ).first()
+        if ticket is None:
+            return JsonResponse({"error": "Обращение не найдено"}, status=HTTPStatus.NOT_FOUND)
+        sent = support.add_user_message(
+            ticket, message, user_name=str(payload.get("userName") or ""),
+        )
+        return JsonResponse({
+            "id": str(ticket.id), "status": "accepted",
+            "message": support.message_json(sent, ticket),
+        })
+
     attachment = None
     if upload is not None:
         limit = getattr(django_settings, "SUPPORT_UPLOAD_MAX_BYTES", 10 * 1024 * 1024)
@@ -93,6 +109,26 @@ def support_submit(request: AuthorizedRequest):
         )
 
     return JsonResponse({"id": str(ticket.id), "status": "accepted"})
+
+
+@xframe_options_exempt
+@require_GET
+@log_errors("support_thread")
+@auth_required
+def support_thread(request: AuthorizedRequest, ticket_id):
+    """Переписка по обращению — для показа и опроса из окна поддержки."""
+
+    account = request.bitrix24_account
+    ticket = SupportTicket.objects.filter(
+        id=ticket_id, member_id=account.member_id,
+    ).first()
+    if ticket is None:
+        return JsonResponse({"error": "Обращение не найдено"}, status=HTTPStatus.NOT_FOUND)
+    return JsonResponse({
+        "id": str(ticket.id),
+        "contact": ticket.contact,
+        "messages": support.thread(ticket),
+    })
 
 
 @xframe_options_exempt

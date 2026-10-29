@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
-from .views_support import support_submit, support_contact
+from .views_support import support_submit, support_contact, support_thread
+from .views_support_ext import ext_threads, ext_thread, ext_reply
 from .views_acquiring import (
     tochka_acquiring_create_payment_link,
     tochka_acquiring_refresh_statuses,
@@ -58,5 +59,10 @@ urlpatterns = [
     path('api/tochka/acquiring/operations/<uuid:operation_id>/refund', tochka_acquiring_refund, name='tochka_acquiring_refund'),
     # Поддержка
     path('api/support', support_submit, name='support_submit'),
+    path('api/support/thread/<uuid:ticket_id>', support_thread, name='support_thread'),
     path('api/support/<uuid:ticket_id>/contact', support_contact, name='support_contact'),
+    # Токен-API для командного центра (ответы из панели)
+    path('api/support/ext/threads', ext_threads, name='support_ext_threads'),
+    path('api/support/ext/thread/<uuid:ticket_id>', ext_thread, name='support_ext_thread'),
+    path('api/support/ext/thread/<uuid:ticket_id>/reply', ext_reply, name='support_ext_reply'),
 ]

@@ -47,6 +47,8 @@ class Config:
     # Форма поддержки → общий Telegram-канал 1daa (TG_BOT_TOKEN / TG_CHAT_ID)
     support_telegram_token: str
     support_telegram_chat_id: str
+    # Токен командного центра 1daa для ext-API поддержки (ответы из панели)
+    support_panel_token: str
 
 
 def load_config() -> Config:
@@ -80,6 +82,7 @@ def load_config() -> Config:
         tochka_webhook_dev_secret=env.str("TOCHKA_WEBHOOK_DEV_SECRET", ""),
         support_telegram_token=env.str("TG_BOT_TOKEN", ""),
         support_telegram_chat_id=env.str("TG_CHAT_ID", ""),
+        support_panel_token=env.str("SUPPORT_PANEL_TOKEN", ""),
     )
 
 

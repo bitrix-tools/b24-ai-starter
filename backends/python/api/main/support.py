@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 from config import config
 
-from .models import SupportTicket
+from .models import SupportMessage, SupportTicket
 
 logger = logging.getLogger(__name__)
 
@@ -205,3 +205,96 @@ def attach_contact(ticket: SupportTicket, contact: str) -> Optional[str]:
         payload,
         "application/x-www-form-urlencoded",
     )
+
+
+# --- Переписка: тред поверх обращения ---------------------------------------
+# Обращение — первое сообщение клиента (текст в SupportTicket), ответы и
+# продолжение разговора лежат в SupportMessage. Отдельной записи на первый
+# текст нет, поэтому старые обращения показываются как есть.
+
+
+def first_bubble(ticket: SupportTicket) -> dict:
+    return {
+        "id": f"ticket-{ticket.id}",
+        "author": SupportMessage.AUTHOR_USER,
+        "authorName": ticket.user_name or "Вы",
+        "text": ticket.message,
+        "attachment": "",
+        "createdAt": ticket.created_at.isoformat(),
+    }
+
+
+def _attachment_url(file_name: str) -> str:
+    # У Точки нет хранилища картинок — вложений в треде не бывает.
+    return ""
+
+
+def message_json(message: SupportMessage, ticket: SupportTicket) -> dict:
+    if message.author == SupportMessage.AUTHOR_SUPPORT:
+        name = message.author_name or "Поддержка"
+    else:
+        name = message.author_name or ticket.user_name or "Вы"
+    return {
+        "id": str(message.id),
+        "author": message.author,
+        "authorName": name,
+        "text": message.text,
+        "attachment": _attachment_url(message.attachment),
+        "createdAt": message.created_at.isoformat(),
+    }
+
+
+def thread(ticket: SupportTicket) -> list:
+    out = [first_bubble(ticket)]
+    out.extend(message_json(m, ticket) for m in ticket.messages.all())
+    return out
+
+
+def add_user_message(ticket: SupportTicket, text: str, *, user_name: str = "") -> SupportMessage:
+    """Дослать сообщение клиента в существующий тред; продолжение дублируем в Telegram."""
+    message = SupportMessage.objects.create(
+        ticket=ticket,
+        author=SupportMessage.AUTHOR_USER,
+        author_name=user_name.strip()[:255],
+        text=text.strip(),
+    )
+    if is_configured():
+        header = f"💬 Ещё сообщение по обращению от {ticket.domain_url or ticket.member_id}"
+        body = f"{header}\n\n{text.strip()[:MESSAGE_LIMIT]}"
+        payload = urllib.parse.urlencode({
+            "chat_id": config.support_telegram_chat_id,
+            "text": body,
+            "disable_web_page_preview": "true",
+        }).encode("utf-8")
+        err = _post(
+            TELEGRAM_API.format(token=config.support_telegram_token),
+            payload,
+            "application/x-www-form-urlencoded",
+        )
+        if err:
+            logger.warning("продолжение обращения %s не ушло в мессенджер: %s", ticket.id, err)
+    return message
+
+
+def add_support_reply(ticket: SupportTicket, text: str, *, author_name: str = "", attachment: str = "") -> SupportMessage:
+    """Ответ поддержки в тред (из панели/командного центра); клиент видит при опросе."""
+    return SupportMessage.objects.create(
+        ticket=ticket,
+        author=SupportMessage.AUTHOR_SUPPORT,
+        author_name=author_name.strip()[:255],
+        text=text.strip(),
+        attachment=attachment,
+    )
+
+
+def is_unanswered(ticket: SupportTicket) -> bool:
+    """Ждёт ли обращение ответа: последнее слово за клиентом."""
+    last_support = None
+    last_user = ticket.created_at
+    for message in ticket.messages.all():
+        if message.author == SupportMessage.AUTHOR_SUPPORT:
+            if last_support is None or message.created_at > last_support:
+                last_support = message.created_at
+        elif message.created_at > last_user:
+            last_user = message.created_at
+    return last_support is None or last_user > last_support

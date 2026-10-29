@@ -1,39 +1,66 @@
 <script setup lang="ts">
 /**
- * Виджет поддержки в правом нижнем углу (по схеме других приложений 1daa.ru,
- * навык b24-app-ui §13) — мессенджер-стиль. Открывается пунктом меню
- * «Поддержка». Обращение уходит на бэкенд и пересылается в общий Telegram-канал;
- * контакт спрашиваем вторым шагом, уже после отправки.
+ * Поддержка — переписка, а не разовая форма (перенос из dependent_fields,
+ * навык b24-app-ui §13). Клиент пишет, разработчик отвечает из командного
+ * центра, окно показывает тред и опрашивает его, пока открыто. Тред привязан
+ * к браузеру (useSupport) и продолжается при повторном открытии. Вложение —
+ * только к первому сообщению (в скриншоте часто чужие перс. данные).
  */
 
-const isOpen = defineModel<boolean>('open', { default: false })
+import type { SupportMessage } from '../stores/api'
 
 const api = useApiStore()
 const user = useUserStore()
+const support = useSupport()
 
+const isOpen = defineModel<boolean>('open', { default: false })
+
+const MIN_LENGTH = 10
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+const POLL_MS = 6000
+
+const messages = ref<SupportMessage[]>([])
+const ticket = ref(support.ticketId())
 const message = ref('')
 const contact = ref('')
+const contactKnown = ref(false)
+const contactDismissed = ref(false)
 const file = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const body = ref<HTMLElement | null>(null)
+
 const isSending = ref(false)
-const isSent = ref(false)
-const isContactSaved = ref(false)
-const ticketId = ref('')
+const isLoading = ref(false)
 const error = ref('')
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
-const canSend = computed(() => message.value.trim().length >= 10 && !isSending.value)
+const canSend = computed(() => message.value.trim().length > 0 && !isSending.value)
+const charsLeft = computed(() => Math.max(0, MIN_LENGTH - message.value.trim().length))
 const greetingName = computed(() => (user.login || '').trim().split(' ')[0] || '')
+const isFirst = computed(() => !ticket.value)
+const askContact = computed(() =>
+  !!ticket.value && !contactKnown.value && !contactDismissed.value && messages.value.length > 0
+)
 
-function close() {
-  isOpen.value = false
-  setTimeout(() => {
-    isSent.value = false
-    isContactSaved.value = false
-    ticketId.value = ''
-    error.value = ''
-  }, 200)
+function scrollDown() {
+  nextTick(() => {
+    if (body.value) body.value.scrollTop = body.value.scrollHeight
+  })
+}
+
+async function loadThread() {
+  if (!ticket.value) return
+  try {
+    const data = await api.loadSupportThread(ticket.value)
+    messages.value = data.messages
+    contactKnown.value = !!data.contact
+    support.markRead(data.messages)
+  } catch {
+    support.forgetTicket()
+    ticket.value = ''
+    messages.value = []
+  }
 }
 
 function pickFile() {
@@ -59,32 +86,46 @@ function humanSize(bytes: number): string {
 }
 
 async function send() {
-  if (!canSend.value) return
+  if (message.value.trim().length < MIN_LENGTH) {
+    error.value = 'Опишите вопрос чуть подробнее — так мы ответим быстрее.'
+    return
+  }
   error.value = ''
   isSending.value = true
+  const text = message.value
   try {
     const created = await api.sendSupportMessage({
-      message: message.value,
+      message: text,
       userName: user.login,
-      file: file.value
+      file: isFirst.value ? file.value : null,
+      ticketId: ticket.value || undefined
     })
-    ticketId.value = created.id
     message.value = ''
     dropFile()
-    isSent.value = true
+    if (!ticket.value) {
+      ticket.value = created.id
+      support.rememberTicket(created.id)
+      await loadThread()
+      startPoll()
+    } else if (created.message) {
+      messages.value = [...messages.value, created.message]
+      support.markRead(messages.value)
+    }
+    scrollDown()
   } catch (e: any) {
-    error.value = e?.data?.error || 'Не удалось отправить обращение. Напишите на info@1daa.ru'
+    error.value = e?.data?.error || 'Не удалось отправить сообщение. Напишите на info@1daa.ru'
   } finally {
     isSending.value = false
   }
 }
 
 async function saveContact() {
-  if (!contact.value.trim() || !ticketId.value) return
+  if (!contact.value.trim() || !ticket.value) return
   isSending.value = true
   try {
-    await api.addSupportContact(ticketId.value, contact.value)
-    isContactSaved.value = true
+    await api.addSupportContact(ticket.value, contact.value)
+    contactKnown.value = true
+    contact.value = ''
   } catch (e: any) {
     error.value = e?.data?.error || 'Не удалось сохранить контакт'
   } finally {
@@ -98,6 +139,36 @@ function onKeydown(event: KeyboardEvent) {
     send()
   }
 }
+
+function startPoll() {
+  stopPoll()
+  if (!ticket.value) return
+  pollTimer = setInterval(loadThread, POLL_MS)
+}
+function stopPoll() {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = null
+}
+function close() {
+  isOpen.value = false
+}
+
+watch(isOpen, async (open) => {
+  if (open) {
+    error.value = ''
+    if (ticket.value) {
+      isLoading.value = true
+      await loadThread()
+      isLoading.value = false
+      scrollDown()
+      startPoll()
+    }
+  } else {
+    stopPoll()
+  }
+}, { immediate: true })
+
+onUnmounted(stopPoll)
 </script>
 
 <template>
@@ -113,16 +184,10 @@ function onKeydown(event: KeyboardEvent) {
               </svg>
             </div>
             <div class="text-sm font-bold uppercase tracking-wide text-gray-900">
-              1daa.ru
-              <span class="font-normal normal-case text-gray-500">/ Битрикс24</span>
+              1daa.ru <span class="font-normal normal-case text-gray-500">/ Битрикс24</span>
             </div>
           </div>
-          <button
-            type="button"
-            class="flex size-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
-            aria-label="Закрыть"
-            @click="close"
-          >
+          <button type="button" class="flex size-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100" aria-label="Закрыть" @click="close">
             <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>
         </div>
@@ -142,67 +207,63 @@ function onKeydown(event: KeyboardEvent) {
         </div>
       </div>
 
-      <!-- Тело -->
-      <div class="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-5 py-5">
-        <template v-if="isSent">
-          <div class="py-6 text-center">
-            <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-green-50 text-green-600">
-              <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            </div>
-            <div class="font-semibold">Обращение отправлено</div>
-            <p class="mt-1 text-sm text-gray-500">Осталось понять, куда ответить.</p>
+      <!-- Переписка -->
+      <div ref="body" class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
+        <div v-if="!messages.length && !isLoading" class="m-auto text-center">
+          <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+            <svg viewBox="0 0 24 24" class="size-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </div>
+          <div class="font-semibold">Здравствуйте<template v-if="greetingName">, {{ greetingName }}</template></div>
+          <p class="mt-1 text-sm text-gray-500">
+            Напишите, что нужно сделать или что не работает. Ответ придёт сюда же — окно можно закрыть и открыть позже.
+          </p>
+        </div>
 
-          <template v-if="!isContactSaved">
-            <label class="mb-1 block text-sm font-medium">Почта или телефон</label>
+        <div v-else class="flex flex-col gap-2.5">
+          <div
+            v-for="item in messages"
+            :key="item.id"
+            class="flex items-end gap-2"
+            :class="item.author === 'user' ? 'flex-row-reverse' : 'flex-row'"
+          >
+            <div v-if="item.author === 'support'" class="flex size-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600">АД</div>
+            <div
+              class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm"
+              :class="item.author === 'user' ? 'bg-violet-500 text-white' : 'bg-gray-100 text-gray-900'"
+            >
+              <template v-if="item.text">{{ item.text }}</template>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="askContact" class="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+          <div class="text-xs font-medium text-gray-700">Куда ответить, если вы закроете окно?</div>
+          <div class="mt-2 flex gap-2">
             <input
               v-model="contact"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-              placeholder="ivan@example.ru"
+              class="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              placeholder="ivan@example.ru или телефон"
               @keydown.enter="saveContact"
             >
-            <p class="mt-2 text-xs leading-relaxed text-gray-400">
-              Без контакта ответим в чате портала — это дольше.
-            </p>
-            <div class="mt-3 flex gap-2">
-              <button
-                type="button"
-                class="rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                :disabled="!contact.trim() || isSending"
-                @click="saveContact"
-              >Отправить контакт</button>
-              <button
-                type="button"
-                class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-gray-50"
-                :disabled="isSending"
-                @click="close"
-              >Не нужно</button>
-            </div>
-          </template>
-
-          <p v-else class="text-center text-sm text-gray-500">Контакт записан — ответим на него.</p>
-        </template>
-
-        <template v-else>
-          <div class="text-center">
-            <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-              <svg viewBox="0 0 24 24" class="size-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
-            <div class="font-semibold">
-              Здравствуйте<template v-if="greetingName">, {{ greetingName }}</template>
-            </div>
-            <p class="mt-1 text-sm text-gray-500">
-              Напишите, что нужно сделать или что не работает. Ответим на указанный контакт.
-            </p>
+            <button
+              type="button"
+              class="shrink-0 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              :disabled="!contact.trim() || isSending"
+              @click="saveContact"
+            >Ок</button>
           </div>
-          <p v-if="error" class="mt-3 text-sm text-red-600">{{ error }}</p>
-        </template>
+          <button type="button" class="mt-1.5 text-xs text-gray-500 hover:underline" @click="contactDismissed = true">
+            Не нужно — отвечайте здесь
+          </button>
+        </div>
+
+        <p v-if="error" class="mt-3 text-sm text-red-600">{{ error }}</p>
       </div>
 
       <!-- Поле ввода -->
-      <div v-if="!isSent" class="shrink-0 border-t border-gray-100 px-4 py-3">
+      <div class="shrink-0 border-t border-gray-100 px-4 py-3">
         <div v-if="file" class="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gray-100 px-3 py-2 text-xs">
           <span class="truncate">{{ file.name }} · {{ humanSize(file.size) }}</span>
           <button type="button" class="shrink-0 text-gray-500 hover:text-red-600" aria-label="Убрать файл" @click="dropFile">✕</button>
@@ -210,6 +271,7 @@ function onKeydown(event: KeyboardEvent) {
         <div class="flex items-end gap-2">
           <input ref="fileInput" type="file" class="hidden" @change="onFileChosen">
           <button
+            v-if="isFirst"
             type="button"
             class="flex size-11 shrink-0 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100"
             aria-label="Прикрепить файл"
@@ -239,14 +301,9 @@ function onKeydown(event: KeyboardEvent) {
             </svg>
           </button>
         </div>
-      </div>
-
-      <div v-else class="shrink-0 border-t border-gray-100 px-4 py-3">
-        <button
-          type="button"
-          class="w-full rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-gray-50"
-          @click="close"
-        >Закрыть</button>
+        <p v-if="charsLeft > 0 && message.trim()" class="mt-1.5 px-1 text-xs text-gray-400">
+          Ещё хотя бы {{ charsLeft }} {{ charsLeft === 1 ? 'символ' : charsLeft < 5 ? 'символа' : 'символов' }} — опишите вопрос подробнее.
+        </p>
       </div>
     </div>
   </div>
