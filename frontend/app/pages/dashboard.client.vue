@@ -29,7 +29,11 @@ const isLoadingData = ref(false)
 const isManualSyncing = ref(false)
 const isBackgroundSyncing = ref(false)
 const syncError = ref('')
-const activeTab = ref<'payments' | 'accounts' | 'settings'>('payments')
+const activeTab = ref<'payments' | 'accounts' | 'settings' | 'help'>('payments')
+
+function openSupport() {
+  window.open('mailto:info@1daa.ru?subject=Поддержка — Точка Банк. Интеграция', '_blank')
+}
 const dealStages = ref<DealStageOption[]>([])
 const dealCategories = ref<DealCategoryOption[]>([])
 const dealStagesByCategory = ref<Record<number, DealStageOption[]>>({})
@@ -1922,6 +1926,7 @@ onBeforeUnmount(() => {
             { key: 'payments', label: 'Платежи' },
             { key: 'accounts', label: 'Банковские счета' },
             { key: 'settings', label: 'Настройки' },
+            { key: 'help', label: 'Помощь' },
           ]"
           :key="tab.key"
           class="py-3 text-sm font-medium border-b-2 transition-colors"
@@ -2107,8 +2112,8 @@ onBeforeUnmount(() => {
           <div class="text-sm text-violet-600 font-medium mb-2">{{ formatCurrency(tochkaStore.paymentsTotalAmount) }}</div>
 
           <!-- Payments table -->
-          <div class="overflow-x-auto -mx-1 px-1">
-          <table class="w-full min-w-[1320px] text-sm table-fixed">
+          <div class="overflow-x-auto payments-table-wrap">
+          <table class="w-full min-w-[1320px] text-sm table-fixed payments-table">
             <colgroup>
               <col class="w-[3rem]" />
               <col class="w-[5.5rem]" />
@@ -2152,7 +2157,7 @@ onBeforeUnmount(() => {
                 <tr
                   v-for="p in group.payments"
                   :key="p.id"
-                  class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                  class="pay-row"
                 >
                   <td
                     class="py-3 text-gray-400 text-xs font-mono"
@@ -3887,6 +3892,11 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <!-- ============ ПОМОЩЬ ============ -->
+      <div v-else-if="activeTab === 'help'">
+        <TochkaHelp @support="openSupport" @navigate="activeTab = $event" />
+      </div>
+
     </div>
   </div>
 </template>
@@ -3917,5 +3927,27 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
+}
+
+/* Список платежей во всю ширину карточки: отменяем боковой отступ px-6,
+   возвращаем его на крайние ячейки — строки, линии и подсветка идут до краёв. */
+.payments-table-wrap {
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+}
+.payments-table th:first-child,
+.payments-table td:first-child {
+  padding-left: 1.5rem;
+}
+.payments-table th:last-child,
+.payments-table td:last-child {
+  padding-right: 1.5rem;
+}
+.payments-table tbody tr.pay-row {
+  border-bottom: 1px solid rgb(243 244 246);
+  transition: background-color 0.12s ease;
+}
+.payments-table tbody tr.pay-row:hover {
+  background-color: rgb(245 243 255);
 }
 </style>
