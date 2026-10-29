@@ -72,18 +72,31 @@ export const useApiStore = defineStore(
     const sendSupportMessage = async (data: {
       message: string
       userName?: string
-      contact?: string
+      file?: File | null
     }): Promise<{ id: string }> => {
-      return await $api('/api/support', {
+      const form = new FormData()
+      form.append('message', data.message)
+      if (data.userName) form.append('userName', data.userName)
+      if (data.file) form.append('file', data.file)
+      return await $fetch(`${apiUrl}/api/support`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${tokenJWT.value}`
         },
-        body: JSON.stringify({
-          message: data.message,
-          userName: data.userName || '',
-          contact: data.contact || ''
-        }),
+        body: form,
+      })
+    }
+
+    const addSupportContact = async (
+      ticketId: string,
+      contact: string
+    ): Promise<{ id: string }> => {
+      return await $api(`/api/support/${ticketId}/contact`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        },
+        body: JSON.stringify({ contact }),
       })
     }
 
@@ -132,7 +145,8 @@ export const useApiStore = defineStore(
       getEnum,
       getList,
       postInstall,
-      sendSupportMessage
+      sendSupportMessage,
+      addSupportContact
     }
   }
 )
