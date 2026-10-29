@@ -92,6 +92,23 @@ def support_submit(request: AuthorizedRequest):
             )
         attachment = (upload.name, upload.read())
 
+    # Один тред на портал: если у этого портала уже есть обращение, новое
+    # сообщение дописываем в него, а не плодим дубли с одного member_id.
+    existing = (
+        SupportTicket.objects.filter(member_id=account.member_id)
+        .order_by("-created_at").first()
+    )
+    if existing is not None:
+        sent = support.add_user_message(
+            existing, message, user_name=str(payload.get("userName") or ""),
+        )
+        if attachment is not None:
+            support.deliver_attachment(existing, attachment[0], attachment[1])
+        return JsonResponse({
+            "id": str(existing.id), "status": "accepted",
+            "message": support.message_json(sent, existing),
+        })
+
     ticket = support.submit(
         member_id=account.member_id,
         domain_url=account.domain_url,
