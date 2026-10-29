@@ -91,28 +91,47 @@ async function send() {
     return
   }
   error.value = ''
+  const text = message.value.trim()
+  const fileToSend = isFirst.value ? file.value : null
+  const tempId = `tmp-${Date.now()}`
+
+  // Оптимистично показываем сообщение сразу и чистим поле — не ждём сервер,
+  // чтобы отправка не «залипала». Настоящее сообщение заменит временное.
+  messages.value = [...messages.value, {
+    id: tempId,
+    author: 'user',
+    authorName: user.login || 'Вы',
+    text,
+    attachment: '',
+    createdAt: new Date().toISOString()
+  }]
+  message.value = ''
+  dropFile()
+  scrollDown()
   isSending.value = true
-  const text = message.value
+
   try {
     const created = await api.sendSupportMessage({
       message: text,
       userName: user.login,
-      file: isFirst.value ? file.value : null,
+      file: fileToSend,
       ticketId: ticket.value || undefined
     })
-    message.value = ''
-    dropFile()
     if (!ticket.value) {
       ticket.value = created.id
       support.rememberTicket(created.id)
       await loadThread()
       startPoll()
     } else if (created.message) {
-      messages.value = [...messages.value, created.message]
+      // Замена временного сообщения настоящим по tempId — без дубля.
+      messages.value = messages.value.map(m => (m.id === tempId ? created.message! : m))
       support.markRead(messages.value)
     }
     scrollDown()
   } catch (e: any) {
+    // Отправка не удалась — убираем временное сообщение и возвращаем текст.
+    messages.value = messages.value.filter(m => m.id !== tempId)
+    message.value = text
     error.value = e?.data?.error || 'Не удалось отправить сообщение. Напишите на info@1daa.ru'
   } finally {
     isSending.value = false

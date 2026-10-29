@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -258,6 +259,8 @@ def add_user_message(ticket: SupportTicket, text: str, *, user_name: str = "") -
         author_name=user_name.strip()[:255],
         text=text.strip(),
     )
+    # Пересылку в мессенджер делаем в фоне: ответ клиенту не должен ждать
+    # Телеграм (таймаут до 10 с) — иначе окно «залипает» на отправке.
     if is_configured():
         header = f"💬 Ещё сообщение по обращению от {ticket.domain_url or ticket.member_id}"
         body = f"{header}\n\n{text.strip()[:MESSAGE_LIMIT]}"
@@ -266,13 +269,18 @@ def add_user_message(ticket: SupportTicket, text: str, *, user_name: str = "") -
             "text": body,
             "disable_web_page_preview": "true",
         }).encode("utf-8")
-        err = _post(
-            TELEGRAM_API.format(token=config.support_telegram_token),
-            payload,
-            "application/x-www-form-urlencoded",
-        )
-        if err:
-            logger.warning("продолжение обращения %s не ушло в мессенджер: %s", ticket.id, err)
+        tid = ticket.id
+
+        def _forward():
+            err = _post(
+                TELEGRAM_API.format(token=config.support_telegram_token),
+                payload,
+                "application/x-www-form-urlencoded",
+            )
+            if err:
+                logger.warning("продолжение обращения %s не ушло в мессенджер: %s", tid, err)
+
+        threading.Thread(target=_forward, daemon=True).start()
     return message
 
 
