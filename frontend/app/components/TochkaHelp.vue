@@ -160,7 +160,7 @@ function followStep(step: (typeof firstSteps)[number]) {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="mx-auto max-w-[1200px] space-y-5">
     <!-- Поиск по руководству -->
     <div class="flex items-center gap-6 rounded-2xl bg-gray-50 px-6 py-6">
       <div class="min-w-0 flex-1">
@@ -260,7 +260,7 @@ function followStep(step: (typeof firstSteps)[number]) {
       </a>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div>
       <!-- Руководство -->
       <div>
         <div class="mb-3 flex items-baseline justify-between gap-3">
@@ -295,32 +295,14 @@ function followStep(step: (typeof firstSteps)[number]) {
           </button>
 
           <div v-if="!visible.length" class="px-5 py-6 text-sm text-gray-500">
-            Ничего не нашлось. Напишите в поддержку — ответим и добавим раздел.
+            Ничего не нашлось.
+            <button type="button" class="font-semibold text-violet-600 hover:underline" @click="emit('support')">
+              Напишите в поддержку
+            </button>
+            — ответим и добавим раздел.
           </div>
         </div>
       </div>
-
-      <!-- На связи -->
-      <aside class="h-fit rounded-2xl bg-gray-900 px-5 py-5 text-white">
-        <div class="mb-3 flex size-9 items-center justify-center rounded-xl bg-white/10">
-          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </div>
-        <div class="text-base font-semibold">
-          На связи разработчик
-        </div>
-        <p class="mt-1 text-sm text-white/70">
-          Поможем с настройкой, разберём ошибку, обсудим вашу задачу.
-        </p>
-        <button
-          type="button"
-          class="mt-4 w-full rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          @click="emit('support')"
-        >
-          Написать в поддержку
-        </button>
-      </aside>
     </div>
 
     <!-- Первые шаги -->

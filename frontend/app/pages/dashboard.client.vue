@@ -29,11 +29,10 @@ const isLoadingData = ref(false)
 const isManualSyncing = ref(false)
 const isBackgroundSyncing = ref(false)
 const syncError = ref('')
-const activeTab = ref<'payments' | 'accounts' | 'settings' | 'help'>('payments')
+const activeTab = ref<'payments' | 'accounts' | 'settings' | 'help' | 'support'>('payments')
 
-const isSupportOpen = ref(false)
 function openSupport() {
-  isSupportOpen.value = true
+  activeTab.value = 'support'
 }
 const dealStages = ref<DealStageOption[]>([])
 const dealCategories = ref<DealCategoryOption[]>([])
@@ -1928,6 +1927,7 @@ onBeforeUnmount(() => {
             { key: 'accounts', label: 'Банковские счета' },
             { key: 'settings', label: 'Настройки' },
             { key: 'help', label: 'Помощь' },
+            { key: 'support', label: 'Поддержка' },
           ]"
           :key="tab.key"
           class="py-3 text-sm font-medium border-b-2 transition-colors"
@@ -3898,9 +3898,11 @@ onBeforeUnmount(() => {
         <TochkaHelp @support="openSupport" @navigate="activeTab = $event" />
       </div>
 
-    </div>
+      <div v-else-if="activeTab === 'support'">
+        <TochkaSupport />
+      </div>
 
-    <TochkaSupport v-model:open="isSupportOpen" />
+    </div>
   </div>
 </template>
 
