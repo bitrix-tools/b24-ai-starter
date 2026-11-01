@@ -7,14 +7,14 @@
 
 # Grab the PHP extension installer script from mlocati's image
 # https://github.com/mlocati/docker-php-extension-installer#readme
-FROM mlocati/php-extension-installer:2.4 AS php-extension-installer
+FROM mlocati/php-extension-installer:2.13 AS php-extension-installer
 
 # Separate Composer stage to install PHP dependencies efficiently
 # https://hub.docker.com/_/composer
-FROM composer:2.8 AS composer
+FROM composer:2.10 AS composer
 
 # Using official PHP 8.4 CLI image based on Debian Bookworm for development purposes
-FROM php:8.4-cli-bookworm AS dev-php
+FROM php:8.5-cli-bookworm AS dev-php
 
 # Copy Composer binary from the official Composer image
 COPY --from=composer /usr/bin/composer /usr/bin/composer
